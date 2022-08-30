@@ -41,7 +41,7 @@ class sudoku:
 				 
 		V/X    - specifies type of XV or XVXV Sudoku clue is used
 		
-		white/black - same as XV, but for Kropkis
+		White/Black - same as XV, but for Kropkis
 		
 		Horz/Vert - clues that go on edges are usually specified with the
 		            grid of the top/left most cell, and then an H or V to
@@ -662,7 +662,7 @@ class sudoku:
 				secondCell = self.cellValues[row+(j+1)*vStep][col+(j+1)*hStep]				
 				if j == i:
 					# First case: difference 1
-					if wb == sudoku.white:
+					if wb == sudoku.White:
 						self.model.Add(firstCell - secondCell == 1).OnlyEnforceIf(varBitmap[i] + [lgr])
 						self.model.Add(secondCell - firstCell == 1).OnlyEnforceIf(varBitmap[i] + [lgr.Not()])
 					# Ratio 2
@@ -672,7 +672,7 @@ class sudoku:
 				else:
 					# Nothing forced...unless negative constraint
 					if neg is True:
-						if wb == sudoku.white:
+						if wb == sudoku.White:
 							self.model.Add(firstCell - secondCell != 1).OnlyEnforceIf(varBitmap[i] + [lgr])
 							self.model.Add(secondCell - firstCell != 1).OnlyEnforceIf(varBitmap[i] + [lgr.Not()])
 						else:
