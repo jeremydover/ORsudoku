@@ -65,14 +65,20 @@ class sudoku:
 	Row = 0		#Constant to pass to indicate row/column
 	Col = 1		#Constant to pass to indicate row/column
 	
-	V = 5		#Constant to distinguish XV sudoku clues
-	X = 10		#Constant to distinguish XV sudoku clues
+	V = 0		#Constant to distinguish XV sudoku clues
+	X = 1		#Constant to distinguish XV sudoku clues
 	
-	white = 0	#Constant to distinguish Kropki clues
-	black = 1	#Constant to distinguish Kropki clues
+	White = 0	#Constant to distinguish Kropki clues
+	Black = 1	#Constant to distinguish Kropki clues
 	
 	Horz = 0	#Constant to determine clues going horizontally/vertically
 	Vert = 1	#Constant to determine clues going horizontally/vertically
+	
+	Min = 0		#Constant to determine whether min/max clues are mins or maxs
+	Max = 1		#Constant to determine whether min/max clues are mins or maxs
+	
+	Even = 0	# Constant to determine whether parity constraint is even or odd
+	Odd = 1		# Constant to determine whether parity constraint is even or odd
 	
 	def __init__(self,boardSizeRoot,irregular=None):
 		self.boardSizeRoot = boardSizeRoot
@@ -242,28 +248,28 @@ class sudoku:
 				else:
 					self.model.Add(self.cellValues[k][col] != row+1).OnlyEnforceIf(varBitmap[k])
 	
-	def setIndexRow(self,row,neg=False,list=[]):
+	def setIndexRow(self,row,neg=False,inlist=[]):
 		# This sets up an indexing row. Each cell indexes the *column* so don't be surprised when we call 
 		# the cell method with rc=1.
 		# Row is the row number
 		# neg is whether or not there is a negative constraint on cells not in the index list
-		# list is the list of cells that index vs. not index in the negative constraint scenario
+		# inlist is the list of cells that index vs. not index in the negative constraint scenario
 		
 		for i in range(self.boardWidth):
-			if neg is True and i not in list:
+			if neg is True and i not in inlist:
 				self.__setIndexCell(row,i,sudoku.Col,-1)
 			else:
 				self.__setIndexCell(row,i,sudoku.Col,1)
 				
-	def setIndexColumn(self,col,neg=False,list=[]):
+	def setIndexColumn(self,col,neg=False,inlist=[]):
 		# This sets up an indexing column. Each cell indexes the *row* so don't be surprised when we call 
 		# the cell method with rc=0.
 		# Row is the column number
 		# neg is whether or not there is a negative constraint on cells not in the index list
-		# list is the list of cells that index vs. not index in the negative constraint scenario
+		# inlist is the list of cells that index vs. not index in the negative constraint scenario
 		
 		for i in range(self.boardWidth):
-			if neg is True and i not in list:
+			if neg is True and i not in inlist:
 				self.__setIndexCell(i,col,sudoku.Row,-1)
 			else:
 				self.__setIndexCell(i,col,sudoku.Row,1)
@@ -315,13 +321,17 @@ class sudoku:
 		self.setEntropyQuadArray([(i,j) for i in range(self.boardWidth-1) for j in range(self.boardWidth-1)])
 
 ####Single cell constraints
-	def setGiven(self,row,col,value):
+	def setGiven(self,row,col=-1,value=-1):
+		if col == -1:
+			(row,col,value) = self.__procCell(row,3)
 		self.model.Add(self.cellValues[row][col] == value)
 	
 	def setGivenArray(self,cells):
-		for x in cells: self.setGiven(x[0],x[1],x[2])
+		for x in cells:	self.setGiven(x)
 
-	def setMinMaxCell(self,row,col,minmax):
+	def setMinMaxCell(self,row,col=-1,minmax=-1):
+		if col == -1:
+			(row,col,minmax) = self.__procCell(row,3)
 		if row > 0:
 			self.model.Add(self.cellValues[row][col] < self.cellValues[row-1][col]) if minmax == 0 else self.model.Add(self.cellValues[row][col] > self.cellValues[row-1][col])
 		if row < self.boardWidth-1:
@@ -331,53 +341,65 @@ class sudoku:
 		if col < self.boardWidth-1:
 			self.model.Add(self.cellValues[row][col] < self.cellValues[row][col+1]) if minmax == 0 else self.model.Add(self.cellValues[row][col] > self.cellValues[row][col+1])
 			
-	def setMinCell(self,row,col):
-		self.setMinMaxCell(row,col,0)
+	def setMinCell(self,row,col=-1):
+		if col == -1:
+			(row,col) = self.__procCell(row)
+		self.setMinMaxCell(row,col,self.Min)
 
-	def setMaxCell(self,row,col):
-		self.setMinMaxCell(row,col,1)
+	def setMaxCell(self,row,col=-1):
+		if col == -1:
+			(row,col) = self.__procCell(row)
+		self.setMinMaxCell(row,col,self.Max)
 		
 	def setMinMaxArray(self,cells):
-		for x in cells: self.setMinMaxCell(x[0],x[1],x[2])
+		for x in cells: self.setMinMaxCell(x)
 		
 	def setMinArray(self,cells):
-		for x in cells: self.setMinCell(x[0],x[1])
+		for x in cells: self.setMinCell(x)
 		
 	def setMaxArray(self,cells):
-		for x in cells: self.setMaxCell(x[0],x[1])
+		for x in cells: self.setMaxCell(x)
 		
-	def setEven(self,row,col):
-		self.model.AddModuloEquality(0,self.cellValues[row][col],2)
+	def setEvenOdd(self,row,col=-1,parity=-1):
+		if col == -1:
+			(row,col,parity) = self.__procCell(row,3)
+		self.model.AddModuloEquality(parity,self.cellValues[row][col],2)
 		
-	def setOdd(self,row,col):
-		self.model.AddModuloEquality(1,self.cellValues[row][col],2)
+	def setEven(self,row,col=-1):
+		if col == -1:
+			(row,col) = self.__procCell(row)
+		self.setEvenOdd(row,col,self.Even)
+		
+	def setOdd(self,row,col=-1):
+		if col == -1:
+			(row,col) = self.__procCell(row)
+		self.setEvenOdd(row,col,self.Odd)
 		
 	def setEvenArray(self,cells):
-		for x in cells: self.setEven(x[0],x[1])
+		for x in cells: self.setEven(x)
 		
 	def setOddArray(self,cells):
-		for x in cells: self.setOdd(x[0],x[1])
+		for x in cells: self.setOdd(x)
 		
-	def setEvenOddArray(self,cell):
-		for x in cells:
-			if x[2] == 0:
-				self.setEven(x[0],x[1])
-			else:
-				self.setOdd(x[0],x[1])
+	def setEvenOddArray(self,cells):
+		for x in cells: self.setEvenOdd(x)
 		
 ####Multi-cell constraints
-	def setFortress(self,fortress):
-		for x in fortress:
-			if x[0] > 0 and (x[0]-1,x[1]) not in fortress:
+	def setFortress(self,inlist):
+		inlist = self.__procCellList(inlist)
+		for x in inlist:
+			if x[0] > 0 and (x[0]-1,x[1]) not in inlist:
 				self.model.Add(self.cellValues[x[0]][x[1]] > self.cellValues[x[0]-1][x[1]])
-			if x[0] < self.boardWidth-1 and (x[0]+1,x[1]) not in fortress:
+			if x[0] < self.boardWidth-1 and (x[0]+1,x[1]) not in inlist:
 				self.model.Add(self.cellValues[x[0]][x[1]] > self.cellValues[x[0]+1][x[1]])
-			if x[1] > 0 and (x[0],x[1]-1) not in fortress:
+			if x[1] > 0 and (x[0],x[1]-1) not in inlist:
 				self.model.Add(self.cellValues[x[0]][x[1]] > self.cellValues[x[0]][x[1]-1])
-			if x[1] < self.boardWidth-1 and (x[0],x[1]+1) not in fortress:
+			if x[1] < self.boardWidth-1 and (x[0],x[1]+1) not in inlist:
 				self.model.Add(self.cellValues[x[0]][x[1]] > self.cellValues[x[0]][x[1]+1])
 				
-	def setKropkiWhite(self,row,col,hv):
+	def setKropkiWhite(self,row,col=-1,hv=-1):
+		if col == -1:
+			(row,col,hv) = self.__procCell(row,3)
 		if self.isKropkiInitialized is not True:
 			self.kropkiCells = [(row,col,hv)]
 			self.isKropkiInitialized = True
@@ -388,7 +410,9 @@ class sudoku:
 		self.model.Add(self.cellValues[row][col] - self.cellValues[row+hv][col+(1-hv)] == 1).OnlyEnforceIf(bit)
 		self.model.Add(self.cellValues[row][col] - self.cellValues[row+hv][col+(1-hv)] == -1).OnlyEnforceIf(bit.Not())
 		
-	def setKropkiBlack(self,row,col,hv):
+	def setKropkiBlack(self,row,col=-1,hv=-1):
+		if col == -1:
+			(row,col,hv) = self.__procCell(row,3)
 		if self.isKropkiInitialized is not True:
 			self.kropkiCells = [(row,col,hv)]
 			self.isKropkiInitialized = True
@@ -400,14 +424,15 @@ class sudoku:
 		self.model.Add(2*self.cellValues[row][col] == self.cellValues[row+hv][col+(1-hv)]).OnlyEnforceIf(bit.Not())
 		
 	def setKropkiWhiteArray(self,cells):
-		for x in cells: self.setKropkiWhite(x[0],x[1],x[2])
+		for x in cells: self.setKropkiWhite(x)
 		
 	def setKropkiBlackArray(self,cells):
-		for x in cells: self.setKropkiBlack(x[0],x[1],x[2])
+		for x in cells: self.setKropkiBlack(x)
 		
-	def setKropkiWhiteBlackArray(self,cells):
-		for x in cells:
-			if x[3] == sudoku.white:
+	def setKropkiArray(self,cells):
+		cellList = self.__procCellList(cells,4)
+		for x in cellList:
+			if x[3] == sudoku.White:
 				self.setKropkiWhite(x[0],x[1],x[2])
 			else:
 				self.setKropkiBlack(x[0],x[1],x[2])
@@ -432,7 +457,9 @@ class sudoku:
 					self.model.Add(self.cellValues[i][j] != 2*self.cellValues[i][j+1])
 					self.model.Add(2*self.cellValues[i][j] != self.cellValues[i][j+1])
 					
-	def setXVV(self,row,col,hv):
+	def setXVV(self,row,col=-1,hv=-1):
+		if col == -1:
+			(row,col,hv) = self.__procCell(row,3)
 		if self.isXVInitialized is not True:
 			self.xvCells = [(row,col,hv)]
 			self.isXVInitialized = True
@@ -442,7 +469,9 @@ class sudoku:
 		# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
 		self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] == 5)
 		
-	def setXVX(self,row,col,hv):
+	def setXVX(self,row,col=-1,hv=-1):
+		if col == -1:
+			(row,col,hv) = self.__procCell(row,3)
 		if self.isXVInitialized is not True:
 			self.xvCells = [(row,col,hv)]
 			self.isXVInitialized = True
@@ -453,18 +482,19 @@ class sudoku:
 		self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] == 10)
 		
 	def setXVVArray(self,cells):
-		for x in cells: self.setXVV(x[0],x[1],x[2])
+		for x in cells: self.setXVV(x)
 		
 	def setXVXArray(self,cells):
-		for x in cells: self.setXVX(x[0],x[1],x[2])
+		for x in cells: self.setXVX(x)
 		
 	def setXVArray(self,cells):
-		for x in cells:
+		cellList = self.__procCellList(cells,4)
+		for x in cellList:
 			if x[3] == sudoku.V:
 				self.setXVV(x[0],x[1],x[2])
 			else:
 				self.setXVX(x[0],x[1],x[2])
-
+				
 	def setXVNegative(self):
 		if self.isXVInitialized is not True:
 			self.xvCells = []
@@ -481,7 +511,9 @@ class sudoku:
 					self.model.Add(self.cellValues[i][j] + self.cellValues[i][j+1] != 5)
 					self.model.Add(self.cellValues[i][j] + self.cellValues[i][j+1] != 10)
 					
-	def setXVXVV(self,row,col,hv):
+	def setXVXVV(self,row,col=-1,hv=-1):
+		if col == -1:
+			(row,col,hv) = self.__procCell(row,3)
 		if self.isXVXVInitialized is not True:
 			self.xvxvCells = [(row,col,hv)]
 			self.isXVXVInitialized = True
@@ -493,7 +525,9 @@ class sudoku:
 		self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] == 5).OnlyEnforceIf(bit)
 		self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] == 15).OnlyEnforceIf(bit.Not())
 		
-	def setXVXVX(self,row,col,hv):
+	def setXVXVX(self,row,col=-1,hv=-1):
+		if col == -1:
+			(row,col,hv) = self.__procCell(row,3)
 		if self.isXVXVInitialized is not True:
 			self.xvxvCells = [(row,col,hv)]
 			self.isXVXVInitialized = True
@@ -506,13 +540,14 @@ class sudoku:
 		self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] == 15).OnlyEnforceIf(bit.Not())
 		
 	def setXVXVVArray(self,cells):
-		for x in cells: self.setXVXVV(x[0],x[1],x[2])
+		for x in cells: self.setXVXVV(x)
 		
 	def setXVXVXArray(self,cells):
-		for x in cells: self.setXVXVX(x[0],x[1],x[2])
+		for x in cells: self.setXVXVX(x)
 		
 	def setXVXVArray(self,cells):
-		for x in cells:
+		cellList = self.__procCellList(cells,4)
+		for x in cellList:
 			if x[3] == sudoku.V:
 				self.setXVXVV(x[0],x[1],x[2])
 			else:
@@ -536,36 +571,48 @@ class sudoku:
 					self.model.Add(self.cellValues[i][j] + self.cellValues[i][j+1] != 10)
 					self.model.Add(self.cellValues[i][j] + self.cellValues[i][j+1] != 15)
 
-	def setCloneRegion(self,list):
-		for j in range(1,len(list)):
-			for k in range(len(list[0])):
-				self.model.Add(self.cellValues[list[0][k][0]][list[0][k][1]] == self.cellValues[list[j][k][0]][list[j][k][1]])
+	def setCloneRegion(self,inlist):
+		inlist = list(map(self.__procCellList,inlist))
+		for j in range(1,len(inlist)):
+			for k in range(len(inlist[0])):
+				self.model.Add(self.cellValues[inlist[0][k][0]][inlist[0][k][1]] == self.cellValues[inlist[j][k][0]][inlist[j][k][1]])
 				
-	def setCage(self,list,value = None):
-		self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in list])
+	def setCage(self,inlist,value = None):
+		inlist = self.__procCellList(inlist)
+		self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in inlist])
 		if value is not None:
-			self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in list) == value)
+			self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in inlist) == value)
 			
-	def setRepeatingCage(self,list,value):
-		self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in list) == value)
+	def setRepeatingCage(self,inlist,value):
+		inlist = self.__procCellList(inlist)
+		self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in inlist) == value)
 		
-	def setEntropkiWhite(self,row,col,hv):
+	def setEntropkiWhite(self,row,col=-1,hv=-1):
+		if self.isEntropy is False:
+			self.__setEntropy()
+		if col == -1:
+			(row,col,hv) = self.__procCell(row,3)
 		# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
 		self.model.Add(self.cellEntropy[row][col] != self.cellEntropy[row+hv][col+(1-hv)])
 		
-	def setEntropkiBlack(self,row,col,hv):
+	def setEntropkiBlack(self,row,col=-1,hv=-1):
+		if self.isEntropy is False:
+			self.__setEntropy()
+		if col == -1:
+			(row,col,hv) = self.__procCell(row,3)
 		# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
 		self.model.Add(self.cellEntropy[row][col] == self.cellEntropy[row+hv][col+(1-hv)])
 
 	def setEntropkiWhiteArray(self,cells):
-		for x in cells: self.setEntropkiWhite(x[0],x[1],x[2])
+		for x in cells: self.setEntropkiWhite(x)
 		
 	def setEntropkiBlackArray(self,cells):
-		for x in cells: self.setEntropkiBlack(x[0],x[1],x[2])
+		for x in cells: self.setEntropkiBlack(x)
 		
-	def setEntropkiWhiteBlackArray(self,cells):
-		for x in cells:
-			if x[3] == sudoku.white:
+	def setEntropkiArray(self,cells):
+		cellList = self.__procCellList(cells,4)
+		for x in cellList:
+			if x[3] == sudoku.White:
 				self.setEntropkiWhite(x[0],x[1],x[2])
 			else:
 				self.setEntropkiBlack(x[0],x[1],x[2])
@@ -682,7 +729,14 @@ class sudoku:
 					varTrack = varTrack + 1
 		
 ####2x2 constraints
-	def setQuadruple(self,row,col,values):
+	def setQuadruple(self,row,col=-1,values=-1):
+		if col == -1:
+			# In this case we do not know the length of the field because of the indeterminate number of given digits in the quad
+			# We can still use procCell to make it a tuple, but we'll need to use the string form if in row 0
+			T = self.__procCell(row,0)	#Note: we cannot do any zero fill because of the data structure
+			row = T[0]
+			col = T[1]
+			values = [T[i] for i in range(2,len(T))]
 		for x in values:
 			if values.count(x) > 2:
 				print('Quadruple at {:d},{:d} cannot have more than two instances of {:d}'.format(row,col,x))
@@ -713,9 +767,11 @@ class sudoku:
 					self.model.Add(self.cellValues[row+1][col] == x).OnlyEnforceIf([bitDouble.Not(),bit1.Not(),bit2])
 					
 	def setQuadrupleArray(self,cells):
-		for x in cells: self.setQuadruple(x[0],x[1],x[2])
+		for x in cells: self.setQuadruple(x)
 	
-	def setQuadSum(self,row,col):
+	def setQuadSum(self,row,col=-1):
+		if col == -1:
+			(row,col) = self.__procCell(row)
 		# Quad sums: a dot at the corner of four cells indicate that one of the cells is the sum of the other three
 		bit1 = self.model.NewBoolVar('QuadSumMaxVRow{:d}Col{:d}'.format(row,col))
 		bit2 = self.model.NewBoolVar('QuadSumMaxHRow{:d}Col{:d}'.format(row,col))
@@ -725,9 +781,11 @@ class sudoku:
 		self.model.Add(self.cellValues[row+1][col] == self.cellValues[row][col]+self.cellValues[row+1][col+1]+self.cellValues[row][col+1]).OnlyEnforceIf([bit1.Not(),bit2])
 		
 	def setQuadSumArray(self,cells):
-		for x in cells: self.setQuadSum(x[0],x[1])
+		for x in cells: self.setQuadSum(x)
 
-	def setBattenburg(self,row,col):
+	def setBattenburg(self,row,col=-1):
+		if col == -1:
+			(row,col) = self.__procCell(row)
 		if self.isBattenburgInitialized is not True:
 			self.battenburgCells = [(row,col)]
 			self.isBattenburgInitialized = True
@@ -747,7 +805,7 @@ class sudoku:
 		self.model.AddModuloEquality(1,diff3,2)
 		
 	def setBattenburgArray(self,cells):
-		for x in cells: self.setBattenburg(x[0],x[1])
+		for x in cells: self.setBattenburg(x)
 			
 	def setBattenburgNegative(self):
 		if self.isBattenburgInitialized is not True:
@@ -791,7 +849,9 @@ class sudoku:
 					self.model.Add(mod3 == 1).OnlyEnforceIf(bit3.Not())
 					self.model.AddBoolOr([bit1,bit2,bit3])
 
-	def setEntropyQuad(self,row,col):
+	def setEntropyQuad(self,row,col=-1):
+		if col == -1:
+			(row,col) = self.__procCell(row)
 		# A 2x2 square of cells is entropic if it includes a low, middle, and high digit
 		if self.isEntropyQuadInitialized is not True:
 			self.entropyQuadCells = [(row,col)]
@@ -804,8 +864,8 @@ class sudoku:
 		
 		self.model.AddForbiddenAssignments([self.cellEntropy[row][col],self.cellEntropy[row][col+1],self.cellEntropy[row+1][col],self.cellEntropy[row+1][col+1]],[(0,0,0,0),(1,1,1,1),(2,2,2,2),(0,0,0,1),(0,0,1,0),(0,1,0,0),(1,0,0,0),(0,0,0,2),(0,0,2,0),(0,2,0,0),(2,0,0,0),(1,1,1,0),(1,1,0,1),(1,0,1,1),(0,1,1,1),(1,1,1,2),(1,1,2,1),(1,2,1,1),(2,1,1,1),(2,2,2,0),(2,2,0,2),(2,0,2,2),(0,2,2,2),(2,2,2,1),(2,2,1,2),(2,1,2,2),(1,2,2,2),(0,0,1,1),(0,0,2,2),(1,1,0,0),(1,1,2,2),(2,2,0,0),(2,2,1,1),(0,1,0,1),(0,2,0,2),(1,0,1,0),(1,2,1,2),(2,0,2,0),(2,1,2,1),(0,1,1,0),(0,2,2,0),(1,0,0,1),(1,2,2,1),(2,0,0,2),(2,1,1,2)])
 		
-	def setEntropyQuadArray(self,list):
-		for x in list: self.setEntropyQuad(x[0],x[1])
+	def setEntropyQuadArray(self,inlist):
+		for x in inlist: self.setEntropyQuad(x)
 		
 	def setEntropyQuadNegative(self):
 		if self.isEntropyQuadInitialized is not True:
@@ -823,7 +883,9 @@ class sudoku:
 				if (i,j) not in self.entropyQuadCells:
 					self.model.AddAllowedAssignments([self.cellEntropy[i][j],self.cellEntropy[i][j+1],self.cellEntropy[i+1][j],self.cellEntropy[i+1][j+1]],[(0,0,0,0),(1,1,1,1),(2,2,2,2),(0,0,0,1),(0,0,1,0),(0,1,0,0),(1,0,0,0),(0,0,0,2),(0,0,2,0),(0,2,0,0),(2,0,0,0),(1,1,1,0),(1,1,0,1),(1,0,1,1),(0,1,1,1),(1,1,1,2),(1,1,2,1),(1,2,1,1),(2,1,1,1),(2,2,2,0),(2,2,0,2),(2,0,2,2),(0,2,2,2),(2,2,2,1),(2,2,1,2),(2,1,2,2),(1,2,2,2),(0,0,1,1),(0,0,2,2),(1,1,0,0),(1,1,2,2),(2,2,0,0),(2,2,1,1),(0,1,0,1),(0,2,0,2),(1,0,1,0),(1,2,1,2),(2,0,2,0),(2,1,2,1),(0,1,1,0),(0,2,2,0),(1,0,0,1),(1,2,2,1),(2,0,0,2),(2,1,1,2)])
 					
-	def setEntropyBattenburg(self,row,col):
+	def setEntropyBattenburg(self,row,col=-1):
+		if col == -1:
+			(row,col) = self.__procCell(row)
 		# A 2x2 square of cells is entropic if it includes a low, middle, and high digit
 		if self.isEntropyBattenburgInitialized is not True:
 			self.entropyBattenburgCells = [(row,col)]
@@ -839,8 +901,8 @@ class sudoku:
 		self.model.Add(self.cellEntropy[row+1][col+1] != self.cellEntropy[row+1][col])
 		self.model.Add(self.cellEntropy[row+1][col] != self.cellEntropy[row][col])
 		
-	def setEntropyBattenburgArray(self,list):
-		for x in list: self.setEntropyBattenburg(x[0],x[1])
+	def setEntropyBattenburgArray(self,inlist):
+		for x in inlist: self.setEntropyBattenburg(x)
 		
 	def setEntropyBattenburgNegative(self):
 		if self.isEntropyBattenburgInitialized is not True:
@@ -871,147 +933,165 @@ class sudoku:
 					self.model.AddBoolOr([bit1,bit2,bit3,bit4])
 
 ####Linear constraints
-	def setArrow(self,list):
-		self.model.Add(self.cellValues[list[0][0]][list[0][1]] == sum(self.cellValues[list[j][0]][list[j][1]] for j in range(1,len(list))))
+	def setArrow(self,inlist):
+		inlist = self.__procCellList(inlist)
+		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] == sum(self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(1,len(inlist))))
 		
-	def setPointingArrow(self,list):
+	def setPointingArrow(self,inlist):
+		inlist = self.__procCellList(inlist)
 		# Pointing arrow is an arrow, but it also pointsm extending in last direction, to its total sum
-		self.model.Add(self.cellValues[list[0][0]][list[0][1]] == sum(self.cellValues[list[j][0]][list[j][1]] for j in range(1,len(list))))
+		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] == sum(self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(1,len(inlist))))
 	
-		vert = list[-1][0]-list[-2][0] # Vertical delta to compute extension direction
-		horiz = list[-1][1]-list[-2][1] # Horizontal delta to compute extension direction
+		vert = inlist[-1][0]-inlist[-2][0] # Vertical delta to compute extension direction
+		horiz = inlist[-1][1]-inlist[-2][1] # Horizontal delta to compute extension direction
 		
-		tcells = [self.cellValues[list[-1][0]+k*vert][list[-1][1]+k*horiz] for k in range(1,self.boardWidth) if list[-1][0]+k*vert in range(self.boardWidth) and list[-1][1]+k*horiz in range(self.boardWidth)]
-		tvars = [self.model.NewBoolVar('PointingArrowFinderHeadRow{:d}Col{:d}Cell{:d}'.format(list[0][0],list[0][1],i)) for i in range(len(tcells))]
+		tcells = [self.cellValues[inlist[-1][0]+k*vert][inlist[-1][1]+k*horiz] for k in range(1,self.boardWidth) if inlist[-1][0]+k*vert in range(self.boardWidth) and inlist[-1][1]+k*horiz in range(self.boardWidth)]
+		tvars = [self.model.NewBoolVar('PointingArrowFinderHeadRow{:d}Col{:d}Cell{:d}'.format(inlist[0][0],inlist[0][1],i)) for i in range(len(tcells))]
 		for j in range(len(tvars)):
-			self.model.Add(tcells[j] == self.cellValues[list[0][0]][list[0][1]]).OnlyEnforceIf(tvars[j])
-			self.model.Add(tcells[j] != self.cellValues[list[0][0]][list[0][1]]).OnlyEnforceIf(tvars[j].Not())
+			self.model.Add(tcells[j] == self.cellValues[inlist[0][0]][inlist[0][1]]).OnlyEnforceIf(tvars[j])
+			self.model.Add(tcells[j] != self.cellValues[inlist[0][0]][inlist[0][1]]).OnlyEnforceIf(tvars[j].Not())
 		self.model.AddBoolOr(tvars)
 		
-	def setThermo(self,list):
-		for j in range(len(list)-1):
-			self.model.Add(self.cellValues[list[j][0]][list[j][1]] < self.cellValues[list[j+1][0]][list[j+1][1]])
+	def setThermo(self,inlist):
+		inlist = self.__procCellList(inlist)
+		for j in range(len(inlist)-1):
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] < self.cellValues[inlist[j+1][0]][inlist[j+1][1]])
 			
-	def setKeyboardKnightLine(self,list):
-		for j in range(len(list)-1):
-			self.model.AddAllowedAssignments([self.cellValues[list[j][0]][list[j][1]],self.cellValues[list[j+1][0]][list[j+1][1]]],[(1,6),(1,8),(2,7),(2,9),(3,4),(3,8),(4,3),(4,9),(6,1),(6,7),(7,2),(7,6),(8,1),(8,3),(9,2),(9,4)])
+	def setKeyboardKnightLine(self,inlist):
+		inlist = self.__procCellList(inlist)
+		for j in range(len(inlist)-1):
+			self.model.AddAllowedAssignments([self.cellValues[inlist[j][0]][inlist[j][1]],self.cellValues[inlist[j+1][0]][inlist[j+1][1]]],[(1,6),(1,8),(2,7),(2,9),(3,4),(3,8),(4,3),(4,9),(6,1),(6,7),(7,2),(7,6),(8,1),(8,3),(9,2),(9,4)])
 			
-	def setKeyboardKingLine(self,list):
-		for j in range(len(list)-1):
-			self.model.AddAllowedAssignments([self.cellValues[list[j][0]][list[j][1]],self.cellValues[list[j+1][0]][list[j+1][1]]],[(1,2),(1,4),(1,5),(2,1),(2,4),(2,5),(2,6),(2,3),(3,2),(3,5),(3,6),(4,1),(4,2),(4,5),(4,8),(4,7),(5,1),(5,2),(5,3),(5,4),(5,6),(5,7),(5,8),(5,9),(6,3),(6,2),(6,5),(6,8),(6,9),(7,4),(7,5),(7,8),(8,7),(8,4),(8,5),(8,6),(8,9),(9,8),(9,5),(9,6)])
+	def setKeyboardKingLine(self,inlist):
+		inlist = self.__procCellList(inlist)
+		for j in range(len(inlist)-1):
+			self.model.AddAllowedAssignments([self.cellValues[inlist[j][0]][inlist[j][1]],self.cellValues[inlist[j+1][0]][inlist[j+1][1]]],[(1,2),(1,4),(1,5),(2,1),(2,4),(2,5),(2,6),(2,3),(3,2),(3,5),(3,6),(4,1),(4,2),(4,5),(4,8),(4,7),(5,1),(5,2),(5,3),(5,4),(5,6),(5,7),(5,8),(5,9),(6,3),(6,2),(6,5),(6,8),(6,9),(7,4),(7,5),(7,8),(8,7),(8,4),(8,5),(8,6),(8,9),(9,8),(9,5),(9,6)])
 			
-	def setPalindromeLine(self,list):
-		for j in range(len(list) // 2):
-			self.model.Add(self.cellValues[list[j][0]][list[j][1]] == self.cellValues[list[-j-1][0]][list[-j-1][1]])
+	def setPalindromeLine(self,inlist):
+		inlist = self.__procCellList(inlist)
+		for j in range(len(inlist) // 2):
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] == self.cellValues[inlist[-j-1][0]][inlist[-j-1][1]])
 			
-	def setWeakPalindromeLine(self,list):
-		for j in range(len(list) // 2):
-			self.model.AddAllowedAssignments([self.cellValues[list[j][0]][list[j][1]],self.cellValues[list[-j-1][0]][list[-j-1][1]]],[(1,1),(1,3),(3,1),(3,3),(2,2),(2,4),(4,2),(4,4),(5,5),(5,7),(5,9),(7,5),(7,7),(7,9),(6,6),(6,8),(8,6),(8,8)])
+	def setWeakPalindromeLine(self,inlist):
+		inlist = self.__procCellList(inlist)
+		for j in range(len(inlist) // 2):
+			self.model.AddAllowedAssignments([self.cellValues[inlist[j][0]][inlist[j][1]],self.cellValues[inlist[-j-1][0]][inlist[-j-1][1]]],[(1,1),(1,3),(3,1),(3,3),(2,2),(2,4),(4,2),(4,4),(5,5),(5,7),(5,9),(7,5),(7,7),(7,9),(6,6),(6,8),(8,6),(8,8)])
 	
-	def setParityLine(self,list):
-		for j in range(len(list)-1):
-			diff = self.model.NewIntVar(-8,8,'ParityLineRow{:d}Col{:d}toRow{:d}Col{:d}'.format(list[j][0],list[j][1],list[j+1][0],list[j+1][1]))
-			self.model.Add(diff == self.cellValues[list[j][0]][list[j][1]] - self.cellValues[list[j+1][0]][list[j+1][1]])
+	def setParityLine(self,inlist):
+		inlist = self.__procCellList(inlist)
+		for j in range(len(inlist)-1):
+			diff = self.model.NewIntVar(-8,8,'ParityLineRow{:d}Col{:d}toRow{:d}Col{:d}'.format(inlist[j][0],inlist[j][1],inlist[j+1][0],inlist[j+1][1]))
+			self.model.Add(diff == self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]])
 			self.model.AddModuloEquality(1,diff,2)
 			
-	def setRenbanLine(self,list):
-		self.model.AddAllDifferent([self.cellValues[list[j][0]][list[j][1]] for j in range(len(list))])
-		for x in range(len(list)):
-			for y in range(len(list)):
-				self.model.Add(self.cellValues[list[x][0]][list[x][1]]-self.cellValues[list[y][0]][list[y][1]] < len(list))
+	def setRenbanLine(self,inlist):
+		inlist = self.__procCellList(inlist)
+		self.model.AddAllDifferent([self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(len(inlist))])
+		for x in range(len(inlist)):
+			for y in range(len(inlist)):
+				self.model.Add(self.cellValues[inlist[x][0]][inlist[x][1]]-self.cellValues[inlist[y][0]][inlist[y][1]] < len(inlist))
 				
-	def setGermanWhisperLine(self,list):
-		for j in range(len(list)-1):
-			bit = self.model.NewBoolVar('GermanWhisperBiggerRow{:d}Col{:d}'.format(list[j][0],list[j][1]))
-			self.model.Add(self.cellValues[list[j][0]][list[j][1]] - self.cellValues[list[j+1][0]][list[j+1][1]] >= 5).OnlyEnforceIf(bit)
-			self.model.Add(self.cellValues[list[j][0]][list[j][1]] - self.cellValues[list[j+1][0]][list[j+1][1]] <= -5).OnlyEnforceIf(bit.Not())
+	def setGermanWhispersLine(self,inlist):
+		inlist = self.__procCellList(inlist)
+		for j in range(len(inlist)-1):
+			bit = self.model.NewBoolVar('GermanWhisperBiggerRow{:d}Col{:d}'.format(inlist[j][0],inlist[j][1]))
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] >= 5).OnlyEnforceIf(bit)
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] <= -5).OnlyEnforceIf(bit.Not())
 			
-	def setDutchWhisperLine(self,list):
-		for j in range(len(list)-1):
-			bit = self.model.NewBoolVar('GermanWhisperBiggerRow{:d}Col{:d}'.format(list[j][0],list[j][1]))
-			self.model.Add(self.cellValues[list[j][0]][list[j][1]] - self.cellValues[list[j+1][0]][list[j+1][1]] >= 4).OnlyEnforceIf(bit)
-			self.model.Add(self.cellValues[list[j][0]][list[j][1]] - self.cellValues[list[j+1][0]][list[j+1][1]] <= -4).OnlyEnforceIf(bit.Not())
+	def setDutchWhispersLine(self,inlist):
+		inlist = self.__procCellList(inlist)
+		for j in range(len(inlist)-1):
+			bit = self.model.NewBoolVar('DutchWhisperBiggerRow{:d}Col{:d}'.format(inlist[j][0],inlist[j][1]))
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] >= 4).OnlyEnforceIf(bit)
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] <= -4).OnlyEnforceIf(bit.Not())
 			
-	def setChineseWhisperLine(self,list):
-		for j in range(len(list)-1):
-			self.model.Add(self.cellValues[list[j][0]][list[j][1]] - self.cellValues[list[j+1][0]][list[j+1][1]] <= 2)
-			self.model.Add(self.cellValues[list[j][0]][list[j][1]] - self.cellValues[list[j+1][0]][list[j+1][1]] >= -2)
+	def setChineseWhispersLine(self,inlist):
+		inlist = self.__procCellList(inlist)
+		for j in range(len(inlist)-1):
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] <= 2)
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] >= -2)
 			
-	def setEntropicLine(self,list):
+	def setEntropicLine(self,inlist):
+		inlist = self.__procCellList(inlist)
 		if self.isEntropy is False:
 			self.__setEntropy()
 		
-		if len(list) == 2:
-			self.model.Add(self.cellEntropy[list[0][0]][list[0][1]] != self.cellEntropy[list[1][0]][list[1][1]])
+		if len(inlist) == 2:
+			self.model.Add(self.cellEntropy[inlist[0][0]][inlist[0][1]] != self.cellEntropy[inlist[1][0]][inlist[1][1]])
 		else:
-			for j in range(len(list)-2):
-				self.model.AddAllDifferent([self.cellEntropy[list[j][0]][list[j][1]],self.cellEntropy[list[j+1][0]][list[j+1][1]],self.cellEntropy[list[j+2][0]][list[j+2][1]]])
+			for j in range(len(inlist)-2):
+				self.model.AddAllDifferent([self.cellEntropy[inlist[j][0]][inlist[j][1]],self.cellEntropy[inlist[j+1][0]][inlist[j+1][1]],self.cellEntropy[inlist[j+2][0]][inlist[j+2][1]]])
 
-	def setModularLine(self,list):
+	def setModularLine(self,inlist):
+		inlist = self.__procCellList(inlist)
 		if self.isModular is False:
 			self.__setModular()
 		
-		if len(list) == 2:
-			self.model.Add(self.cellModular[list[0][0]][list[0][1]] != self.cellModular[list[1][0]][list[1][1]])
+		if len(inlist) == 2:
+			self.model.Add(self.cellModular[inlist[0][0]][inlist[0][1]] != self.cellModular[inlist[1][0]][inlist[1][1]])
 		else:
-			for j in range(len(list)-2):
-				self.model.AddAllDifferent([self.cellModular[list[j][0]][list[j][1]],self.cellModular[list[j+1][0]][list[j+1][1]],self.cellModular[list[j+2][0]][list[j+2][1]]])
+			for j in range(len(inlist)-2):
+				self.model.AddAllDifferent([self.cellModular[inlist[j][0]][inlist[j][1]],self.cellModular[inlist[j+1][0]][inlist[j+1][1]],self.cellModular[inlist[j+2][0]][inlist[j+2][1]]])
 				
-	def setBetweenLine(self,list):
-		c = self.model.NewBoolVar('BetweenRow{:d}Col{:d}ToRow{:d}Col{:d}'.format(list[0][0],list[0][1],list[-1][0],list[-1][1]))
+	def setBetweenLine(self,inlist):
+		inlist = self.__procCellList(inlist)
+		c = self.model.NewBoolVar('BetweenRow{:d}Col{:d}ToRow{:d}Col{:d}'.format(inlist[0][0],inlist[0][1],inlist[-1][0],inlist[-1][1]))
 		
 		# Case c true: first element of line is largest
-		self.model.Add(self.cellValues[list[0][0]][list[0][1]] > self.cellValues[list[-1][0]][list[-1][1]]).OnlyEnforceIf(c)
-		for j in range(1,len(list)-1):
-			self.model.Add(self.cellValues[list[0][0]][list[0][1]] > self.cellValues[list[j][0]][list[j][1]]).OnlyEnforceIf(c)
-			self.model.Add(self.cellValues[list[j][0]][list[j][1]] > self.cellValues[list[-1][0]][list[-1][1]]).OnlyEnforceIf(c)
+		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] > self.cellValues[inlist[-1][0]][inlist[-1][1]]).OnlyEnforceIf(c)
+		for j in range(1,len(inlist)-1):
+			self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] > self.cellValues[inlist[j][0]][inlist[j][1]]).OnlyEnforceIf(c)
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] > self.cellValues[inlist[-1][0]][inlist[-1][1]]).OnlyEnforceIf(c)
 			
 		# Case c false: last element of line is largest
-		self.model.Add(self.cellValues[list[0][0]][list[0][1]] < self.cellValues[list[-1][0]][list[-1][1]]).OnlyEnforceIf(c.Not())
-		for j in range(1,len(list)-1):
-			self.model.Add(self.cellValues[list[0][0]][list[0][1]] < self.cellValues[list[j][0]][list[j][1]]).OnlyEnforceIf(c.Not())
-			self.model.Add(self.cellValues[list[j][0]][list[j][1]] < self.cellValues[list[-1][0]][list[-1][1]]).OnlyEnforceIf(c.Not())
+		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] < self.cellValues[inlist[-1][0]][inlist[-1][1]]).OnlyEnforceIf(c.Not())
+		for j in range(1,len(inlist)-1):
+			self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] < self.cellValues[inlist[j][0]][inlist[j][1]]).OnlyEnforceIf(c.Not())
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] < self.cellValues[inlist[-1][0]][inlist[-1][1]]).OnlyEnforceIf(c.Not())
 			
-	def setLockoutLine(self,list):
-		c = self.model.NewBoolVar('LockoutRow{:d}Col{:d}ToRow{:d}Col{:d}'.format(list[0][0],list[0][1],list[-1][0],list[-1][1]))
-		self.model.Add(self.cellValues[list[0][0]][list[0][1]] - self.cellValues[list[-1][0]][list[-1][1]] >= 4).OnlyEnforceIf(c)
-		self.model.Add(self.cellValues[list[-1][0]][list[-1][1]] - self.cellValues[list[0][0]][list[0][1]] >= 4).OnlyEnforceIf(c.Not())
+	def setLockoutLine(self,inlist):
+		inlist = self.__procCellList(inlist)
+		c = self.model.NewBoolVar('LockoutRow{:d}Col{:d}ToRow{:d}Col{:d}'.format(inlist[0][0],inlist[0][1],inlist[-1][0],inlist[-1][1]))
+		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] - self.cellValues[inlist[-1][0]][inlist[-1][1]] >= 4).OnlyEnforceIf(c)
+		self.model.Add(self.cellValues[inlist[-1][0]][inlist[-1][1]] - self.cellValues[inlist[0][0]][inlist[0][1]] >= 4).OnlyEnforceIf(c.Not())
 		
-		for j in range(1,len(list)-1):
+		for j in range(1,len(inlist)-1):
 			# c picks whether cell is greater than both endpoints, or less
-			c = self.model.NewBoolVar('LockoutMidRow{:d}Col{:d}FromRow{:d}Col{:d}ToRow{:d}Col{:d}'.format(list[j][0],list[j][1],list[0][0],list[0][1],list[-1][0],list[-1][1]))
-			self.model.Add(self.cellValues[list[0][0]][list[0][1]] > self.cellValues[list[j][0]][list[j][1]]).OnlyEnforceIf(c)
-			self.model.Add(self.cellValues[list[-1][0]][list[-1][1]] > self.cellValues[list[j][0]][list[j][1]]).OnlyEnforceIf(c)
-			self.model.Add(self.cellValues[list[0][0]][list[0][1]] < self.cellValues[list[j][0]][list[j][1]]).OnlyEnforceIf(c.Not())
-			self.model.Add(self.cellValues[list[-1][0]][list[-1][1]] < self.cellValues[list[j][0]][list[j][1]]).OnlyEnforceIf(c.Not())
+			c = self.model.NewBoolVar('LockoutMidRow{:d}Col{:d}FromRow{:d}Col{:d}ToRow{:d}Col{:d}'.format(inlist[j][0],inlist[j][1],inlist[0][0],inlist[0][1],inlist[-1][0],inlist[-1][1]))
+			self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] > self.cellValues[inlist[j][0]][inlist[j][1]]).OnlyEnforceIf(c)
+			self.model.Add(self.cellValues[inlist[-1][0]][inlist[-1][1]] > self.cellValues[inlist[j][0]][inlist[j][1]]).OnlyEnforceIf(c)
+			self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] < self.cellValues[inlist[j][0]][inlist[j][1]]).OnlyEnforceIf(c.Not())
+			self.model.Add(self.cellValues[inlist[-1][0]][inlist[-1][1]] < self.cellValues[inlist[j][0]][inlist[j][1]]).OnlyEnforceIf(c.Not())
 			
-	def setRegionSumLine(self,list):
+	def setRegionSumLine(self,inlist):
+		inlist = self.__procCellList(inlist)
 		sumSets = []
 		for r in self.regions:
-			tempSum = [x for x in list if x in r]
+			tempSum = [x for x in inlist if x in r]
 			if len(tempSum) != 0: sumSets.append(tempSum)
 		
 		baseSum = sum(self.cellValues[x[0]][x[1]] for x in sumSets[0])
 		for i in range(1,len(sumSets)):
 			self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in sumSets[i]) == baseSum)
 			
-	def setRegionSegmentSumLine(self,list):
+	def setRegionSegmentSumLine(self,inlist):
+		inlist = self.__procCellList(inlist)
 		# This is used for variants where the sums for each segment of the line have the same sum
 		# in each region. If a line enters a region twice, each segment must have the same sum as all
 		# other segments...the visits do not aggregate
 		sumSets = []
 		currentRegionStart = 0
 		for i in range(len(self.regions)):
-			if list[0] in self.regions[i]: currentRegion = i
-		for j in range(1,len(list)):
+			if inlist[0] in self.regions[i]: currentRegion = i
+		for j in range(1,len(inlist)):
 			for i in range(len(self.regions)):
-				if list[j] in self.regions[i]: thisRegion = i
+				if inlist[j] in self.regions[i]: thisRegion = i
 			if thisRegion != currentRegion:
-				sumSets.append(list[currentRegionStart:j])
+				sumSets.append(inlist[currentRegionStart:j])
 				currentRegionStart = j
 				currentRegion = thisRegion
 		# Need to do it again since the last segment is left in the queue.	
-		sumSets.append(list[currentRegionStart:])
+		sumSets.append(inlist[currentRegionStart:])
 
 		baseSum = sum(self.cellValues[x[0]][x[1]] for x in sumSets[0])
 		for i in range(1,len(sumSets)):
@@ -1096,3 +1176,18 @@ class sudoku:
 			var[j].append(bits[-1])
 			
 		return var
+		
+	def __procCell(self,cell,n=2):
+		# Utility function that processes an individual cell into a tuple format if needed
+		# Pads with leading zeros up to length n
+		if type(cell) is tuple:
+			return cell
+		elif type(cell) is str:
+			return tuple(map(int,list(cell.zfill(n))))
+		elif type(cell) is int:
+			return tuple(map(int,list(str(cell).zfill(n))))
+			
+	def __procCellList(self,inlist,n=2):
+		# Utility function to process a list from one of several input formats into the tuple format
+		# required by our functions
+		return list(map(lambda x: self.__procCell(x,n),inlist))
