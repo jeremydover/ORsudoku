@@ -1,0 +1,521 @@
+Supported Constraint List
+=========================
+159 (see Indexing)
+Anti-King
+Anti-Knight
+Arrows
+Battenburg
+Between Lines
+Chinese Whispers Lines
+Clone Regions
+Disjoint Groups
+Dutch Whispers Lines
+Entropic Lines
+Entropki Dots (same/different entropy classes)
+Entropy (see Global Entropy)
+Entropy Battenburg (on a 2x2, no pair of same entropic cells are adjacent)
+Entropy Quads (partial Entropy, asserts Entropy on an individual 2x2)
+Even-Odd
+Fortress
+German Whispers Lines
+Given Digits
+Global Entropy
+Global Whispers (Dutch, et. al.)
+Indexing
+Keyboard King Lines
+Keyboard Knight Lines
+Killer Cages (repeating and non-repeating)
+Kropki (see Kropki Pairs)
+Kropki Pairs
+Little Killer
+Lockout Lines
+Min-Max
+Modular Lines
+Non-Consecutive
+Numbered Room
+Palindrome Lines
+Parity Lines (alternating parity along line)
+Pointing Arrows (arrow points to another instance of the sum)
+Quadruple
+Quad Sums (one digit on a quad is the sum of the three others)
+Region Sum Lines (sum of all cells along a line in a region is fixed)
+Region Segment Sum Lines - see Region Sum Lines
+Renban Lines
+Sandwich Sums
+Sum Dots (see Killer Cages)
+Thermometers
+Weak Palindrome Lines
+Windoku
+X-Kropki
+XSudoku
+X-Sum
+XV (see XV Pairs)
+XV Pairs
+XVXV
+
+Some Notes on Data Structures
+-----------------------------
+All cells are indexed as tuples, e.g. (4,6), per the following array:
+
+----------------------------
+|00|01|02|03|04|05|06|07|08|
+----------------------------
+|10|11|12|13|14|15|16|17|18|
+----------------------------
+|20|21|22|23|24|25|26|27|28|
+----------------------------
+|30|31|32|33|34|35|36|37|38|
+----------------------------
+|40|41|42|43|44|45|46|47|48|
+----------------------------
+|50|51|52|53|54|55|56|57|58|
+----------------------------
+|60|61|62|63|64|65|66|67|68|
+----------------------------
+|70|71|72|73|74|75|76|77|78|
+----------------------------
+|80|81|82|83|84|85|86|87|88|
+----------------------------
+
+When a constraint requires a cell or list of cells, they can be input in one of three ways:
+1. Explicitly as a tuple, e.g., (5,6)
+2. As a string, e.g., '05'
+3. As an integer, e.g., 16. Cells in the first row are referred to by single digits.
+
+Note: The non-tuple cell inputs WILL break on boards larger than 9x9. However, since 9x9 is by far the most popular use case, these shortcuts are worth having.
+
+Qudruples are indexed similarly, from 00 to 77:
+
+-------------------------------------
+|   |   |   |   |   |   |   |   |   |
+|   |   |   |   |   |   |   |   |   |
+---0,0-0,1-0,2-0,3-0,4-0,5-0,6-0,7---
+|   |   |   |   |   |   |   |   |   |
+|   |   |   |   |   |   |   |   |   |
+---1,0-1,1-1,2-1,3-1,4-1,5-1,6-1,7---
+|   |   |   |   |   |   |   |   |   |
+|   |   |   |   |   |   |   |   |   |
+---2,0-2,1-2,2-2,3-2,4-2,5-2,6-2,7---
+|   |   |   |   |   |   |   |   |   |
+|   |   |   |   |   |   |   |   |   |
+---3,0-3,1-3,2-3,3-3,4-3,5-3,6-3,7---
+|   |   |   |   |   |   |   |   |   |
+|   |   |   |   |   |   |   |   |   |
+---4,0-4,1-4,2-4,3-4,4-4,5-4,6-4,7---
+|   |   |   |   |   |   |   |   |   |
+|   |   |   |   |   |   |   |   |   |
+---5,0-5,1-5,2-5,3-5,4-5,5-5,6-5,7---
+|   |   |   |   |   |   |   |   |   |
+|   |   |   |   |   |   |   |   |   |
+---6,0-6,1-6,2-6,3-6,4-6,5-6,6-6,7---
+|   |   |   |   |   |   |   |   |   |
+|   |   |   |   |   |   |   |   |   |
+---7,0-7,1-7,2-7,3-7,4-7,5-7,6-7,7---
+|   |   |   |   |   |   |   |   |   |
+|   |   |   |   |   |   |   |   |   |
+-------------------------------------
+
+Edge constraints are indexed by the top- or left-most cell in the pair of adjacent cells. An additional parameter hv is provided to determine whether the pair is horizontal or vertical. The class variables Horz and Vert can be used for this designation. 
+
+Anti-King
+---------
+setAntiKing(): applies the anti-king constraint to the whole puzzle
+
+  
+Anti-Knight
+-----------
+setAntiKnight(): applies the anti-knight constraint to the whole puzzle
+  
+Arrows
+------
+setArrow(inlist): creates an arrow constraint
+  inlist: a list of cells along arrow, where the first element of list is the circle
+  
+Battenburg
+----------
+setBattenburg(cell) OR
+setBattenburg(row,col): creates a Battenburg constraint (no cells on the quad with the same parity share an edge)
+  cell: a single cell specification, e.g., 13,'05',(4,7)
+  row,col: cell specified as two arguments
+  
+setBattenburgArray(list): creates multiple Battenburg constraints
+  list: a list of cell specifications
+  
+setBattenburgNegative(): specify that all cells not specifically designated with Battenburgs do NOT satisfy the Battenburg constraint
+
+Between Lines
+-------------
+setBetweenLine(list): creates a between line constraint
+  list: a list of cell specifications
+  
+Chinese Whispers Lines
+----------------------
+setChineseWhispersLine(list): creates a Chinese whispers line constraint
+  list: a list of cell specifications
+  
+Clone Regions
+-------------
+setCloneRegion(list): creates a set of regions that are clones of each other, i.e., the same digit appears in the ith position for each i
+  list: a list OF LISTS of cell specifications
+  
+Disjoint Groups
+---------------
+setDisjointGroups(): sets the global disjoint groups constraint
+
+Dutch Whispers Lines
+--------------------
+setDutchWhispersLine(list): creates a Dutch whispers line constraint
+  list: a list of cell specifications
+  
+Entropic Lines
+--------------
+setEntropicLine(list): creates an entropic line constraint
+  list: a list of cell specifications
+  
+Entropki Dots
+-------------
+Entropki dots are placed like Kropki dots, but white dots indicate the adjacent cells are of different entropic ranks, while black dots indicate the adjacent cells are of the same entropic rank.
+
+setEntropkiWhite(cellHV) OR
+setEntropkiWhite(row,col,hv): creates a white Entropki dot
+  cellHV: an extended cell specification which adds the hv parameter: dot is on the right side if H, or on the bottom if V. All parameters can  be given positionally, or in a tuple, and these can use the Horz and Vert variables for the HV specification. Shorthand is possible, appending 0 to a cell spec to indicate horizontal and 1 to indicate vertical.
+  Example: 51, '051' and (0,5,p.Vert) all specify a dot on the bottom edge of cell 0,5
+  
+setEntropkiBlack(cellHV) OR
+setEntropkiBlack(row,col,hv): creates a black Entropki dot
+  cellHV: an extended cell specification which adds the hv parameter: dot is on the right side if H, or on the bottom if V. All parameters can  be given positionally, or in a tuple, but shorthand is possible, appending 0 to a cell spec to indicate horizontal and 1 to indicate vertical.
+  Example: 51, '051' and (0,5,p.Vert) all specify a dot on the bottom edge of cell 0,5
+  
+setEntropkiWhiteArray(list): creates multiple white Entropki dots
+  list: list of cellHV specifications, see setEntropkiWhite
+
+setEntropkiBlackArray(list): creates multiple black Entropki dots
+  list: list of cellHV specifications, see setEntropkiBlack
+  
+setEntropkiArray(list): creates multiple Entropki dots
+  list: list of cellHVWB specifications, which include a cell spec, the HV spec as given in setEntropkiWhite, and a WB spec, specifying the color of the dot. When given as a tuple, the White and Black variables can be used to specify W/B. Shorthand is possible, with white being 0 and black 1.
+  Example: 1701 incidates a black dot (1 WB spec is fourth) on the right edge (0 HV spec is third) of cell 1,7 (17 cell spec is first). This can also be written as the tuple (1,7,p.Horz,p.Black)
+  
+Entropy Battenburg
+------------------
+setEntropyBattenburg(cell) OR
+setEntropyBattenburg(row,col): creates an entropy Battenburg constraint (no cells on the quad of the same entropic rank share an edge)
+  cell: a single cell specification, e.g., 13,'05',(4,7)
+  row,col: cell specified as two arguments
+  
+setEntropyBattenburgArray(list): creates multiple entropy Battenburg constraints
+  list: a list of cell specifications
+  
+setEntropyBattenburgNegative(): specify that all cells not specifically designated with entropy Battenburgs do NOT satisfy the entropy Battenburg constraint
+
+Entropy Quads
+-------------
+setEntropyQuad(cell) OR
+setEntropyQuad(row,col): creates an entropy constraint (all three entropic ranks must appear in the quad) for an individual quad
+  cell: a single cell specification, e.g., 13,'05',(4,7)
+  row,col: cell specified as two arguments
+  
+setEntropyQuadArray(list): creates multiple entropy quad constraints
+  list: a list of cell specifications
+  
+setEntropyQuadNegative(): specify that all cells not specifically designated with entropy quads do NOT satisfy the entropy quad constraint, i.e., some entropic rank will be missing around each quad which is not an entropy quad
+
+Even-Odd
+--------
+setEven(cell) OR
+setEven(row,col): asserts the cell value is even
+  cell: single cell specification
+  row,col: cell specified as two arguments
+
+setOdd(cell) OR
+setOdd(row,col): asserts the cell value is odd
+  cell: single cell specification
+  row,col: cell specified as two arguments
+  
+setEvenOdd(cellEO): asserts the parity of a cell
+  cellEO: a cell specificaiton augmented with an even odd specification. Tuple specification may use the Even and Odd variables, e.g. (5,8,p.Odd). Shorthand is possible, using 0 for even and 1 for odd. Thus 581 is an alternative specification for the same assertion.
+  
+setEvenArray(list): create multiple even constraints
+  list: list of cell specifications
+  
+setOddArray(list): create multiple odd constraints
+  list: list of cell specifications
+  
+setEvenOddArray(list): create multipl parity constraints
+  list: list of cellEO specifications; see setEvenOdd
+  
+Fortress
+--------
+setFortress(list): creates a Fortress constraint on a group of cells
+  list: list of cell specifications
+  
+German Whispers Lines
+---------------------
+setGermanWhispersLine(list): creates a German whispers line constraint
+  list: a list of cell specifications
+  
+Given Digits
+------------
+setGiven(cellVal) OR
+setGiven(row,col,value): set the value in a particular cell
+  cellVal: an extended cell specification that includes the value to be set. Shorthand is possible.
+    Example: 289, '289' and (2,8,9) all designate a 9 given in row 2, column 8
+	
+setGivenArray(list): set multiple given digits
+  list: a list of cellVal specifications; see setGiven
+  
+Global Entropy
+--------------
+setGlobalEntropy(): assert the Entropy condition on all quads. Effectively the same as setting entropy quads on all quads; see set EntropyQuad
+
+Global Whispers
+---------------
+setGlobalWhispers(n=4): assert the global whispers constraint: every cell has at least one neighbor with which it has a difference of at least n. The default for n is 4
+
+Indexing (159)
+--------------
+setIndexRow(row,neg=False,inlist=[]): set an index row, namely one which indicates the position of the digit corresponding to the row within some subset of columns
+  row: the row (0-8) used as an index. Note: row 0 provides positions of 1s, row 1 of 2s, etc. By default, all column positions index
+  neg (optional): if a column position is indicated as not indexing, then position indicate specifically does NOT indicate the position of the digit. Default is False.
+  inlist (optional): a list of which column positions (0-8) are indexing, with columns not in the list NOT indexing
+  Example: If we call setIndexRow(4,True,[0,1,2,3,4,5,6,7]), then in all but the rightmost column, the entry in row 4, column X indicates which row contains a 5 in that column. So if 4,0 is a 2, then 1,0 must be 5. In the rightmost column, the 5 CANNOT appear in the row indicated by the entry in row 4. Specifically if 4,8 is a 3, then the entry in 2,8 CANNOT be a 5. This is where our using 0-base for rows and columns is most confusing.
+
+setIndexColumn(row,neg=False,inlist=[]): set an index column. See setIndexRow for details of the mechanics
+  Example: The traditional 159 ruleset is implemented with the calls:
+  setIndexColumn(0)
+  setIndexcolumn(4)
+  setIndexColumn(8)
+  
+Keyboard King Lines
+-------------------
+setKeyboardKingLine(list): creates a keyboard king line constraint (adjacent digits must be a king's move apart on a telephone keypad). Designed by Zegres
+  list: a list of cell specifications
+  
+Keyboard Knight Lines
+---------------------
+setKeyboardKnightLine(list): creates a keyboard knight line constraint (adjacent digits must be a knight's move apart on a telephone keypad). Designed by Zegres.
+  list: a list of cell specifications
+  
+Killer Cages
+------------
+setCage(list,value): creates a killer cage with all cell values distinct
+  list: list of cell specifications indicating the cells in a killer cage
+  value (optional): if given, indicates the sum of the digits in the cage
+  Note: sum dots can be implemented computationally with a killer cage, since this method does not require any particular relationship amongst the cells.
+  
+setRepeatingCage(list,value): creates a killer cage where values may repeat
+  list: list of cell specifications indicating the cells in a killer cage
+  value: indicates the sum of the digits in the cage
+  
+Kropki and Kropki Pairs
+-----------------------
+setKropkiWhite(cellHV) OR
+setKropkiWhite(row,col,hv): creates a white Kropki dot
+  cellHV: an extended cell specification which adds the hv parameter: dot is on the right side if H, or on the bottom if V. All parameters can  be given positionally, or in a tuple, and these can use the Horz and Vert variables for the HV specification. Shorthand is possible, appending 0 to a cell spec to indicate horizontal and 1 to indicate vertical.
+  Example: 51, '051' and (0,5,p.Vert) all specify a dot on the bottom edge of cell 0,5
+  
+setKropkiBlack(cellHV) OR
+setKropkiBlack(row,col,hv): creates a black Kropki dot
+  cellHV: an extended cell specification which adds the hv parameter: dot is on the right side if H, or on the bottom if V. All parameters can  be given positionally, or in a tuple, but shorthand is possible, appending 0 to a cell spec to indicate horizontal and 1 to indicate vertical.
+  Example: 51, '051' and (0,5,p.Vert) all specify a dot on the bottom edge of cell 0,5
+  
+setKropkiWhiteArray(list): creates multiple white Kropki dots
+  list: list of cellHV specifications, see setKropkiWhite
+
+setKropkiBlackArray(list): creates multiple black Kropki dots
+  list: list of cellHV specifications, see setKropkiBlack
+  
+setKropkiArray(list): creates multiple Entropki dots
+  list: list of cellHVWB specifications, which include a cell spec, the HV spec as given in setKropkiWhite, and a WB spec, specifying the color of the dot. When given as a tuple, the White and Black variables can be used to specify W/B. Shorthand is possible, with white being 0 and black 1.
+  Example: 1701 incidates a black dot (1 WB spec is fourth) on the right edge (0 HV spec is third) of cell 1,7 (17 cell spec is first). This can also be written as the tuple (1,7,p.Horz,p.Black)
+  
+setKropkiNegative(): implements true Kropki rules with a negative constraint
+
+Little Killers
+--------------
+setLittleKiller(row1,col1,row2,col2,value): sets a little killer diagonal constraint
+  row1,col1: the cell spec of the first cell in the little killer diagonal, next to the clue
+  row2,col2: the cell spec for the second cell in the diagonal (this seemed easier than some arbitary spec to define diagonals)
+  
+Lockout Lines
+-------------
+setlockoutLine(list): creates a lockout line constraint
+  list: a list of cell specifications
+  
+Min-Max
+-------
+setMinCell(cell) OR
+setMinCell(row,col): assert a cell is smaller than all orthogonally adjacent cells
+  cell: single cell specification
+  row,col: cell specified as two arguments
+  
+setMaxCell(cell) OR
+setMaxCell(row,col): assert a cell is larger than all orthogonally adjacent cells
+  cell: single cell specification
+  row,col: cell specified as two arguments
+  
+setMinArray(list): set multiple minimum cells
+  list: list of cell specifications
+  
+setMaxArray(list): set multiple maximum cells
+  list: list of cell specifications
+  
+setMinMaxCell(cellMM) OR
+setMinMaxCell(row,col,minmax): set a minimum or maximum constraint
+  cellMM: an extended cell specification which adds the minmax parameter. All parameters can be given positionally, or in a tuple, and these can use the Min and Max variables for the minmax specification. Shorthand is possible, appending 0 to a cell spec to indicate a minimum and 1 to indicate a maximum.
+  
+setMinMaxCellArray(list): set multiple min/max constraints
+  list: list of cellMM specifications; see setMinMaxCell
+  
+Modular Lines
+-------------
+setModularLine(list): creates a modular line constraint
+  list: a list of cell specifications
+  
+Non-Consecutive
+---------------
+setNonConsecutive(): sets the global non-consecutive cells constraint
+
+Numbered Rooms
+--------------
+setNumberedRoom(row,col,rc,value): sets a numbered room constraint
+  row,col: The coordinates of the cell containing the indexing clue, i.e. the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  value: The value (1-9) to be placed based on the indexing cell
+  
+Palindrome Lines
+----------------
+setPalindromeLine(list): creates a palindrome line constraint
+  list: a list of cell specifications
+  
+Parity Lines
+------------
+setParityLine(list): creates a parity line constraint (parity must alternate along the line)
+  list: a list of cell specifications
+  
+Pointing Arrows
+---------------
+setPointingArrow(list): creates a pointing arrow, which is both a regular arrow, and whose pointy end points at another copy of the sum
+  list: a list of cells along arrow, where the first element of list is the circle
+  
+Quadruple
+---------
+setQuadruple(cellVals) OR
+setQuadruple(row,col,values): create a quadruple constraint on a 2x2 region
+  cellVals: an extended cell specification which adds a list of values appearing in the quad to the cell specification. Shorthand is possible, but you must be careful: since the list of values has indeterminate length, you cannot use the integer shorthand for quads in the tope row. So for example, to set a quad with values 1,1,3,7 on the quad in position 0,5, you must use either notation '051137' or (0,5,1,1,3,7). For other quads, integer notation will work as expected, i.e. 67235 will indicate the quad at 6,7 contains values 2, 3, and 5.
+  
+setQuadrupleArray(list): set multiple quadruples
+  list: list of cellVal specifications; see setQuadruple
+  
+Quad Sums
+---------
+setQuadSum(cell) OR
+setQuadSum(row,col): assert that one of the digits in a quad is the sum of the other 3
+  cell: single cell specification
+  row,col: cell specified as two arguments
+  
+setQuadSumArray(list): set multiple quad sum constraints
+  list: list of cell specifications
+  
+Region Sum Lines
+----------------
+setRegionSumLine(list): asserts that the sum of all cells on the line in each region is fixed across regions, regardless of contiguity along the line
+  list: list of cell specifications
+  
+setRegionSegmentSumLine(list): asserts that the sum of cells on line in each visit to a region is fixed, with discontiguous segments in a region counted as different visits
+  list: list of cell specifications
+  
+Renban Lines
+------------
+setRenbanLine(list): set a Renban line constraint
+  list: list of cell specifications
+
+Sandwich Sums
+-------------
+set SandwichSum(row,col,rc,value): sets a sandwich sum constraint
+  row,col: The coordinates of the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  value: The sum of the values between the 1 and 9 in the clued row/column
+  
+Thermometers
+------------
+setThermo(list): asserts that the values in cells increase from the beginning of the line to the end
+  list: list of cell specifications, with bulb end of thermo being the first element
+  
+Weak Palindrome Lines
+---------------------
+setWeakPalindromeLine(list): creates a weak palindrome line constraint: instead of matching digits, palindromic positions must match on parity and magnitude (1-4 vs. 5-9)
+  list: a list of cell specifications
+  
+Windoku
+-------
+setWindoku(): assert Windoku rules
+
+X-Kropki
+--------
+setXKropki(row,col,rc,wb,neg): The first cell next to the Kropki dot (outside the grid) indicates the position (0-7) of the corresponding Kropki dot in the row/column. Designed by Zegres.
+  row,col: coordinates of the cell next to the clue
+  rc: indicates whether rule applies to row or column. Use Row and Col class variables
+  wb: indicates whether Kropki clue is white or black. Use White and Black class variables
+  neg (optional, default False): If true, indicates that there are no other Kropki relationships of the same color in the row/column
+  
+XSudoku
+-------
+setXSudokuMain(): assert no repeats on the main (top left to bottom right) diagonal
+
+setXSudokuOff(): assert no repeats on the off (top right to bottom left) diagonal
+
+X-Sum
+-----
+setXSum(row,col,rc,value): set an X sum constraint on a row or column
+  row,col: The coordinates of the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  value: The sum of the first X cells in the row/column from the clue, where X is the value in the adjacent cell
+  
+XV/XV Pairs
+-----------
+setXVV(cellHV) OR
+setXVV(row,col,hv): creates a V clue
+  cellHV: an extended cell specification which adds the hv parameter: clue is on the right side if H, or on the bottom if V. All parameters can  be given positionally, or in a tuple, and these can use the Horz and Vert variables for the HV specification. Shorthand is possible, appending 0 to a cell spec to indicate horizontal and 1 to indicate vertical.
+  Example: 51, '051' and (0,5,p.Vert) all specify a V clue on the bottom edge of cell 0,5
+  
+setXVX(cellHV) OR
+setXVX(row,col,hv): creates an X clue
+  cellHV: an extended cell specification which adds the hv parameter: clue is on the right side if H, or on the bottom if V. All parameters can  be given positionally, or in a tuple, but shorthand is possible, appending 0 to a cell spec to indicate horizontal and 1 to indicate vertical.
+  Example: 51, '051' and (0,5,p.Vert) all specify an X clue on the bottom edge of cell 0,5
+  
+setXVVArray(list): creates multiple V clues
+  list: list of cellHV specifications, see setXVV
+
+setXVXArray(list): creates multiple X clues
+  list: list of cellHV specifications, see setXVX
+  
+setXVArray(list): creates multiple X/V clues
+  list: list of cellHVXV specifications, which include a cell spec, the HV spec as given in setXVV, and a XV spec, specifying the type of clue. When given as a tuple, the X and V variables can be used to specify X/V clues. Shorthand is possible, with V being 0 and X 1.
+  Example: 1701 incidates an X (1 XV spec is fourth) on the right edge (0 HV spec is third) of cell 1,7 (17 cell spec is first). This can also be written as the tuple (1,7,p.Horz,p.X)
+  
+setXVNegative(): implements negative constraint
+
+XVXV
+----
+setXVXVV(cellHV) OR
+setXVXVV(row,col,hv): creates a V clue, in XVXV rules, where sum may be 5 or 15
+  cellHV: an extended cell specification which adds the hv parameter: clue is on the right side if H, or on the bottom if V. All parameters can  be given positionally, or in a tuple, and these can use the Horz and Vert variables for the HV specification. Shorthand is possible, appending 0 to a cell spec to indicate horizontal and 1 to indicate vertical.
+  Example: 51, '051' and (0,5,p.Vert) all specify a V clue on the bottom edge of cell 0,5
+  
+setXVXVX(cellHV) OR
+setXVXVX(row,col,hv): creates an X clue, in XVXV rules, where sum may be 10 or 15
+  cellHV: an extended cell specification which adds the hv parameter: clue is on the right side if H, or on the bottom if V. All parameters can  be given positionally, or in a tuple, but shorthand is possible, appending 0 to a cell spec to indicate horizontal and 1 to indicate vertical.
+  Example: 51, '051' and (0,5,p.Vert) all specify an X clue on the bottom edge of cell 0,5
+  
+setXVXVVArray(list): creates multiple V clues
+  list: list of cellHV specifications, see setXVV
+
+setXVXVXArray(list): creates multiple X clues
+  list: list of cellHV specifications, see setXVX
+  
+setXVXVArray(list): creates multiple X/V clues
+  list: list of cellHVXV specifications, which include a cell spec, the HV spec as given in setXVV, and a XV spec, specifying the type of clue. When given as a tuple, the X and V variables can be used to specify X/V clues. Shorthand is possible, with V being 0 and X 1.
+  Example: 1701 incidates an X (1 XV spec is fourth) on the right edge (0 HV spec is third) of cell 1,7 (17 cell spec is first). This can also be written as the tuple (1,7,p.Horz,p.X)
+  
+setXVXVNegative(): implements negative constraint
