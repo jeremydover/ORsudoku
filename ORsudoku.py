@@ -11,19 +11,23 @@ class SolutionPrinter(cp_model.CpSolverSolutionCallback):
 		cp_model.CpSolverSolutionCallback.__init__(self)
 		self.__variables = variables
 		self.__solution_count = 0
+		self.__printAll = False
+		
+	def setPrintAll(self):
+		self.__printAll = True
 
 	def OnSolutionCallback(self):
 		self.__solution_count += 1
 		cntr = 0
-		printAll = True
-		
-		if printAll is True:
+				
+		if self.__printAll is True:
 			for v in self.__variables:
 				print('%i' % (self.Value(v)), end = ' ')
 				cntr += 1
 				if cntr == 9:
 					print ()
 					cntr = 0
+			print()
 
 	def SolutionCount(self):
 		return self.__solution_count
@@ -226,7 +230,7 @@ class sudoku:
 		
 	def __setIndexCell(self,row,col,rc,pm):
 		# This is the atomic call to set an index condition. Dealing with whether it's a whole row, whether or not there's a negative
-		# constraint is dealt with higher level functions. This is not generally meany to be set outside the class.
+		# constraint is dealt with higher level functions. This is not generally meant to be set outside the class.
 		# row,col is exactly what you think
 		# rc determines whether the cell is indexing its row or its column: 0 -> row, 1 -> column
 		# pm determines whether this is a positive or a negative constraint on the index cell: +1 or -1 values
@@ -248,31 +252,39 @@ class sudoku:
 				else:
 					self.model.Add(self.cellValues[k][col] != row+1).OnlyEnforceIf(varBitmap[k])
 	
-	def setIndexRow(self,row,neg=False,inlist=[]):
+	def setIndexRow(self,row1,neg=False,inlist1=[]):
 		# This sets up an indexing row. Each cell indexes the *column* so don't be surprised when we call 
 		# the cell method with rc=1.
 		# Row is the row number
 		# neg is whether or not there is a negative constraint on cells not in the index list
 		# inlist is the list of cells that index vs. not index in the negative constraint scenario
 		
+		# Convert 1-base to 0-base
+		row0 = row1 - 1
+		inlist0 = [x-1 for x in inlist1]
+		
 		for i in range(self.boardWidth):
-			if neg is True and i not in inlist:
-				self.__setIndexCell(row,i,sudoku.Col,-1)
+			if neg is True and i not in inlist0:
+				self.__setIndexCell(row0,i,sudoku.Col,-1)
 			else:
-				self.__setIndexCell(row,i,sudoku.Col,1)
+				self.__setIndexCell(row0,i,sudoku.Col,1)
 				
-	def setIndexColumn(self,col,neg=False,inlist=[]):
+	def setIndexColumn(self,col1,neg=False,inlist1=[]):
 		# This sets up an indexing column. Each cell indexes the *row* so don't be surprised when we call 
 		# the cell method with rc=0.
 		# Row is the column number
 		# neg is whether or not there is a negative constraint on cells not in the index list
 		# inlist is the list of cells that index vs. not index in the negative constraint scenario
 		
+		# Convert 1-base to 0-base
+		col0 = col1 - 1
+		inlist0 = [x-1 for x in inlist1]
+		
 		for i in range(self.boardWidth):
-			if neg is True and i not in inlist:
-				self.__setIndexCell(i,col,sudoku.Row,-1)
+			if neg is True and i not in inlist0:
+				self.__setIndexCell(i,col0,sudoku.Row,-1)
 			else:
-				self.__setIndexCell(i,col,sudoku.Row,1)
+				self.__setIndexCell(i,col0,sudoku.Row,1)
 
 	def setGlobalWhispers(self,diff=4):
 		# Every cell must have at least one neighbor which with its difference is at least diff
@@ -618,19 +630,27 @@ class sudoku:
 				self.setEntropkiBlack(x[0],x[1],x[2])
 		
 ####Externally-clued constraints
-	def setLittleKiller(self,row1,col1,row2,col2,value):
+	def setLittleKiller(self,row11,col11,row21,col21,value):
 		# row1,col1 is the position of the first cell in the sum
 		# row2,col2 is the position of the second cell in the sum
 		
+		# Convert from 1-base to 0-base
+		row1 = row11 - 1
+		row2 = row21 - 1
+		col1 = col11 - 1
+		col2 = col21 - 1
 		hStep = col2 - col1
 		vStep = row2 - row1
 		cells = [(row1+vStep*k,col1+hStep*k) for k in range(self.boardWidth) if row1+vStep*k in range(self.boardWidth) and col1+hStep*k in range(self.boardWidth)]
 		self.setRepeatingCage(cells,value)
 		
-	def setXSum(self,row,col,rc,value):
+	def setXSum(self,row1,col1,rc,value):
 		#row,col are the coordinates of the cell containing the length, value is the sum
 		#rc: 0 -> if adding in row, 1 -> if adding in column. Needed for corner cells.
-	
+		
+		# Convert from 1-base to 0-base
+		row = row1 - 1
+		col = col1 - 1
 		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
 		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
 		
@@ -643,7 +663,7 @@ class sudoku:
 				self.model.Add(self.cellValues[row][col] == i+1).OnlyEnforceIf(varBitmap[i])
 				self.model.Add(sum(self.cellValues[row+j*vStep][col+j*hStep] for j in range(i+1)) == value).OnlyEnforceIf(varBitmap[i])
 				
-	def setXKropki(self,row,col,rc,wb,neg=False):
+	def setXKropki(self,row1,col1,rc,wb,neg=False):
 		# row,col are the coordinates of the cell containing the Kropki position, so no 9s allowed
 		# rc is whether the cell is poiting to the row or column 0->row, 1->column
 		# wb whether kropki is white or black, 0->white,1->black
@@ -652,6 +672,9 @@ class sudoku:
 		varBitmap = self.__varBitmap('XKropkiPosRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth-1)
 		lgr = self.model.NewBoolVar('XKropkiLargerRow{:d}Col{:d}RC{:d}'.format(row,col,rc))
 		
+		# Convert from 1-base to 0-base
+		row = row1 - 1
+		col = col1 - 1
 		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
 		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)		
 		
@@ -679,13 +702,16 @@ class sudoku:
 							self.model.Add(firstCell - 2*secondCell != 0).OnlyEnforceIf(varBitmap[i] + [lgr])
 							self.model.Add(secondCell - 2*firstCell != 0).OnlyEnforceIf(varBitmap[i] + [lgr.Not()])
 							
-	def setNumberedRoom(self,row,col,rc,value):
+	def setNumberedRoom(self,row1,col1,rc,value):
 		# row,col are the coordinates of the cell containing the index of the target cell
 		# rc is whether things are row/column
 		# value is the target value to place
 		varBitmap = self.__varBitmap('NumRoomPosRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth-1)
 		lgr = self.model.NewBoolVar('XKropkiLargerRow{:d}Col{:d}RC{:d}'.format(row,col,rc))
 
+		# Convert from 1-base to 0-base
+		row = row1 - 1
+		col = col1 - 1
 		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
 		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)	
 		
@@ -693,10 +719,14 @@ class sudoku:
 			self.model.Add(self.cellValues[row][col] == i+1).OnlyEnforceIf(varBitmap[i])
 			self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] == value).OnlyEnforceIf(varBitmap[i])
 			
-	def setSandwichSum(self,row,col,rc,value):
+	def setSandwichSum(self,row1,col1,rc,value):
 		# row,col are the coordinates of the cell containing the index of the target cell
 		# rc is whether things are row/column
 		# value is the sum of values between 1 and 9
+		
+		# Convert from 1-base to 0-base
+		row = row1 - 1
+		col = col1 - 1
 		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
 		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
 		
@@ -731,9 +761,7 @@ class sudoku:
 ####2x2 constraints
 	def setQuadruple(self,row,col=-1,values=-1):
 		if col == -1:
-			# In this case we do not know the length of the field because of the indeterminate number of given digits in the quad
-			# We can still use procCell to make it a tuple, but we'll need to use the string form if in row 0
-			T = self.__procCell(row,0)	#Note: we cannot do any zero fill because of the data structure
+			T = self.__procCell(row)
 			row = T[0]
 			col = T[1]
 			values = [T[i] for i in range(2,len(T))]
@@ -1118,32 +1146,31 @@ class sudoku:
 		solution_printer = SolutionPrinter(consolidatedCellValues)
 		self.solveStatus = solver.Solve(self.model)
 		
-		print()
-		print('Solutions found : %i' % solution_printer.SolutionCount())
-		print('Status = %s' % solver.StatusName(self.solveStatus))
+		print('Solution found!')
 		if self.solveStatus == cp_model.OPTIMAL:
-			print("OPTIMAL Solution")
 			for rowIndex in range(self.boardWidth):
 				for colIndex in range(self.boardWidth):
 					print('{:d}'.format(solver.Value(self.cellValues[rowIndex][colIndex])),end = " ")
 				print()
+		print()
 
-	def countSolutions(self):
+	def countSolutions(self,printAll = False):
 		self.__applyNegativeConstraints()
 		solver = cp_model.CpSolver()
 		consolidatedCellValues = []
 		for tempArray in self.cellValues: consolidatedCellValues = consolidatedCellValues + tempArray
 		solution_printer = SolutionPrinter(consolidatedCellValues)
+		if printAll is True: solution_printer.setPrintAll()
 		self.solveStatus = solver.SearchForAllSolutions(self.model, solution_printer)
 		
-		print()
 		print('Solutions found : %i' % solution_printer.SolutionCount())
-		print('Status = %s' % solver.StatusName(self.solveStatus))
-		if self.solveStatus == cp_model.OPTIMAL:
-			for rowIndex in range(self.boardWidth):
-				for colIndex in range(self.boardWidth):
-					print('{:d}'.format(solver.Value(self.cellValues[rowIndex][colIndex])),end = " ")
-				print()
+		if printAll is False:
+			print('Sample solution')
+			if self.solveStatus == cp_model.OPTIMAL:
+				for rowIndex in range(self.boardWidth):
+					for colIndex in range(self.boardWidth):
+						print('{:d}'.format(solver.Value(self.cellValues[rowIndex][colIndex])),end = " ")
+					print()
 
 	def __varBitmap(self,string,num):
 		# Utility function to create a list of Boolean vaariable propositions that encode num possibilities exactly.
@@ -1179,13 +1206,19 @@ class sudoku:
 		
 	def __procCell(self,cell,n=2):
 		# Utility function that processes an individual cell into a tuple format if needed
-		# Pads with leading zeros up to length n
+		# Pads with leading zeros up to length n.
+		
+		# Note: This function assumes that the first two elements are a row/column index, 1-base
+		# so it converts them to 0-base.
+		
 		if type(cell) is tuple:
-			return cell
+			myCell = cell 
 		elif type(cell) is str:
-			return tuple(map(int,list(cell.zfill(n))))
+			myCell = tuple(map(int,list(cell.zfill(n))))
 		elif type(cell) is int:
-			return tuple(map(int,list(str(cell).zfill(n))))
+			myCell = tuple(map(int,list(str(cell).zfill(n))))
+			
+		return tuple([myCell[i]-1 for i in range(2)] + [myCell[i] for i in range(2,len(myCell))])
 			
 	def __procCellList(self,inlist,n=2):
 		# Utility function to process a list from one of several input formats into the tuple format
