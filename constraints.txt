@@ -16,12 +16,14 @@ Entropy (see Global Entropy)
 Entropy Battenburg (on a 2x2, no pair of same entropic cells are adjacent)
 Entropy Quads (partial Entropy, asserts Entropy on an individual 2x2)
 Even-Odd
+Extra Regions - see irregular Sudoku
 Fortress
 German Whispers Lines
 Given Digits
 Global Entropy
 Global Whispers (Dutch, et. al.)
 Indexing
+Irregular Sudoku
 Keyboard King Lines
 Keyboard Knight Lines
 Killer Cages (repeating and non-repeating)
@@ -273,6 +275,19 @@ setIndexColumn(row,neg=False,inlist=[]): set an index column. See setIndexRow fo
   setIndexcolumn(5)
   setIndexColumn(9)
   
+Irregular Sudoku
+----------------
+Note: for ALMOST all intents and purposes, regions are no different from killer cages of size 9. But regions are respected by regions sum lines, where cages are not.
+
+To implement an irregular Sudoku puzzle, call the puzzle constructor with the irregular flag set, e.g.,
+p = ORsudoku.sudoku(boardSizeRoot,irregular=True)
+
+setRegion(list): creates an Irregular Sudoku region
+	list: list of cell specifications
+	
+set Regions(list): create multiple irregular Sudoku regions
+	list: list OF LISTS of cell specifications
+
 Keyboard King Lines
 -------------------
 setKeyboardKingLine(list): creates a keyboard king line constraint (adjacent digits must be a king's move apart on a telephone keypad). Designed by Zegres
@@ -396,6 +411,7 @@ setQuadSumArray(list): set multiple quad sum constraints
   
 Region Sum Lines
 ----------------
+See Irregular Sudoku's setRegion method to set regions that affect Region Sum Lines. By default regions are the boxes in normal Sudoku rules.
 setRegionSumLine(list): asserts that the sum of all cells on the line in each region is fixed across regions, regardless of contiguity along the line
   list: list of cell specifications
   

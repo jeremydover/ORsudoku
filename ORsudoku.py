@@ -129,8 +129,6 @@ class sudoku:
 		self.regions = []
 		if irregular is None:
 			self.__setBoxes()
-		else:
-			sys.exit()
 			
 	def __setBoxes(self):
 		# Create rules to ensure boxes have no repeats
@@ -144,6 +142,16 @@ class sudoku:
 						tempIndexArray.append((self.boardSizeRoot*rowBox+rowIndex,self.boardSizeRoot*colBox+colIndex))
 				self.model.AddAllDifferent(tempCellArray)					# Squares
 				self.regions.append(tempIndexArray)
+
+	def setRegion(self,inlist):
+		# Allow setting of irregular regions
+		inlist = self.__procCellList(inlist)
+		self.regions.append([self.cellValues[x[0]][x[1]] for x in inlist])
+		self.model.AddAllDifferent(self.regions[-1])
+		
+	def setRegions(self,inlist):
+		# Allow setting of multiple regions
+		for x in inlist: self.setRegion(x)
 
 	def __setEntropy(self):
 		# Set up variables to track entropy and modular constraints
@@ -1093,37 +1101,40 @@ class sudoku:
 			
 	def setRegionSumLine(self,inlist):
 		inlist = self.__procCellList(inlist)
+		varlist = set(map(lambda s:self.cellValues[s[0]][s[1]],inlist))
 		sumSets = []
-		for r in self.regions:
-			tempSum = [x for x in inlist if x in r]
+		for region in self.regions:
+			tempSum = set(region) & set(varlist)
 			if len(tempSum) != 0: sumSets.append(tempSum)
 		
-		baseSum = sum(self.cellValues[x[0]][x[1]] for x in sumSets[0])
+		baseSum = sum(x for x in sumSets[0])
 		for i in range(1,len(sumSets)):
-			self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in sumSets[i]) == baseSum)
+			self.model.Add(sum(x for x in sumSets[i]) == baseSum)
 			
 	def setRegionSegmentSumLine(self,inlist):
-		inlist = self.__procCellList(inlist)
 		# This is used for variants where the sums for each segment of the line have the same sum
 		# in each region. If a line enters a region twice, each segment must have the same sum as all
 		# other segments...the visits do not aggregate
+		inlist = self.__procCellList(inlist)
+		varlist = list(map(lambda s:self.cellValues[s[0]][s[1]],inlist))
+		
 		sumSets = []
 		currentRegionStart = 0
 		for i in range(len(self.regions)):
-			if inlist[0] in self.regions[i]: currentRegion = i
-		for j in range(1,len(inlist)):
+			if len({varlist[0]} & set(self.regions[i])) > 0: currentRegion = i
+		for j in range(1,len(varlist)):
 			for i in range(len(self.regions)):
-				if inlist[j] in self.regions[i]: thisRegion = i
+				if len({varlist[j]} & set(self.regions[i])) > 0: thisRegion = i
 			if thisRegion != currentRegion:
-				sumSets.append(inlist[currentRegionStart:j])
+				sumSets.append(varlist[currentRegionStart:j])
 				currentRegionStart = j
 				currentRegion = thisRegion
 		# Need to do it again since the last segment is left in the queue.	
-		sumSets.append(inlist[currentRegionStart:])
+		sumSets.append(varlist[currentRegionStart:])
 
-		baseSum = sum(self.cellValues[x[0]][x[1]] for x in sumSets[0])
+		baseSum = sum(x for x in sumSets[0])
 		for i in range(1,len(sumSets)):
-			self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in sumSets[i]) == baseSum)
+			self.model.Add(sum(x for x in sumSets[i]) == baseSum)
 
 ####Model solving
 	def __applyNegativeConstraints(self):
@@ -1146,8 +1157,9 @@ class sudoku:
 		solution_printer = SolutionPrinter(consolidatedCellValues)
 		self.solveStatus = solver.Solve(self.model)
 		
-		print('Solution found!')
+		print('Solver status = %s' % solver.StatusName(self.solveStatus))
 		if self.solveStatus == cp_model.OPTIMAL:
+			print('Solution found!')
 			for rowIndex in range(self.boardWidth):
 				for colIndex in range(self.boardWidth):
 					print('{:d}'.format(solver.Value(self.cellValues[rowIndex][colIndex])),end = " ")
