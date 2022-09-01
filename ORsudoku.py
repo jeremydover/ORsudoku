@@ -1,8 +1,10 @@
 from __future__ import print_function
 import sys
 import math
+import colorama
 from ortools.sat.python import cp_model
 from array import *
+from colorama import Fore
 
 class SolutionPrinter(cp_model.CpSolverSolutionCallback):
 	"""Print intermediate solutions."""
@@ -144,13 +146,11 @@ class sudoku:
 		for rowBox in range(self.boardSizeRoot):
 			for colBox in range(self.boardSizeRoot):
 				tempCellArray = []
-				tempIndexArray = []
 				for rowIndex in range(self.boardSizeRoot):
 					for colIndex in range(self.boardSizeRoot):
 						tempCellArray.append(self.cellValues[self.boardSizeRoot*rowBox+rowIndex][self.boardSizeRoot*colBox+colIndex])
-						tempIndexArray.append((self.boardSizeRoot*rowBox+rowIndex,self.boardSizeRoot*colBox+colIndex))
 				self.model.AddAllDifferent(tempCellArray)					# Squares
-				self.regions.append(tempIndexArray)
+				self.regions.append(tempCellArray)
 
 	def setRegion(self,inlist):
 		# Allow setting of irregular regions
@@ -1025,6 +1025,10 @@ class sudoku:
 		inlist = self.__procCellList(inlist)
 		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] == sum(self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(1,len(inlist))))
 		
+	def setDoubleArrow(self,inlist):
+		inlist = self.__procCellList(inlist)
+		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] + self.cellValues[inlist[-1][0]][inlist[-1][1]]== sum(self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(1,len(inlist)-1)))
+
 	def setPointingArrow(self,inlist):
 		inlist = self.__procCellList(inlist)
 		# Pointing arrow is an arrow, but it also pointsm extending in last direction, to its total sum
@@ -1297,3 +1301,180 @@ class sudoku:
 		# Utility function to process a list from one of several input formats into the tuple format
 		# required by our functions
 		return list(map(lambda x: self.__procCell(x,n),inlist))
+		
+class doublerSudoku(sudoku):
+	"""A class used to implement doubler puzzles. A doubler puzzle has a doubler in each row, column and region. Moreover, each digit is doubled exactly one time. The digit entered is used to determine normal Sudoku contraints, i.e., one of each digit per row, column and region. But for each other constraint, its value needs to be doubled."""	
+	
+	def __init__(self,boardSizeRoot,irregular=None,digitSet=None):
+		self.boardSizeRoot = boardSizeRoot
+		self.boardWidth = boardSizeRoot*boardSizeRoot
+
+		self.isBattenburgInitialized = False
+		self.isBattenburgNegative = False
+		
+		self.isKropkiInitialized = False
+		self.isKropkiNegative = False
+		
+		self.isXVInitialized = False
+		self.isXVNegative = False
+		
+		self.isXVXVInitialized = False
+		self.isXVXVNegative = False
+		
+		self.isEntropyQuadInitialized = False
+		self.isEntropyQuadNegative = False
+		
+		self.isEntropyBattenburgInitialized = False
+		self.isEntropyBattenburgNegative = False
+		
+		self.isEntropy = False
+		self.isModular = False
+		
+		if digitSet is None:
+			self.digits = {x for x in range(1,self.boardWidth+1)}
+		else:
+			self.digits = digitSet
+		self.maxDigit = max(self.digits)
+		self.minDigit = min(self.digits)
+		self.digitRange = self.maxDigit - self.minDigit
+
+		self.model = cp_model.CpModel()
+		self.cellValues = [] 		# Since this array is used throughout for the constraints, we'll make this the doubled values
+		self.baseValues = []
+		
+		# Create the variables containing the cell values
+		for rowIndex in range(self.boardWidth):
+			tempArrayCell = []
+			tempArrayBase = []
+			for colIndex in range(self.boardWidth):
+				tempBase = self.model.NewIntVar(self.minDigit,self.maxDigit,'cellValue{:d}{:d}'.format(rowIndex,colIndex))
+				tempCell = self.model.NewIntVar(min(0,2*self.minDigit),max(0,2*self.maxDigit),'cellValue{:d}{:d}'.format(rowIndex,colIndex))
+				if (self.maxDigit - self.minDigit) >= self.boardWidth:	# If base digit set is not continguous, force values
+					self.model.AddAllowedAssignments([tempBase],[(x,) for x in digitSet])
+					# Note: no need to force values on cellValues, because they will be tied to base
+				tempArrayCell.append(tempCell)
+				tempArrayBase.append(tempBase)
+			self.cellValues.insert(rowIndex,tempArrayCell)
+			self.baseValues.insert(rowIndex,tempArrayBase)
+			
+			
+		# Create rules to ensure rows and columns have no repeats for the BASE digits
+		for rcIndex in range(self.boardWidth):
+			self.model.AddAllDifferent([self.baseValues[rcIndex][crIndex] for crIndex in range(self.boardWidth)]) 	# Rows
+			self.model.AddAllDifferent([self.baseValues[crIndex][rcIndex] for crIndex in range(self.boardWidth)]) 	# Columns
+
+		# Now the doubling stuff
+		self.double = []
+	
+		for i in range(self.boardWidth):
+			tempDoubleArray = []
+			for j in range(self.boardWidth):
+				c = self.model.NewBoolVar('double{:d}{:d}'.format(i,j))
+				tempDoubleArray.append(c)
+			self.double.insert(i,tempDoubleArray)
+		
+		# Finally, create integer versions of doubling variables to check conditions
+		self.doubleInt = []
+  
+		for i in range(self.boardWidth):
+			tempDoubleArray = []
+			for j in range(self.boardWidth):
+				c = self.model.NewIntVar(0,1,'doubleInt{:d}{:d}'.format(i,j))
+				tempDoubleArray.append(c)
+			self.doubleInt.insert(i,tempDoubleArray)
+		
+		# Doubling conditions
+		# First we tie the values of the underlying digits to their apparent values
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				self.model.Add(self.cellValues[i][j] == 2*self.baseValues[i][j]).OnlyEnforceIf([self.double[i][j]])
+				self.model.Add(self.cellValues[i][j] == self.baseValues[i][j]).OnlyEnforceIf([self.double[i][j].Not()])
+			
+		# Now tie double and doubleInt variables
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				self.model.Add(self.doubleInt[i][j] == 1).OnlyEnforceIf([self.double[i][j]])
+				self.model.Add(self.doubleInt[i][j] == 0).OnlyEnforceIf([self.double[i][j].Not()])
+			
+		# Now we ensure there is only one doubler per row, column, and box
+		for i in range(self.boardWidth):
+			self.model.Add(sum(self.doubleInt[i][j] for j in range(self.boardWidth)) == 1)
+			self.model.Add(sum(self.doubleInt[j][i] for j in range(self.boardWidth)) == 1)
+
+		# NOW deal with regions. Default to boxes. Needed to get all variables set up.
+		self.regions = []
+		if irregular is None:
+			self.__setBoxes()
+	
+		# The ugly part: ensuring all doubled digits are distinct
+	
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				for k in range(self.boardWidth):
+					for l in range(self.boardWidth):
+						if k>i or l>j:
+							self.model.Add(self.baseValues[i][j] != self.baseValues[k][l]).OnlyEnforceIf([self.double[i][j],self.double[k][l]]) 
+			
+	def __setBoxes(self):
+		# Create rules to ensure boxes have no repeats in the BASE digits
+		for rowBox in range(self.boardSizeRoot):
+			for colBox in range(self.boardSizeRoot):
+				tempBaseArray = []
+				tempDoubleArray = []
+				for rowIndex in range(self.boardSizeRoot):
+					for colIndex in range(self.boardSizeRoot):
+						tempBaseArray.append(self.baseValues[self.boardSizeRoot*rowBox+rowIndex][self.boardSizeRoot*colBox+colIndex])
+						tempDoubleArray.append(self.doubleInt[self.boardSizeRoot*rowBox+rowIndex][self.boardSizeRoot*colBox+colIndex])
+				self.model.AddAllDifferent(tempBaseArray)	# Ensures square regions have all different values
+				self.regions.append(tempBaseArray)			# Set squares up as regions for region sum rules
+				self.model.Add(sum(tempDoubleArray) == 1)	# Ensure there is only one doubler per square
+				
+	def setRegion(self,inlist):
+		# Allow setting of irregular regions
+		inlist = self.__procCellList(inlist)
+		self.regions.append([self.baseValues[x[0]][x[1]] for x in inlist])
+		self.model.AddAllDifferent(self.regions[-1])
+		self.model.Add(sum(self.doubleInt[x[0]][x[1]] for x in inlist) == 1)	# Ensure one doubler per region
+		
+	def findSolution(self):
+		self._sudoku__applyNegativeConstraints()
+		solver = cp_model.CpSolver()
+		consolidatedCellValues = []
+		for tempArray in self.cellValues: consolidatedCellValues = consolidatedCellValues + tempArray
+		solution_printer = SolutionPrinter(consolidatedCellValues)
+		self.solveStatus = solver.Solve(self.model)
+		colorama.init()
+	
+		print('Solver status = %s' % solver.StatusName(self.solveStatus))
+		if self.solveStatus == cp_model.OPTIMAL:
+			print('Solution found!')
+			for i in range(self.boardWidth):
+				for j in range(self.boardWidth):
+					if solver.Value(self.doubleInt[i][j]) == 1: # This one is doubled!
+						print(Fore.RED + '{:d}'.format(solver.Value(self.baseValues[i][j])) + Fore.RESET,end = " ")
+					else:
+						print('{:d}'.format(solver.Value(self.baseValues[i][j])),end = " ")
+				print()
+		print()
+
+	def countSolutions(self,printAll = False):
+		self._sudoku__applyNegativeConstraints()
+		solver = cp_model.CpSolver()
+		consolidatedCellValues = []
+		for tempArray in self.cellValues: consolidatedCellValues = consolidatedCellValues + tempArray
+		solution_printer = SolutionPrinter(consolidatedCellValues)
+		if printAll is True: solution_printer.setPrintAll()
+		self.solveStatus = solver.SearchForAllSolutions(self.model, solution_printer)
+		
+		print('Solutions found : %i' % solution_printer.SolutionCount())
+		if printAll is False:
+			colorama.init()
+			print('Sample solution')
+			if self.solveStatus == cp_model.OPTIMAL:
+				for i in range(self.boardWidth):
+					for j in range(self.boardWidth):
+						if solver.Value(self.doubleInt[i][j]) == 1: # This one is doubled!
+							print(Fore.RED + '{:d}'.format(solver.Value(self.baseValues[i][j])) + Fore.RESET,end = " ")
+						else:
+							print('{:d}'.format(solver.Value(self.baseValues[i][j])),end = " ")
+					print()

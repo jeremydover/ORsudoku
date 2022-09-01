@@ -11,6 +11,8 @@ Between Lines
 Chinese Whispers Lines
 Clone Regions
 Disjoint Groups
+Double Arrows
+Doubler Sudoku
 Dutch Whispers Lines
 Entropic Lines
 Entropki Dots (same/different entropy classes)
@@ -174,6 +176,18 @@ setCloneRegion(list): creates a set of regions that are clones of each other, i.
 Disjoint Groups
 ---------------
 setDisjointGroups(): sets the global disjoint groups constraint
+
+Double Arrows
+-------------
+setDoubleArrow(inlist): creates a double arrow constraint - sum of cells between the endpoint equals the sum of the endpoints
+  inlist: a list of cells along arrow, where the first element of list is the circle
+
+Doubler Sudoku
+--------------
+Doubler rules were invented by zetamath. Grid is as normal, but one cell in each row, column in region is doubled when used in other constraints
+To model a doubler puzzle, you must use the class doublerSudoku, e.g.
+
+p = ORsudoku.doublerSudoku(boardSizeRoot)
 
 Dutch Whispers Lines
 --------------------
