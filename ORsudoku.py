@@ -4,7 +4,6 @@ import math
 from ortools.sat.python import cp_model
 from array import *
 
-
 class SolutionPrinter(cp_model.CpSolverSolutionCallback):
 	"""Print intermediate solutions."""
 	def __init__(self, variables):
@@ -12,10 +11,10 @@ class SolutionPrinter(cp_model.CpSolverSolutionCallback):
 		self.__variables = variables
 		self.__solution_count = 0
 		self.__printAll = False
-		
+
 	def setPrintAll(self):
 		self.__printAll = True
-
+		
 	def OnSolutionCallback(self):
 		self.__solution_count += 1
 		cntr = 0
@@ -84,7 +83,7 @@ class sudoku:
 	Even = 0	# Constant to determine whether parity constraint is even or odd
 	Odd = 1		# Constant to determine whether parity constraint is even or odd
 	
-	def __init__(self,boardSizeRoot,irregular=None):
+	def __init__(self,boardSizeRoot,irregular=None,digitSet=None):
 		self.boardSizeRoot = boardSizeRoot
 		self.boardWidth = boardSizeRoot*boardSizeRoot
 
@@ -108,6 +107,14 @@ class sudoku:
 		
 		self.isEntropy = False
 		self.isModular = False
+		
+		if digitSet is None:
+			self.digits = {x for x in range(1,self.boardWidth+1)}
+		else:
+			self.digits = digitSet
+		self.maxDigit = max(self.digits)
+		self.minDigit = min(self.digits)
+		self.digitRange = self.maxDigit - self.minDigit
 
 		self.model = cp_model.CpModel()
 		self.cellValues = []
@@ -116,7 +123,9 @@ class sudoku:
 		for rowIndex in range(self.boardWidth):
 			tempArray = []
 			for colIndex in range(self.boardWidth):
-				tempCell = self.model.NewIntVar(1,self.boardWidth,'cellValue{:d}{:d}'.format(rowIndex,colIndex))
+				tempCell = self.model.NewIntVar(self.minDigit,self.maxDigit,'cellValue{:d}{:d}'.format(rowIndex,colIndex))
+				if (self.maxDigit - self.minDigit) >= self.boardWidth:	#Digit set is not continguous, so force values
+					self.model.AddAllowedAssignments([tempCell],[(x,) for x in digitSet])
 				tempArray.append(tempCell)
 			self.cellValues.insert(rowIndex,tempArray)
 			
@@ -160,7 +169,7 @@ class sudoku:
 		for i in range(self.boardWidth):
 			t = []
 			for j in range(self.boardWidth):
-				c = self.model.NewIntVar(0,self.boardSizeRoot-1,'entropyValue{:d}{:d}'.format(i,j))
+				c = self.model.NewIntVar(self.minDigit // 3 - 1,self.maxDigit // 3,'entropyValue{:d}{:d}'.format(i,j))
 				t.append(c)
 				self.model.Add(3*c+1 <= self.cellValues[i][j])
 				self.model.Add(3*c+4 > self.cellValues[i][j])
@@ -171,22 +180,20 @@ class sudoku:
 	def __setModular(self):
 		# Set up variables to track modular constraints
 		if self.isEntropy is False:
-			self.setEntropy()
+			self.__setEntropy()
 		
 		self.cellModular = []
 		
 		for i in range(self.boardWidth):
 			t = []
 			for j in range(self.boardWidth):
-				c = self.model.NewIntVar(0,self.boardSizeRoot-1,'modularValue{:d}{:d}'.format(i,j))
+				c = self.model.NewIntVar(1,3,'modularValue{:d}{:d}'.format(i,j))
 				t.append(c)
-				self.model.Add(c == self.cellValues[i][j] - self.boardSizeRoot*self.cellEntropy[i][j])
+				self.model.Add(c == self.cellValues[i][j] - 3*self.cellEntropy[i][j])
 			self.cellModular.insert(i,t)
 		
 		self.isModular = True
-		
-		
-		
+				
 ####Global constraints
 
 	def setXSudokuMain(self):
@@ -662,14 +669,12 @@ class sudoku:
 		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
 		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
 		
-		varBitmap = self.__varBitmap('XSumRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth-1)
+		allowableDigits = [x for x in self.digits if x >= 1 and x <=self.boardWidth]
+		varBitmap = self.__varBitmap('XSumRow{:d}Col{:d}RC{:d}'.format(row,col,rc),len(allowableDigits))
 		
-		if value == (self.boardWidth*(self.boardWidth+1) // 2):
-			self.model.Add(self.cellValues[row][col] == self.boardWidth)
-		else:
-			for i in range(self.boardWidth-1):
-				self.model.Add(self.cellValues[row][col] == i+1).OnlyEnforceIf(varBitmap[i])
-				self.model.Add(sum(self.cellValues[row+j*vStep][col+j*hStep] for j in range(i+1)) == value).OnlyEnforceIf(varBitmap[i])
+		for i in range(len(allowableDigits)):
+			self.model.Add(self.cellValues[row][col] == allowableDigits[i]).OnlyEnforceIf(varBitmap[i])
+			self.model.Add(sum(self.cellValues[row+j*vStep][col+j*hStep] for j in range(allowableDigits[i])) == value).OnlyEnforceIf(varBitmap[i])
 				
 	def setXKropki(self,row1,col1,rc,wb,neg=False):
 		# row,col are the coordinates of the cell containing the Kropki position, so no 9s allowed
@@ -677,21 +682,22 @@ class sudoku:
 		# wb whether kropki is white or black, 0->white,1->black
 		# neg: True if Kropki implies no other Kropkis can occur in row/col
 			
-		varBitmap = self.__varBitmap('XKropkiPosRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth-1)
-		lgr = self.model.NewBoolVar('XKropkiLargerRow{:d}Col{:d}RC{:d}'.format(row,col,rc))
-		
 		# Convert from 1-base to 0-base
 		row = row1 - 1
 		col = col1 - 1
 		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
 		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)		
 		
-		for i in range(self.boardWidth-1):
-			self.model.Add(self.cellValues[row][col] == i+1).OnlyEnforceIf(varBitmap[i])
+		allowableDigits = [x for x in self.digits if x >= 1 and x <=self.boardWidth-1]
+		varBitmap = self.__varBitmap('XKropkiPosRow{:d}Col{:d}RC{:d}'.format(row,col,rc),len(allowableDigits))
+		lgr = self.model.NewBoolVar('XKropkiLargerRow{:d}Col{:d}RC{:d}'.format(row,col,rc))
+		
+		for i in range(len(allowableDigits)):
+			self.model.Add(self.cellValues[row][col] == allowableDigits[i]).OnlyEnforceIf(varBitmap[i])
 			for j in range(self.boardWidth-1):
 				firstCell = self.cellValues[row+j*vStep][col+j*hStep]
 				secondCell = self.cellValues[row+(j+1)*vStep][col+(j+1)*hStep]				
-				if j == i:
+				if j == allowableDigits[i]-1:
 					# First case: difference 1
 					if wb == sudoku.White:
 						self.model.Add(firstCell - secondCell == 1).OnlyEnforceIf(varBitmap[i] + [lgr])
@@ -714,23 +720,24 @@ class sudoku:
 		# row,col are the coordinates of the cell containing the index of the target cell
 		# rc is whether things are row/column
 		# value is the target value to place
-		varBitmap = self.__varBitmap('NumRoomPosRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth-1)
-		lgr = self.model.NewBoolVar('XKropkiLargerRow{:d}Col{:d}RC{:d}'.format(row,col,rc))
-
+		
 		# Convert from 1-base to 0-base
 		row = row1 - 1
 		col = col1 - 1
 		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
 		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)	
 		
-		for i in range(self.boardWidth-1):
-			self.model.Add(self.cellValues[row][col] == i+1).OnlyEnforceIf(varBitmap[i])
-			self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] == value).OnlyEnforceIf(varBitmap[i])
+		allowableDigits = [x for x in self.digits if x >= 1 and x <=self.boardWidth]
+		varBitmap = self.__varBitmap('NumRoomPosRow{:d}Col{:d}RC{:d}'.format(row,col,rc),len(allowableDigits))
+		
+		for i in range(len(allowableDigits)):
+			self.model.Add(self.cellValues[row][col] == allowableDigits[i]).OnlyEnforceIf(varBitmap[i])
+			self.model.Add(self.cellValues[row+(allowableDigits[i]-1)*vStep][col+(allowableDigits[i]-1)*hStep] == value).OnlyEnforceIf(varBitmap[i])
 			
 	def setSandwichSum(self,row1,col1,rc,value):
 		# row,col are the coordinates of the cell containing the index of the target cell
 		# rc is whether things are row/column
-		# value is the sum of values between 1 and 9
+		# value is the sum of values between the lowest and higest digits (usually 1 and 9)
 		
 		# Convert from 1-base to 0-base
 		row = row1 - 1
@@ -738,33 +745,77 @@ class sudoku:
 		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
 		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
 		
+		# This variable determines if the sandwich digits are adjacent. We have to treat this case separately, since we
+		# cannot create a constraint with an empty sum
+		adj = self.model.NewBoolVar('SandwichAdjacentRow{:d}Col{:d}RC{:d}'.format(row,col,rc))
+		
 		if value == 0:
-			#In this case the 1 and 9 are right next to each other, which can only occur in 8 ways.
-			varBitmap = self.__varBitmap('SandwichPosRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth-1)
-			lgr = self.model.NewBoolVar('SandwichLargerRow{:d}Col{:d}RC{:d}'.format(row,col,rc))
+			# This is the only case where the lowest and highest digits can be adjacent, which can happen in boardWidth-1 ways
+			varBitmap = self.__varBitmap('Sandwich0PosRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth-1)
+			lgr = self.model.NewBoolVar('Sandwich0LargerRow{:d}Col{:d}RC{:d}'.format(row,col,rc))
 					
 			for j in range(self.boardWidth-1):
 				firstCell = self.cellValues[row+j*vStep][col+j*hStep]
 				secondCell = self.cellValues[row+(j+1)*vStep][col+(j+1)*hStep]
-				# Note: Difference of 8 forces a 1/9 pair
-				self.model.Add(firstCell - secondCell == 8).OnlyEnforceIf(varBitmap[j] + [lgr])
-				self.model.Add(secondCell - firstCell == 8).OnlyEnforceIf(varBitmap[j] + [lgr.Not()])
-		
+				# Note: High/low pairs forces if difference is maximal
+				self.model.Add(firstCell - secondCell == self.maxDigit - self.minDigit).OnlyEnforceIf(varBitmap[j] + [lgr,adj])
+				self.model.Add(secondCell - firstCell == self.maxDigit - self.minDigit).OnlyEnforceIf(varBitmap[j] + [lgr.Not(),adj])
 		else:
-			#In this case there are spaces. Combinatorics helps here...there are 9 choose 2 minus (9-1) pairs of positions
-			#where they can go. Man this new varBitmap function makes this easier..save a whole page of code
-			varBitmap = self.__varBitmap('SandwichPosRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth*(self.boardWidth-1) // 2 - (self.boardWidth-1))
-			lgr = self.model.NewBoolVar('SandwichLargerRow{:d}Col{:d}RC{:d}'.format(row,col,rc))
+			# If value is not 0, then we need to make sure adj does not occur, since otherwise constraint is ignored
+			self.model.AddBoolAnd([adj.Not()]).OnlyEnforceIf(adj)
+		
+		# In this case there are spaces. Combinatorics helps here...there are 9 choose 2 minus (9-1) pairs of positions
+		# where they can go. Man this new varBitmap function makes this easier..save a whole page of code. Notice: with varying digits,
+		# we may still be able to get a zero sum, but that side was not the problem, so we can just put the conditions in and go.
+		
+		varBitmap = self.__varBitmap('SandwichPosRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth*(self.boardWidth-1) // 2 - (self.boardWidth-1))
+		lgr = self.model.NewBoolVar('SandwichLargerRow{:d}Col{:d}RC{:d}'.format(row,col,rc))
 			
-			varTrack = 0
-			for j in range(self.boardWidth-2):
-				for k in range(j+2,self.boardWidth):
-					firstCell = self.cellValues[row+j*vStep][col+j*hStep]
-					secondCell = self.cellValues[row+k*vStep][col+k*hStep]
-					self.model.Add(firstCell - secondCell == 8).OnlyEnforceIf(varBitmap[varTrack] + [lgr])
-					self.model.Add(secondCell - firstCell == 8).OnlyEnforceIf(varBitmap[varTrack] + [lgr.Not()])
-					self.model.Add(sum(self.cellValues[row+m*vStep][col+m*hStep] for m in range(j+1,k)) == value).OnlyEnforceIf(varBitmap[varTrack])
-					varTrack = varTrack + 1
+		varTrack = 0
+		for j in range(self.boardWidth-2):
+			for k in range(j+2,self.boardWidth):
+				firstCell = self.cellValues[row+j*vStep][col+j*hStep]
+				secondCell = self.cellValues[row+k*vStep][col+k*hStep]
+				self.model.Add(firstCell - secondCell == self.maxDigit - self.minDigit).OnlyEnforceIf(varBitmap[varTrack] + [lgr,adj.Not()])
+				self.model.Add(secondCell - firstCell == self.maxDigit - self.minDigit).OnlyEnforceIf(varBitmap[varTrack] + [lgr.Not(),adj.Not()])
+				self.model.Add(sum(self.cellValues[row+m*vStep][col+m*hStep] for m in range(j+1,k)) == value).OnlyEnforceIf(varBitmap[varTrack] + [adj.Not()])
+				varTrack = varTrack + 1
+					
+	def setBattlefield(self,row1,col1,rc,value):
+		# row,col are the coordinates of the cell next to the clue
+		# rc is whether things are row/column
+		# value is the sum of uncovered, or double covered, cells in the row, where the first cell on either side indicates the 
+		# number of cells covered from each direction
+		
+		# Convert from 1-base to 0-base
+		row = row1 - 1
+		col = col1 - 1
+		hStep = 0 if rc == sudoku.Col else 1
+		vStep = 0 if rc == sudoku.Row else 1
+		rFirst = row if rc == sudoku.Row else 0
+		cFirst = col if rc == sudoku.Col else 0
+		rLast = row if rc == sudoku.Row else self.boardWidth-1
+		cLast = col if rc == sudoku.Col else self.boardWidth-1
+		
+		
+		allowableDigits = [x for x in self.digits if x >= 1 and x <=self.boardWidth]
+		varBitmap = self.__varBitmap('BattlefieldRow{:d}Col{:d}RC{:d}'.format(row,col,rc),len(allowableDigits)*(len(allowableDigits)-1))
+		
+		varTrack = 0
+		for i in range(len(allowableDigits)):
+			for j in range(len(allowableDigits)):
+				if i == j: continue
+				self.model.Add(self.cellValues[rFirst][cFirst] == allowableDigits[i]).OnlyEnforceIf(varBitmap[varTrack])
+				self.model.Add(self.cellValues[rLast][cLast] == allowableDigits[j]).OnlyEnforceIf(varBitmap[varTrack])
+				if (allowableDigits[i]+allowableDigits[j]) < self.boardWidth:
+					# Add up gap between
+					self.model.Add(sum(self.cellValues[rFirst+k*vStep][cFirst+k*hStep] for k in range(allowableDigits[i],self.boardWidth - allowableDigits[j])) == value).OnlyEnforceIf(varBitmap[varTrack])
+				elif (allowableDigits[i]+allowableDigits[j]) == self.boardWidth:
+					if value != 0: # Nothing in the middle, so cannot work if value !=0. If value = 0, no further constraints.
+						self.model.AddBoolAnd([varBitmap[varTrack][0],varBitmap[varTrack][0].Not()]).OnlyEnforceIf(varBitmap[varTrack])
+				else:
+					self.model.Add(sum(self.cellValues[rFirst+k*vStep][cFirst+k*hStep] for k in range(self.boardWidth - allowableDigits[j],allowableDigits[i])) == value).OnlyEnforceIf(varBitmap[varTrack])
+				varTrack = varTrack + 1
 		
 ####2x2 constraints
 	def setQuadruple(self,row,col=-1,values=-1):
@@ -830,9 +881,9 @@ class sudoku:
 		# We calculate the differences between the top two cells, the two right cells, and the bottom two, and ensure all are odd.
 		# This ensures either OE  or  EO
 		#                     EO      OE
-		diff1 = self.model.NewIntVar(-8,8,'BattenburgTopRow{:d}Col{:d}'.format(row,col))
-		diff2 = self.model.NewIntVar(-8,8,'BattenburgRightRow{:d}Col{:d}'.format(row,col))
-		diff3 = self.model.NewIntVar(-8,8,'BattenburgBottomRow{:d}Col{:d}'.format(row,col))
+		diff1 = self.model.NewIntVar(self.minDigit-self.maxDigit,self.maxDigit-self.minDigit,'BattenburgTopRow{:d}Col{:d}'.format(row,col))
+		diff2 = self.model.NewIntVar(self.minDigit-self.maxDigit,self.maxDigit-self.minDigit,'BattenburgRightRow{:d}Col{:d}'.format(row,col))
+		diff3 = self.model.NewIntVar(self.minDigit-self.maxDigit,self.maxDigit-self.minDigit,'BattenburgBottomRow{:d}Col{:d}'.format(row,col))
 		self.model.Add(diff1 == self.cellValues[row][col] - self.cellValues[row][col+1])
 		self.model.Add(diff2 == self.cellValues[row][col+1] - self.cellValues[row+1][col+1])
 		self.model.Add(diff3 == self.cellValues[row+1][col+1] - self.cellValues[row+1][col])
@@ -853,18 +904,19 @@ class sudoku:
 		for i in range(self.boardWidth-1):
 			for j in range(self.boardWidth-1):
 				if (i,j) not in self.battenburgCells:
-					diff1 = self.model.NewIntVar(0,16,'BattenburgNegativeTopDifference+8Row{:d}Col{:d}'.format(i,j))
-					diff2 = self.model.NewIntVar(0,16,'BattenburgNegativeRightDifference+8Row{:d}Col{:d}'.format(i,j))
-					diff3 = self.model.NewIntVar(0,16,'BattenburgNegativeBottomDifference+8Row{:d}Col{:d}'.format(i,j))
-					div1 = self.model.NewIntVar(0,8,'BattenburgNegativeTopDiv2Row{:d}Col{:d}'.format(i,j))
-					div2 = self.model.NewIntVar(0,8,'BattenburgNegativeRightDiv2Row{:d}Col{:d}'.format(i,j))
-					div3 = self.model.NewIntVar(0,8,'BattenburgNegativeBottomDiv2Row{:d}Col{:d}'.format(i,j))
+					maxDiff = self.MaxDigit-self.minDigit
+					diff1 = self.model.NewIntVar(0,2*maxDiff,'BattenburgNegativeTopDifference+8Row{:d}Col{:d}'.format(i,j))
+					diff2 = self.model.NewIntVar(0,2*maxDiff,'BattenburgNegativeRightDifference+8Row{:d}Col{:d}'.format(i,j))
+					diff3 = self.model.NewIntVar(0,2*maxDiff,'BattenburgNegativeBottomDifference+8Row{:d}Col{:d}'.format(i,j))
+					div1 = self.model.NewIntVar(0,maxDiff,'BattenburgNegativeTopDiv2Row{:d}Col{:d}'.format(i,j))
+					div2 = self.model.NewIntVar(0,maxDiff,'BattenburgNegativeRightDiv2Row{:d}Col{:d}'.format(i,j))
+					div3 = self.model.NewIntVar(0,maxDiff,'BattenburgNegativeBottomDiv2Row{:d}Col{:d}'.format(i,j))
 					mod1 = self.model.NewIntVar(0,1,'BattenburgNegativeTopMod2Row{:d}Col{:d}'.format(i,j))
 					mod2 = self.model.NewIntVar(0,1,'BattenburgNegativeRightMod2Row{:d}Col{:d}'.format(i,j))
 					mod3 = self.model.NewIntVar(0,1,'BattenburgNegativeBottomMod2Row{:d}Col{:d}'.format(i,j))
-					self.model.Add(diff1 == self.cellValues[i][j] - self.cellValues[i][j+1] + 8)
-					self.model.Add(diff2 == self.cellValues[i][j+1] - self.cellValues[i+1][j+1] + 8)
-					self.model.Add(diff3 == self.cellValues[i+1][j+1] - self.cellValues[i+1][j] + 8)
+					self.model.Add(diff1 == self.cellValues[i][j] - self.cellValues[i][j+1] + maxDiff)
+					self.model.Add(diff2 == self.cellValues[i][j+1] - self.cellValues[i+1][j+1] + maxDiff)
+					self.model.Add(diff3 == self.cellValues[i+1][j+1] - self.cellValues[i+1][j] + maxDiff)
 					self.model.Add(2*div1 <= diff1)
 					self.model.Add(2*(div1+1) > diff1)
 					self.model.Add(2*div2 <= diff2)
@@ -994,11 +1046,17 @@ class sudoku:
 			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] < self.cellValues[inlist[j+1][0]][inlist[j+1][1]])
 			
 	def setKeyboardKnightLine(self,inlist):
+		if self.boardWidth != 9:
+			print('Keyboard lines only supported on 9x9 board')
+			sys.exit()
 		inlist = self.__procCellList(inlist)
 		for j in range(len(inlist)-1):
 			self.model.AddAllowedAssignments([self.cellValues[inlist[j][0]][inlist[j][1]],self.cellValues[inlist[j+1][0]][inlist[j+1][1]]],[(1,6),(1,8),(2,7),(2,9),(3,4),(3,8),(4,3),(4,9),(6,1),(6,7),(7,2),(7,6),(8,1),(8,3),(9,2),(9,4)])
 			
 	def setKeyboardKingLine(self,inlist):
+		if self.boardWidth != 9:
+			print('Keyboard lines only supported on 9x9 board')
+			sys.exit()
 		inlist = self.__procCellList(inlist)
 		for j in range(len(inlist)-1):
 			self.model.AddAllowedAssignments([self.cellValues[inlist[j][0]][inlist[j][1]],self.cellValues[inlist[j+1][0]][inlist[j+1][1]]],[(1,2),(1,4),(1,5),(2,1),(2,4),(2,5),(2,6),(2,3),(3,2),(3,5),(3,6),(4,1),(4,2),(4,5),(4,8),(4,7),(5,1),(5,2),(5,3),(5,4),(5,6),(5,7),(5,8),(5,9),(6,3),(6,2),(6,5),(6,8),(6,9),(7,4),(7,5),(7,8),(8,7),(8,4),(8,5),(8,6),(8,9),(9,8),(9,5),(9,6)])
@@ -1009,6 +1067,9 @@ class sudoku:
 			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] == self.cellValues[inlist[-j-1][0]][inlist[-j-1][1]])
 			
 	def setWeakPalindromeLine(self,inlist):
+		if self.boardWidth != 9:
+			print('Keyboard lines only supported on 9x9 board')
+			sys.exit()
 		inlist = self.__procCellList(inlist)
 		for j in range(len(inlist) // 2):
 			self.model.AddAllowedAssignments([self.cellValues[inlist[j][0]][inlist[j][1]],self.cellValues[inlist[-j-1][0]][inlist[-j-1][1]]],[(1,1),(1,3),(3,1),(3,3),(2,2),(2,4),(4,2),(4,4),(5,5),(5,7),(5,9),(7,5),(7,7),(7,9),(6,6),(6,8),(8,6),(8,8)])
@@ -1016,7 +1077,7 @@ class sudoku:
 	def setParityLine(self,inlist):
 		inlist = self.__procCellList(inlist)
 		for j in range(len(inlist)-1):
-			diff = self.model.NewIntVar(-8,8,'ParityLineRow{:d}Col{:d}toRow{:d}Col{:d}'.format(inlist[j][0],inlist[j][1],inlist[j+1][0],inlist[j+1][1]))
+			diff = self.model.NewIntVar(self.minDigit-self.maxDigit,self.maxDigit-self.minDigit,'ParityLineRow{:d}Col{:d}toRow{:d}Col{:d}'.format(inlist[j][0],inlist[j][1],inlist[j+1][0],inlist[j+1][1]))
 			self.model.Add(diff == self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]])
 			self.model.AddModuloEquality(1,diff,2)
 			
@@ -1156,7 +1217,7 @@ class sudoku:
 		for tempArray in self.cellValues: consolidatedCellValues = consolidatedCellValues + tempArray
 		solution_printer = SolutionPrinter(consolidatedCellValues)
 		self.solveStatus = solver.Solve(self.model)
-		
+	
 		print('Solver status = %s' % solver.StatusName(self.solveStatus))
 		if self.solveStatus == cp_model.OPTIMAL:
 			print('Solution found!')
