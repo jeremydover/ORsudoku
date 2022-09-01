@@ -1,10 +1,12 @@
 Supported Constraint List
 =========================
 159 (see Indexing)
+Alternate Digits
 Anti-King
 Anti-Knight
 Arrows
 Battenburg
+Battlefield
 Between Lines
 Chinese Whispers Lines
 Clone Regions
@@ -86,7 +88,7 @@ When a constraint requires a cell or list of cells, they can be input in one of 
 
 Note: The non-tuple cell inputs WILL break on boards larger than 9x9. However, since 9x9 is by far the most popular use case, these shortcuts are worth having.
 
-Qudruples are indexed similarly, from 00 to 77:
+Quadruples are indexed similarly, from 00 to 77:
 
 -------------------------------------
 |   |   |   |   |   |   |   |   |   |
@@ -119,11 +121,15 @@ Qudruples are indexed similarly, from 00 to 77:
 
 Edge constraints are indexed by the top- or left-most cell in the pair of adjacent cells. An additional parameter hv is provided to determine whether the pair is horizontal or vertical. The class variables Horz and Vert can be used for this designation. 
 
+Alternate Digits
+----------------
+If a puzzle does not have a 1-9 digit set (0-8 being the most common alternative), then an alternate digit set can be added by including the digitSet parameter when instantiating the puzzle, e.g.,
+p = ORsudoku.sudoku(boardSizeRoot,digitSet={0,1,2,3,4,5,6,7,8})
+
 Anti-King
 ---------
 setAntiKing(): applies the anti-king constraint to the whole puzzle
 
-  
 Anti-Knight
 -----------
 setAntiKnight(): applies the anti-knight constraint to the whole puzzle
@@ -143,6 +149,13 @@ setBattenburgArray(list): creates multiple Battenburg constraints
   
 setBattenburgNegative(): specify that all cells not specifically designated with Battenburgs do NOT satisfy the Battenburg constraint
 
+Battlefield
+-----------
+setBattlefield(row,col,rc,value): inplements a Battlefield constraint in a row or column
+  row,col: The coordinates of a cell on either end of the row/column
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  value: summarized from Realshaggy: Consider the first x and last y cells of a row or column where x is the value of the first and y the value of the last cell. value is the sum of the digits where these groups overlap or the sum of the digits between these groups.
+  
 Between Lines
 -------------
 setBetweenLine(list): creates a between line constraint
