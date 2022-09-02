@@ -1,0 +1,6 @@
+9/1/2022
+	Added support for slow thermometers
+	Added support for doubling lines
+	Added support for magic squares
+	Added support for position sums
+	Added support for Japanese sum sudoku, excluding countSolutions method.
