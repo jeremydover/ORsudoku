@@ -332,7 +332,7 @@ To model a Japanese Sum Sudoku puzzle, you must use the class japaneseSumSudoku,
 
 p = ORsudoku.japaneseSumSudoku(boardSizeRoot)
 
-Note: The Japanese Sum Sudoku class does NOT support the countSolutions method, only findSolution.
+Note: The Japanese Sum Sudoku class now supports the countSolutions method. HOWEVER, it uses a huge number of Boolean variables that can quickly create exponentially many solutions which are fundamentally the same (i.e. same digits). Recommend only using this for final testing to determine if a puzzle solution is unique.
 
 In this class, you can use the following method:
 setJapaneseSum(row,col,rc,value): sets a Japanese sum constraint

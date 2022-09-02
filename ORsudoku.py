@@ -1663,6 +1663,10 @@ class japaneseSumSudoku(sudoku):
 			varBitmap = [[]]
 		elif len(value) < (self.boardWidth+1)//2:
 			varBitmap = self._sudoku__varBitmap('JapaneseSumRow{:d}Col{:d}RC{:d}'.format(row,col,rc),math.comb(self.boardWidth-1,2*len(value)-2))
+			# Need to force these variables to a single value in the other cases
+			self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf([ltShaded,rbShaded])
+			self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf([ltShaded,rbShaded.Not()])
+			self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf([ltShaded.Not(),rbShaded])
 		else: # Do the die here, since if this case can't work, the others definitely can't
 			print ("Japanese Sum in row {:d} column {:d} cannot be achieved in this grid size")
 			sys.exit()
@@ -1697,6 +1701,10 @@ class japaneseSumSudoku(sudoku):
 				varBitmap = [[]]
 			else:
 				varBitmap = self._sudoku__varBitmap('JapaneseSumRow{:d}Col{:d}RC{:d}'.format(row,col,rc),math.comb(self.boardWidth-1,2*len(value)-1))
+				# Need to force these variables to a single value in the other cases
+				self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf([ltShaded,rbShaded])
+				self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf([ltShaded.Not(),rbShaded.Not()])
+				self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf([ltShaded.Not(),rbShaded])
 			cI = CombinationIterator(self.boardWidth-2,2*len(value)-1)
 			comb = cI.getNext()
 			varTrack = 0
@@ -1723,6 +1731,10 @@ class japaneseSumSudoku(sudoku):
 				varBitmap = [[]]
 			else:
 				varBitmap = self._sudoku__varBitmap('JapaneseSumRow{:d}Col{:d}RC{:d}'.format(row,col,rc),math.comb(self.boardWidth-1,2*len(value)-1))
+				# Need to force these variables to a single value in the other cases
+				self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf([ltShaded,rbShaded])
+				self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf([ltShaded,rbShaded.Not()])
+				self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf([ltShaded.Not(),rbShaded.Not()])
 			cI = CombinationIterator(self.boardWidth-2,2*len(value)-1)
 			comb = cI.getNext()
 			varTrack = 0
@@ -1743,6 +1755,10 @@ class japaneseSumSudoku(sudoku):
 					shade = not shade
 				varTrack = varTrack + 1
 				comb = cI.getNext()
+		else:
+			# These cases can't be realized...kill them
+			self.model.AddBoolAnd([rbShaded]).OnlyEnforceIf([ltShaded,rbShaded.Not()])
+			self.model.AddBoolAnd([ltShaded]).OnlyEnforceIf([ltShaded.Not(),rbShaded])
 
 		# Both shaded
 		if len(value) <= (self.boardWidth-1)//2:
@@ -1750,6 +1766,10 @@ class japaneseSumSudoku(sudoku):
 				varBitmap = [[]]
 			else:
 				varBitmap = self._sudoku__varBitmap('JapaneseSumRow{:d}Col{:d}RC{:d}'.format(row,col,rc),math.comb(self.boardWidth-1,2*len(value)))
+				# Need to force these variables to a single value in the other cases
+				self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf([ltShaded.Not(),rbShaded.Not()])
+				self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf([ltShaded,rbShaded.Not()])
+				self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf([ltShaded.Not(),rbShaded.Not()])
 			cI = CombinationIterator(self.boardWidth-2,2*len(value))
 			comb = cI.getNext()
 			varTrack = 0
@@ -1770,6 +1790,9 @@ class japaneseSumSudoku(sudoku):
 					shade = not shade
 				varTrack = varTrack + 1
 				comb = cI.getNext()
+		else:
+			# This case can't be realized...kill it
+			self.model.AddBoolAnd([rbShaded.Not()]).OnlyEnforceIf([ltShaded,rbShaded])
 
 	def findSolution(self):
 		self._sudoku__applyNegativeConstraints()
@@ -1792,6 +1815,24 @@ class japaneseSumSudoku(sudoku):
 				print()
 		print()
 		
-	def countSolutions(self):
-		print('Count solutions is not supported by Japanese Sum Sudoku')
-		sys.exit()
+	def countSolutions(self,printAll = False):
+		self._sudoku__applyNegativeConstraints()
+		solver = cp_model.CpSolver()
+		consolidatedCellValues = []
+		for tempArray in self.cellValues: consolidatedCellValues = consolidatedCellValues + tempArray
+		solution_printer = SolutionPrinter(consolidatedCellValues)
+		if printAll is True: solution_printer.setPrintAll()
+		self.solveStatus = solver.SearchForAllSolutions(self.model, solution_printer)
+		
+		print('Solutions found : %i' % solution_printer.SolutionCount())
+		if printAll is False:
+			colorama.init()
+			print('Sample solution')
+			if self.solveStatus == cp_model.OPTIMAL:
+				for i in range(self.boardWidth):
+					for j in range(self.boardWidth):
+						if solver.Value(self.cellShaded[i][j]) == 1: # This one is shaded
+							print(Fore.BLACK + Back.WHITE + '{:d}'.format(solver.Value(self.cellValues[i][j])) + Fore.RESET + Back.RESET,end = " ")
+						else:
+							print('{:d}'.format(solver.Value(self.cellValues[i][j])),end = " ")
+					print()
