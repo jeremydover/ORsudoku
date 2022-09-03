@@ -107,7 +107,7 @@ class sudoku:
 	Even = 0	# Constant to determine whether parity constraint is even or odd
 	Odd = 1		# Constant to determine whether parity constraint is even or odd
 	
-	def __init__(self,boardSizeRoot,irregular=None,digitSet=None):
+	def __init__(self,boardSizeRoot,irregular=None,digitSet=None,model=None):
 		self.boardSizeRoot = boardSizeRoot
 		self.boardWidth = boardSizeRoot*boardSizeRoot
 
@@ -140,7 +140,10 @@ class sudoku:
 		self.minDigit = min(self.digits)
 		self.digitRange = self.maxDigit - self.minDigit
 
-		self.model = cp_model.CpModel()
+		if model is None:
+			self.model = cp_model.CpModel()
+		else:
+			self.model = model
 		self.cellValues = []
 		
 		# Create the variables containing the cell values
@@ -215,6 +218,10 @@ class sudoku:
 			self.cellModular.insert(i,t)
 		
 		self.isModular = True
+
+	def getCellVar(self,i,j):
+		# Returns the model variable associated with a cell valuable. Useful when tying several puzzles together, e.g. Samurai
+		return self.cellValues[i][j]
 				
 ####Global constraints
 
@@ -1283,7 +1290,7 @@ class sudoku:
 			self.model.Add(sum(vars[i][j] for j in range(len(inlist)) if j != i) == 1)	#For each cell along line, exactly one cell has a matching value
 
 ####Model solving
-	def __applyNegativeConstraints(self):
+	def applyNegativeConstraints(self):
 		# This method is used to prepare the model for solution. If negative constraints have been set, i.e. all items not marked
 		# cannot be marked. These constraints cannot be applied at time of assertion, since there may be new marks added after
 		# the assertion. This function applies all negative constraints just prior to solving, and is called by the solver function.
@@ -1296,39 +1303,40 @@ class sudoku:
 		if self.isEntropyBattenburgNegative is True: self.__applyEntropyBattenburgNegative()
 
 	def findSolution(self):
-		self.__applyNegativeConstraints()
-		solver = cp_model.CpSolver()
+		self.applyNegativeConstraints()
+		self.solver = cp_model.CpSolver()
 		consolidatedCellValues = []
 		for tempArray in self.cellValues: consolidatedCellValues = consolidatedCellValues + tempArray
 		solution_printer = SolutionPrinter(consolidatedCellValues)
-		self.solveStatus = solver.Solve(self.model)
+		self.solveStatus = self.solver.Solve(self.model)
 	
-		print('Solver status = %s' % solver.StatusName(self.solveStatus))
+		print('Solver status = %s' % self.solver.StatusName(self.solveStatus))
 		if self.solveStatus == cp_model.OPTIMAL:
 			print('Solution found!')
-			for rowIndex in range(self.boardWidth):
-				for colIndex in range(self.boardWidth):
-					print('{:d}'.format(solver.Value(self.cellValues[rowIndex][colIndex])),end = " ")
-				print()
-		print()
+			self.printCurrentSolution()
 
 	def countSolutions(self,printAll = False):
-		self.__applyNegativeConstraints()
-		solver = cp_model.CpSolver()
+		self.applyNegativeConstraints()
+		self.solver = cp_model.CpSolver()
 		consolidatedCellValues = []
 		for tempArray in self.cellValues: consolidatedCellValues = consolidatedCellValues + tempArray
 		solution_printer = SolutionPrinter(consolidatedCellValues)
 		if printAll is True: solution_printer.setPrintAll()
-		self.solveStatus = solver.SearchForAllSolutions(self.model, solution_printer)
+		self.solveStatus = self.solver.SearchForAllSolutions(self.model, solution_printer)
 		
 		print('Solutions found : %i' % solution_printer.SolutionCount())
-		if printAll is False:
+		if printAll is False and self.solveStatus == cp_model.OPTIMAL:
 			print('Sample solution')
-			if self.solveStatus == cp_model.OPTIMAL:
-				for rowIndex in range(self.boardWidth):
-					for colIndex in range(self.boardWidth):
-						print('{:d}'.format(solver.Value(self.cellValues[rowIndex][colIndex])),end = " ")
-					print()
+			self.printCurrentSolution()
+				
+
+	def printCurrentSolution(self):
+		dW = max([len(str(x)) for x in self.digits])
+		for rowIndex in range(self.boardWidth):
+			for colIndex in range(self.boardWidth):
+				print('{:d}'.format(self.solver.Value(self.cellValues[rowIndex][colIndex])).rjust(dW),end = " ")
+			print()
+		print()
 
 	def __varBitmap(self,string,num):
 		# Utility function to create a list of Boolean vaariable propositions that encode num possibilities exactly.
@@ -1516,49 +1524,18 @@ class doublerSudoku(sudoku):
 		self.regions.append([self.baseValues[x[0]][x[1]] for x in inlist])
 		self.model.AddAllDifferent(self.regions[-1])
 		self.model.Add(sum(self.doubleInt[x[0]][x[1]] for x in inlist) == 1)	# Ensure one doubler per region
-		
-	def findSolution(self):
-		self._sudoku__applyNegativeConstraints()
-		solver = cp_model.CpSolver()
-		consolidatedCellValues = []
-		for tempArray in self.cellValues: consolidatedCellValues = consolidatedCellValues + tempArray
-		solution_printer = SolutionPrinter(consolidatedCellValues)
-		self.solveStatus = solver.Solve(self.model)
+					
+	def printCurrentSolution(self):
+		dW = max([len(str(x)) for x in self.digits])
 		colorama.init()
-	
-		print('Solver status = %s' % solver.StatusName(self.solveStatus))
-		if self.solveStatus == cp_model.OPTIMAL:
-			print('Solution found!')
-			for i in range(self.boardWidth):
-				for j in range(self.boardWidth):
-					if solver.Value(self.doubleInt[i][j]) == 1: # This one is doubled!
-						print(Fore.RED + '{:d}'.format(solver.Value(self.baseValues[i][j])) + Fore.RESET,end = " ")
-					else:
-						print('{:d}'.format(solver.Value(self.baseValues[i][j])),end = " ")
-				print()
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				if self.solver.Value(self.doubleInt[i][j]) == 1: # This one is doubled!
+					print(Fore.RED + '{:d}'.format(self.solver.Value(self.baseValues[i][j])).rjust(dW) + Fore.RESET,end = " ")
+				else:
+					print('{:d}'.format(self.solver.Value(self.baseValues[i][j])).rjust(dW),end = " ")
+			print()
 		print()
-
-	def countSolutions(self,printAll = False):
-		self._sudoku__applyNegativeConstraints()
-		solver = cp_model.CpSolver()
-		consolidatedCellValues = []
-		for tempArray in self.cellValues: consolidatedCellValues = consolidatedCellValues + tempArray
-		solution_printer = SolutionPrinter(consolidatedCellValues)
-		if printAll is True: solution_printer.setPrintAll()
-		self.solveStatus = solver.SearchForAllSolutions(self.model, solution_printer)
-		
-		print('Solutions found : %i' % solution_printer.SolutionCount())
-		if printAll is False:
-			colorama.init()
-			print('Sample solution')
-			if self.solveStatus == cp_model.OPTIMAL:
-				for i in range(self.boardWidth):
-					for j in range(self.boardWidth):
-						if solver.Value(self.doubleInt[i][j]) == 1: # This one is doubled!
-							print(Fore.RED + '{:d}'.format(solver.Value(self.baseValues[i][j])) + Fore.RESET,end = " ")
-						else:
-							print('{:d}'.format(solver.Value(self.baseValues[i][j])),end = " ")
-					print()
 					
 class japaneseSumSudoku(sudoku):
 	"""A class used to implement Japanese Sum puzzles."""
@@ -1793,46 +1770,140 @@ class japaneseSumSudoku(sudoku):
 		else:
 			# This case can't be realized...kill it
 			self.model.AddBoolAnd([rbShaded.Not()]).OnlyEnforceIf([ltShaded,rbShaded])
-
-	def findSolution(self):
-		self._sudoku__applyNegativeConstraints()
-		solver = cp_model.CpSolver()
-		consolidatedCellValues = []
-		for tempArray in self.cellValues: consolidatedCellValues = consolidatedCellValues + tempArray
-		solution_printer = SolutionPrinter(consolidatedCellValues)
-		self.solveStatus = solver.Solve(self.model)
+					
+	def printCurrentSolution(self):
 		colorama.init()
+		dW = max([len(str(x)) for x in self.digits])
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				if self.solver.Value(self.cellShaded[i][j]) == 1: # This one is shaded
+					print(Fore.BLACK + Back.WHITE + '{:d}'.format(self.solver.Value(self.cellValues[i][j])).rjust(dW) + Fore.RESET + Back.RESET,end = " ")
+				else:
+					print('{:d}'.format(self.solver.Value(self.cellValues[i][j])).rjust(dW),end = " ")
+			print()
+		print()
+
+class samuraiSudoku(sudoku):
+	"""A class used to implement Samurai Sudoku puzzles."""
+
+	def __init__(self,boardSizeRoot,irregular=None,digitSet=None):
+		self.boardSizeRoot = boardSizeRoot
+		self.boardWidth = boardSizeRoot*boardSizeRoot
+
+		if digitSet is None:
+			self.digits = {x for x in range(1,self.boardWidth+1)}
+		else:
+			self.digits = digitSet
+		self.maxDigit = max(self.digits)
+		self.minDigit = min(self.digits)
+		self.digitRange = self.maxDigit - self.minDigit
+
+		self.model = cp_model.CpModel()
+		
+		self.p1 = sudoku(boardSizeRoot,irregular=irregular,digitSet=self.digits,model=self.model)
+		self.p2 = sudoku(boardSizeRoot,irregular=irregular,digitSet=self.digits,model=self.model)
+		self.p3 = sudoku(boardSizeRoot,irregular=irregular,digitSet=self.digits,model=self.model)
+		self.p4 = sudoku(boardSizeRoot,irregular=irregular,digitSet=self.digits,model=self.model)
+		self.p5 = sudoku(boardSizeRoot,irregular=irregular,digitSet=self.digits,model=self.model)
+		
+		overlap = self.boardWidth-self.boardSizeRoot-1
+		for i in range(self.boardSizeRoot+1):
+			for j in range(self.boardSizeRoot+1):
+				self.model.Add(self.p1.getCellVar(overlap+i,overlap+j) == self.p3.getCellVar(i,j))
+				self.model.Add(self.p2.getCellVar(overlap+i,j) == self.p3.getCellVar(i,overlap+j))
+				self.model.Add(self.p4.getCellVar(i,overlap+j) == self.p3.getCellVar(overlap+i,j))
+				self.model.Add(self.p5.getCellVar(i,j) == self.p3.getCellVar(overlap+i,overlap+j))
+		
+	def setSamuraiConstraint(self,puzz,constraint,args):
+		# Unified interface to apply Samurai constraints to sub-puzzles
+		getattr(getattr(self,'p'+str(puzz)),'set'+constraint)(args)
 	
-		print('Solver status = %s' % solver.StatusName(self.solveStatus))
+	def findSolution(self):
+		self.p1.applyNegativeConstraints()
+		self.p2.applyNegativeConstraints()
+		self.p3.applyNegativeConstraints()
+		self.p4.applyNegativeConstraints()
+		self.p5.applyNegativeConstraints()
+
+		self.solver = cp_model.CpSolver()
+		self.solveStatus = self.solver.Solve(self.model)
+				
+		print('Solver status = %s' % self.solver.StatusName(self.solveStatus))
 		if self.solveStatus == cp_model.OPTIMAL:
 			print('Solution found!')
-			for i in range(self.boardWidth):
-				for j in range(self.boardWidth):
-					if solver.Value(self.cellShaded[i][j]) == 1: # This one is shaded
-						print(Fore.BLACK + Back.WHITE + '{:d}'.format(solver.Value(self.cellValues[i][j])) + Fore.RESET + Back.RESET,end = " ")
-					else:
-						print('{:d}'.format(solver.Value(self.cellValues[i][j])),end = " ")
-				print()
-		print()
+			self.printCurrentSolution()
+				
+	def countSolutions(self):
+		self.p1.applyNegativeConstraints()
+		self.p2.applyNegativeConstraints()
+		self.p3.applyNegativeConstraints()
+		self.p4.applyNegativeConstraints()
+		self.p5.applyNegativeConstraints()
 		
-	def countSolutions(self,printAll = False):
-		self._sudoku__applyNegativeConstraints()
-		solver = cp_model.CpSolver()
+		self.solver = cp_model.CpSolver()
 		consolidatedCellValues = []
-		for tempArray in self.cellValues: consolidatedCellValues = consolidatedCellValues + tempArray
-		solution_printer = SolutionPrinter(consolidatedCellValues)
-		if printAll is True: solution_printer.setPrintAll()
-		self.solveStatus = solver.SearchForAllSolutions(self.model, solution_printer)
+		solution_printer = SolutionPrinter([])
+		self.solveStatus = self.solver.SearchForAllSolutions(self.model, solution_printer)
 		
 		print('Solutions found : %i' % solution_printer.SolutionCount())
-		if printAll is False:
-			colorama.init()
+		if self.solveStatus == cp_model.OPTIMAL:
 			print('Sample solution')
-			if self.solveStatus == cp_model.OPTIMAL:
-				for i in range(self.boardWidth):
-					for j in range(self.boardWidth):
-						if solver.Value(self.cellShaded[i][j]) == 1: # This one is shaded
-							print(Fore.BLACK + Back.WHITE + '{:d}'.format(solver.Value(self.cellValues[i][j])) + Fore.RESET + Back.RESET,end = " ")
-						else:
-							print('{:d}'.format(solver.Value(self.cellValues[i][j])),end = " ")
-					print()
+			self.printCurrentSolution()
+
+	def printCurrentSolution(self):
+		colorama.init()
+		dW = max([len(str(x)) for x in self.digits])
+		overlap = self.boardWidth-self.boardSizeRoot-1
+		# First print boards 1 and 2, and their overlap with board 3
+		for i in range(self.boardWidth):
+			# p1
+			for j in range(self.boardWidth):
+				if i < overlap or j < overlap:
+					print('{:d}'.format(self.solver.Value(self.p1.getCellVar(i,j))).rjust(dW),end = " ")
+				else:
+					print(Fore.CYAN+'{:d}'.format(self.solver.Value(self.p1.getCellVar(i,j))).rjust(dW)+Fore.RESET,end = " ")
+			# Between p1 and p2
+			if i < overlap:
+				print(' '*((1+dW)*(self.boardWidth-2*(self.boardSizeRoot+1))),end = '')
+			else:
+				for j in range(self.boardSizeRoot+1,overlap):
+					print(Fore.CYAN+'{:d}'.format(self.solver.Value(self.p3.getCellVar(i-overlap,j))).rjust(dW)+Fore.RESET,end = " ")
+
+			# p2
+			for j in range(self.boardWidth):
+				if i < overlap or j > self.boardSizeRoot:
+					print('{:d}'.format(self.solver.Value(self.p2.getCellVar(i,j))).rjust(dW),end = " ")
+				else:
+					print(Fore.CYAN+'{:d}'.format(self.solver.Value(self.p2.getCellVar(i,j))).rjust(dW)+Fore.RESET,end = " ")
+			print()
+			
+		# Now we're in the middle where we're printing just board 3
+		for i in range(self.boardSizeRoot+1,overlap):
+			print(' '*((1+dW)*overlap),end = '')
+			for j in range(self.boardWidth):
+				print(Fore.CYAN+'{:d}'.format(self.solver.Value(self.p3.getCellVar(i,j))).rjust(dW)+Fore.RESET,end = " ")
+			print()
+				
+		# Now the bottom two grids, p4 and p5
+		for i in range(self.boardWidth):
+			# p4
+			for j in range(self.boardWidth):
+				if i > self.boardSizeRoot or j < overlap:
+					print('{:d}'.format(self.solver.Value(self.p4.getCellVar(i,j))).rjust(dW),end = " ")
+				else:
+					print(Fore.CYAN+'{:d}'.format(self.solver.Value(self.p4.getCellVar(i,j))).rjust(dW)+Fore.RESET,end = " ")
+			# Between p4 and p5
+			if i < self.boardSizeRoot + 1:
+				for j in range(self.boardSizeRoot+1,overlap):
+					print(Fore.CYAN+'{:d}'.format(self.solver.Value(self.p3.getCellVar(i+overlap,j))).rjust(dW)+Fore.RESET,end = " ")
+			else:
+				print(' '*((1+dW)*(self.boardWidth-2*(self.boardSizeRoot+1))),end = '')
+					
+			# p5
+			for j in range(self.boardWidth):
+				if i > self.boardSizeRoot or j > self.boardSizeRoot:
+					print('{:d}'.format(self.solver.Value(self.p5.getCellVar(i,j))).rjust(dW),end = " ")
+				else:
+					print(Fore.CYAN+'{:d}'.format(self.solver.Value(self.p5.getCellVar(i,j))).rjust(dW)+Fore.RESET,end = " ")
+			print()
+		print()

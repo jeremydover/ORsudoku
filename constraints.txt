@@ -51,6 +51,7 @@ Quad Sums (one digit on a quad is the sum of the three others)
 Region Sum Lines (sum of all cells along a line in a region is fixed)
 Region Segment Sum Lines - see Region Sum Lines
 Renban Lines
+Samurai Sudoku
 Sandwich Sums
 Slow Thermometers (see Thermometers)
 Sum Dots (see Killer Cages)
@@ -482,6 +483,23 @@ Renban Lines
 ------------
 setRenbanLine(list): set a Renban line constraint
   list: list of cell specifications
+
+Samurai Sudoku
+--------------
+To model a Samurai Sudoku puzzle, you must use the class samuraiSudoku, e.g.
+
+p = ORsudoku.samuraiSudoku(boardSizeRoot)
+
+The 5 sub-Sudoku puzzles are labelled
+1 2
+ 3
+4 5
+
+In this class, you can use the following method:
+setSamuraiConstraint(puzzle,constraint,argsd): sets a Samurai constraint
+	puzzle: the puzzle number (1-5) to which the constraint should apply
+	constraint: a string containing the name of the constraint (e.g. 'GivenArray')..do not include the 'set' used in the method name
+	args: the arguments that you wish to pass to the constraint, just as if you were passing them with the normal 'set' method
 
 Sandwich Sums
 -------------

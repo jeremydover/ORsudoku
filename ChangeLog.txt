@@ -1,3 +1,8 @@
+9/2/2022bis
+	Added support for Samurai sudoku
+	Greatly improved solution printing, abstracting it into its own method
+	Fixed printing to include support for multi-digit numbers
+
 9/2/2022
 	Added support for counting solutions for Japanese Sum Sudoku
 	
