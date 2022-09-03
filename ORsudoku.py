@@ -116,6 +116,8 @@ class sudoku:
 		
 		self.isKropkiInitialized = False
 		self.isKropkiNegative = False
+		self.kropkiDiff = 1
+		self.kropkiRatio = 2
 		
 		self.isXVInitialized = False
 		self.isXVNegative = False
@@ -376,10 +378,25 @@ class sudoku:
 	def setGlobalEntropy(self):
 		self.setEntropyQuadArray([(i,j) for i in range(self.boardWidth-1) for j in range(self.boardWidth-1)])
 
+	def setUnicornDigit(self,value):
+		# A unicorn digit is one such that for any instance of that digit in the grid, all of the cells a knight's move away are different
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				c = self.model.NewBoolVar('UnicornDigitD{:d}R{:d}C{:d}'.format(value,i,j))
+				self.model.Add(self.cellValues[i][j] == value).OnlyEnforceIf(c)
+
+				# Curses...lack of OnlyEnforceIf on AddAllDifferent strikes again. Gotta do it the long way
+				kCells = [self.cellValues[i+k][j+m] for k in [-2,-1,1,2] for m in [-2,-1,1,2] if abs(k) != abs(m) and i+k >= 0 and i+k < self.boardWidth and j+m >= 0 and j+m < self.boardWidth]
+				for k in range(len(kCells)):
+					for m in range(k+1,len(kCells)):
+						self.model.Add(kCells[k] != kCells[m]).OnlyEnforceIf(c)
+
+				self.model.Add(self.cellValues[i][j] != value).OnlyEnforceIf(c.Not())		
+
 ####Single cell constraints
 	def setGiven(self,row,col=-1,value=-1):
 		if col == -1:
-			(row,col,value) = self.__procCell(row,3)
+			(row,col,value) = self.__procCell(row)
 		self.model.Add(self.cellValues[row][col] == value)
 	
 	def setGivenArray(self,cells):
@@ -387,7 +404,7 @@ class sudoku:
 
 	def setMinMaxCell(self,row,col=-1,minmax=-1):
 		if col == -1:
-			(row,col,minmax) = self.__procCell(row,3)
+			(row,col,minmax) = self.__procCell(row)
 		if row > 0:
 			self.model.Add(self.cellValues[row][col] < self.cellValues[row-1][col]) if minmax == 0 else self.model.Add(self.cellValues[row][col] > self.cellValues[row-1][col])
 		if row < self.boardWidth-1:
@@ -418,7 +435,7 @@ class sudoku:
 		
 	def setEvenOdd(self,row,col=-1,parity=-1):
 		if col == -1:
-			(row,col,parity) = self.__procCell(row,3)
+			(row,col,parity) = self.__procCell(row)
 		self.model.AddModuloEquality(parity,self.cellValues[row][col],2)
 		
 	def setEven(self,row,col=-1):
@@ -455,7 +472,7 @@ class sudoku:
 				
 	def setKropkiWhite(self,row,col=-1,hv=-1):
 		if col == -1:
-			(row,col,hv) = self.__procCell(row,3)
+			(row,col,hv) = self.__procCell(row)
 		if self.isKropkiInitialized is not True:
 			self.kropkiCells = [(row,col,hv)]
 			self.isKropkiInitialized = True
@@ -463,12 +480,12 @@ class sudoku:
 			self.kropkiCells.append((row,col,hv))
 		# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
 		bit = self.model.NewBoolVar('KropkiWhiteBiggerDigitRow{:d}Col{:d}HV{:d}'.format(row,col,hv))
-		self.model.Add(self.cellValues[row][col] - self.cellValues[row+hv][col+(1-hv)] == 1).OnlyEnforceIf(bit)
-		self.model.Add(self.cellValues[row][col] - self.cellValues[row+hv][col+(1-hv)] == -1).OnlyEnforceIf(bit.Not())
+		self.model.Add(self.cellValues[row][col] - self.cellValues[row+hv][col+(1-hv)] == self.kropkiDiff).OnlyEnforceIf(bit)
+		self.model.Add(self.cellValues[row][col] - self.cellValues[row+hv][col+(1-hv)] == -1*self.kropkiDiff).OnlyEnforceIf(bit.Not())
 		
 	def setKropkiBlack(self,row,col=-1,hv=-1):
 		if col == -1:
-			(row,col,hv) = self.__procCell(row,3)
+			(row,col,hv) = self.__procCell(row)
 		if self.isKropkiInitialized is not True:
 			self.kropkiCells = [(row,col,hv)]
 			self.isKropkiInitialized = True
@@ -476,8 +493,8 @@ class sudoku:
 			self.kropkiCells.append((row,col,hv))
 		# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
 		bit = self.model.NewBoolVar('KropkiBlackBiggerDigitRow{:d}Col{:d}HV{:d}'.format(row,col,hv))
-		self.model.Add(self.cellValues[row][col] == 2*self.cellValues[row+hv][col+(1-hv)]).OnlyEnforceIf(bit)
-		self.model.Add(2*self.cellValues[row][col] == self.cellValues[row+hv][col+(1-hv)]).OnlyEnforceIf(bit.Not())
+		self.model.Add(self.cellValues[row][col] == self.kropkiRatio*self.cellValues[row+hv][col+(1-hv)]).OnlyEnforceIf(bit)
+		self.model.Add(self.kropkiRatio*self.cellValues[row][col] == self.cellValues[row+hv][col+(1-hv)]).OnlyEnforceIf(bit.Not())
 		
 	def setKropkiWhiteArray(self,cells):
 		for x in cells: self.setKropkiWhite(x)
@@ -486,7 +503,7 @@ class sudoku:
 		for x in cells: self.setKropkiBlack(x)
 		
 	def setKropkiArray(self,cells):
-		cellList = self.__procCellList(cells,4)
+		cellList = self.__procCellList(cells)
 		for x in cellList:
 			if x[3] == sudoku.White:
 				self.setKropkiWhite(x[0],x[1],x[2])
@@ -503,19 +520,27 @@ class sudoku:
 		for i in range(self.boardWidth):
 			for j in range(self.boardWidth):
 				if i < 8 and (i,j,1) not in self.kropkiCells:
-					self.model.Add(self.cellValues[i][j] - self.cellValues[i+1][j] != 1)
-					self.model.Add(self.cellValues[i][j] - self.cellValues[i+1][j] != -1)
-					self.model.Add(self.cellValues[i][j] != 2*self.cellValues[i+1][j])
-					self.model.Add(2*self.cellValues[i][j] != self.cellValues[i+1][j])
+					self.model.Add(self.cellValues[i][j] - self.cellValues[i+1][j] != self.kropkiDiff)
+					self.model.Add(self.cellValues[i][j] - self.cellValues[i+1][j] != -1*self.kropkiDiff)
+					self.model.Add(self.cellValues[i][j] != self.kropkiRatio*self.cellValues[i+1][j])
+					self.model.Add(self.kropkiRatio*self.cellValues[i][j] != self.cellValues[i+1][j])
 				if j < 8 and (i,j,0) not in self.kropkiCells:
-					self.model.Add(self.cellValues[i][j] - self.cellValues[i][j+1] != 1)
-					self.model.Add(self.cellValues[i][j] - self.cellValues[i][j+1] != -1)
-					self.model.Add(self.cellValues[i][j] != 2*self.cellValues[i][j+1])
-					self.model.Add(2*self.cellValues[i][j] != self.cellValues[i][j+1])
+					self.model.Add(self.cellValues[i][j] - self.cellValues[i][j+1] != self.kropkiDiff)
+					self.model.Add(self.cellValues[i][j] - self.cellValues[i][j+1] != -1*self.kropkiDiff)
+					self.model.Add(self.cellValues[i][j] != self.kropkiRatio*self.cellValues[i][j+1])
+					self.model.Add(self.kropkiRatio*self.cellValues[i][j] != self.cellValues[i][j+1])
+	
+	def setKropkiDifference(self,diff=1):
+		# Sets the difference used in all subseqequent white Kropki dots
+		self.kropkiDiff = diff
+		
+	def setKropkiRatio(self,ratio=2):
+		# Sets the ratio used in all subseqequent black Kropki dots
+		self.kropkiRatio = ratio
 					
 	def setXVV(self,row,col=-1,hv=-1):
 		if col == -1:
-			(row,col,hv) = self.__procCell(row,3)
+			(row,col,hv) = self.__procCell(row)
 		if self.isXVInitialized is not True:
 			self.xvCells = [(row,col,hv)]
 			self.isXVInitialized = True
@@ -527,7 +552,7 @@ class sudoku:
 		
 	def setXVX(self,row,col=-1,hv=-1):
 		if col == -1:
-			(row,col,hv) = self.__procCell(row,3)
+			(row,col,hv) = self.__procCell(row)
 		if self.isXVInitialized is not True:
 			self.xvCells = [(row,col,hv)]
 			self.isXVInitialized = True
@@ -544,7 +569,7 @@ class sudoku:
 		for x in cells: self.setXVX(x)
 		
 	def setXVArray(self,cells):
-		cellList = self.__procCellList(cells,4)
+		cellList = self.__procCellList(cells)
 		for x in cellList:
 			if x[3] == sudoku.V:
 				self.setXVV(x[0],x[1],x[2])
@@ -569,7 +594,7 @@ class sudoku:
 					
 	def setXVXVV(self,row,col=-1,hv=-1):
 		if col == -1:
-			(row,col,hv) = self.__procCell(row,3)
+			(row,col,hv) = self.__procCell(row)
 		if self.isXVXVInitialized is not True:
 			self.xvxvCells = [(row,col,hv)]
 			self.isXVXVInitialized = True
@@ -583,7 +608,7 @@ class sudoku:
 		
 	def setXVXVX(self,row,col=-1,hv=-1):
 		if col == -1:
-			(row,col,hv) = self.__procCell(row,3)
+			(row,col,hv) = self.__procCell(row)
 		if self.isXVXVInitialized is not True:
 			self.xvxvCells = [(row,col,hv)]
 			self.isXVXVInitialized = True
@@ -602,7 +627,7 @@ class sudoku:
 		for x in cells: self.setXVXVX(x)
 		
 	def setXVXVArray(self,cells):
-		cellList = self.__procCellList(cells,4)
+		cellList = self.__procCellList(cells)
 		for x in cellList:
 			if x[3] == sudoku.V:
 				self.setXVXVV(x[0],x[1],x[2])
@@ -643,9 +668,26 @@ class sudoku:
 		inlist = self.__procCellList(inlist)
 		self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in inlist) == value)
 		
+	def setZone(self,inlist,values):
+		# A zone is an area with potentially repeating values; the clue is a list of digits that must appear in the zone
+		inlist = self.__procCellList(inlist)
+		for x in set(values):
+			xVars = []
+			for i in range(len(inlist)):
+				c = self.model.NewBoolVar('ZoneR{:d}C{:d}V{:d}'.format(inlist[i][0],inlist[i][1],x))
+				# Tie Boolean to integer so we can count instances
+				cI = self.model.NewIntVar(0,1,'ZoneIntR{:d}C{:d}V{:d}'.format(inlist[i][0],inlist[i][1],x))
+				self.model.Add(cI == 1).OnlyEnforceIf(c)
+				self.model.Add(cI == 0).OnlyEnforceIf(c.Not())
+				xVars.append(cI)
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] == x).OnlyEnforceIf(c)
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] != x).OnlyEnforceIf(c.Not())
+				
+			self.model.Add(sum(xVars) == values.count(x))
+			
 	def setMagicSquare(self,row,col=-1):
 		if col == -1:
-			(row,col) = self.__procCell(row,2)
+			(row,col) = self.__procCell(row)
 		tSum = (self.boardWidth+1)*self.boardSizeRoot // 2
 		for i in range(self.boardSizeRoot):
 			self.model.Add(sum(self.cellValues[row+i][col+j] for j in range(self.boardSizeRoot)) == tSum) # Row sum
@@ -658,7 +700,7 @@ class sudoku:
 		if self.isEntropy is False:
 			self.__setEntropy()
 		if col == -1:
-			(row,col,hv) = self.__procCell(row,3)
+			(row,col,hv) = self.__procCell(row)
 		# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
 		self.model.Add(self.cellEntropy[row][col] != self.cellEntropy[row+hv][col+(1-hv)])
 		
@@ -666,7 +708,7 @@ class sudoku:
 		if self.isEntropy is False:
 			self.__setEntropy()
 		if col == -1:
-			(row,col,hv) = self.__procCell(row,3)
+			(row,col,hv) = self.__procCell(row)
 		# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
 		self.model.Add(self.cellEntropy[row][col] == self.cellEntropy[row+hv][col+(1-hv)])
 
@@ -677,7 +719,7 @@ class sudoku:
 		for x in cells: self.setEntropkiBlack(x)
 		
 	def setEntropkiArray(self,cells):
-		cellList = self.__procCellList(cells,4)
+		cellList = self.__procCellList(cells)
 		for x in cellList:
 			if x[3] == sudoku.White:
 				self.setEntropkiWhite(x[0],x[1],x[2])
@@ -1370,9 +1412,8 @@ class sudoku:
 			
 		return var
 		
-	def __procCell(self,cell,n=2):
-		# Utility function that processes an individual cell into a tuple format if needed
-		# Pads with leading zeros up to length n.
+	def __procCell(self,cell):
+		# Utility function that processes an individual cell into a tuple format
 		
 		# Note: This function assumes that the first two elements are a row/column index, 1-base
 		# so it converts them to 0-base.
@@ -1380,16 +1421,16 @@ class sudoku:
 		if type(cell) is tuple:
 			myCell = cell 
 		elif type(cell) is str:
-			myCell = tuple(map(int,list(cell.zfill(n))))
+			myCell = tuple(map(int,list(cell)))
 		elif type(cell) is int:
-			myCell = tuple(map(int,list(str(cell).zfill(n))))
+			myCell = tuple(map(int,list(str(cell))))
 			
 		return tuple([myCell[i]-1 for i in range(2)] + [myCell[i] for i in range(2,len(myCell))])
 			
-	def __procCellList(self,inlist,n=2):
+	def __procCellList(self,inlist):
 		# Utility function to process a list from one of several input formats into the tuple format
 		# required by our functions
-		return list(map(lambda x: self.__procCell(x,n),inlist))
+		return list(map(lambda x: self.__procCell(x),inlist))
 		
 class doublerSudoku(sudoku):
 	"""A class used to implement doubler puzzles. A doubler puzzle has a doubler in each row, column and region. Moreover, each digit is doubled exactly one time. The digit entered is used to determine normal Sudoku contraints, i.e., one of each digit per row, column and region. But for each other constraint, its value needs to be doubled."""	

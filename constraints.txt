@@ -10,6 +10,7 @@ Battlefield
 Between Lines
 Chinese Whispers Lines
 Clone Regions
+Difference Pairs - see Kropki and Kropki Pairs
 Disjoint Groups
 Double Arrows - see Arrows
 Doubler Sudoku
@@ -37,6 +38,7 @@ Kropki (see Kropki Pairs)
 Kropki Pairs
 Little Killer
 Lockout Lines
+Look-and-Say Cages - see Zones
 Magic Squares
 Min-Max
 Modular Lines
@@ -48,6 +50,7 @@ Pointing Arrows - see Arrows
 Position Sums
 Quadruple
 Quad Sums (one digit on a quad is the sum of the three others)
+Ratio Pairs - see Kropki and Kropki pairs
 Region Sum Lines (sum of all cells along a line in a region is fixed)
 Region Segment Sum Lines - see Region Sum Lines
 Renban Lines
@@ -56,6 +59,7 @@ Sandwich Sums
 Slow Thermometers (see Thermometers)
 Sum Dots (see Killer Cages)
 Thermometers
+Unicorn Digits
 Weak Palindrome Lines
 Windoku
 X-Kropki
@@ -64,6 +68,7 @@ X-Sum
 XV (see XV Pairs)
 XV Pairs
 XVXV
+Zones
 
 Some Notes on Data Structures
 -----------------------------
@@ -384,6 +389,13 @@ setKropkiArray(list): creates multiple Entropki dots
   
 setKropkiNegative(): implements true Kropki rules with a negative constraint
 
+To change the values used for difference for white dots, and ratio for black dots, you can use the following methods:
+setKropkiDifference(value)
+setKropkiRatio(value)
+
+The values can be reset to their defaults by calling them with no argument. All dots added subsequently to these calls will use the new values, without changing constraints already entered. HOWEVER, if a negative constraint is applied, it will ALWAYS use the final set value of these two variables to apply the negative
+constraint against.
+
 Little Killers
 --------------
 setLittleKiller(row1,col1,row2,col2,value): sets a little killer diagonal constraint
@@ -508,6 +520,11 @@ set SandwichSum(row,col,rc,value): sets a sandwich sum constraint
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: The sum of the values between the 1 and 9 in the clued row/column
   
+Unicorn Digits
+--------------
+setUnicornDigit(value): set a unicorn digit, i.e. for any instance of that digit in the grid, all of the cells a knight's move away have distinct values
+	value: value of the digit to be a unicorn
+
 Thermometers
 ------------
 setThermo(list): asserts that the values in cells increase from the beginning of the line to the end
@@ -589,3 +606,11 @@ setXVXVArray(list): creates multiple X/V clues
   Example: 1701 incidates an X (1 XV spec is fourth) on the right edge (0 HV spec is third) of cell 1,7 (17 cell spec is first). This can also be written as the tuple (1,7,p.Horz,p.X)
   
 setXVXVNegative(): implements negative constraint
+
+Zones
+-----
+setZone(list,values): sets a zone, i.e., a set of cells and a list of values such that each value must appear in the zone, *including repeats*
+  list: list of cell specifications
+  values: list of values to appear in the zone
+  
+Note that this method can be used to implement look-and-say cages as well, just by interpreting the clue string as a list of values, e.g. 27 becomes [7,7]

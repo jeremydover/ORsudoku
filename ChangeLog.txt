@@ -1,3 +1,8 @@
+9/3/2022
+	Added support for unicorn digits (thanks for the inspiration, clover!)
+	Updated Kropki constraints to allow different difference and ratio values for white/black dots, respectively
+	Added support for zones (thanks again clover1) and look-and-say cages (thanks Derektionary!)
+
 9/2/2022bis
 	Added support for Samurai sudoku
 	Greatly improved solution printing, abstracting it into its own method
@@ -7,7 +12,7 @@
 	Added support for counting solutions for Japanese Sum Sudoku
 	
 9/1/2022
-	Added support for slow thermometers
+	Added support for slow thermometers (thanks for the inspiration, Philip Newman!)
 	Added support for doubling lines
 	Added support for magic squares
 	Added support for position sums
