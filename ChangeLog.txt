@@ -1,3 +1,9 @@
+9/4/2022
+	Added support for shift lines
+	Added support for up-and-down lines (alternately increase/decrease)
+	Added support for neighbor sums
+	Added support for run-on Renban lines
+
 9/3/2022
 	Added support for unicorn digits (thanks for the inspiration, clover!)
 	Updated Kropki constraints to allow different difference and ratio values for white/black dots, respectively

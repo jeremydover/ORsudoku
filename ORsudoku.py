@@ -457,6 +457,18 @@ class sudoku:
 	def setEvenOddArray(self,cells):
 		for x in cells: self.setEvenOdd(x)
 		
+	def setNeighborSum(self,row,col=-1):
+		# Cell whose value is the sum of its orthogonally adjacent neighbors
+		if col == -1:
+			(row,col) = self.__procCell(row)
+		sCells = [self.cellValues[row+k][col+m] for k in [-1,0,1] for m in [-1,0,1] if abs(k) != abs(m) and row+k >= 0 and row+k < self.boardWidth and col+m >= 0 and col+m < self.boardWidth]
+		self.model.Add(sum(sCells) == self.cellValues[row][col])
+	setNeighbourSum	= setNeighborSum
+	
+	def setNeighborSumArray(self,cells):
+		for x in cells: self.setNeighborSum(x)
+	setNeighbourSumArray = setNeighborSumArray
+	
 ####Multi-cell constraints
 	def setFortress(self,inlist):
 		inlist = self.__procCellList(inlist)
@@ -1203,6 +1215,20 @@ class sudoku:
 			for y in range(len(inlist)):
 				self.model.Add(self.cellValues[inlist[x][0]][inlist[x][1]]-self.cellValues[inlist[y][0]][inlist[y][1]] < len(inlist))
 				
+	def setRunOnRenbanLine(self,inlist,n=5):
+		# Each contiguous subsegment of length n is a Renban of length n
+		# Note: we could just chunk this out as a bunch of overlapping Renbans, but that'll add a lot of repeated subtraction conditions
+		# Let's do the first one that way, so we aren't duplicating quite as much code
+		if len(inlist) >= n:
+			self.setRenbanLine(inlist[0:n]) # Note: do this before doing procCellList, since the Renban call will proc it
+		inlist = self.__procCellList(inlist)
+		for i in range(n,len(inlist)):
+			self.model.AddAllDifferent([self.cellValues[inlist[i-j][0]][inlist[i-j][1]] for j in range(n)])
+			for j in range(n):
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]]-self.cellValues[inlist[i-j][0]][inlist[i-j][1]] < n)
+				self.model.Add(self.cellValues[inlist[i-j][0]][inlist[i-j][1]]-self.cellValues[inlist[i][0]][inlist[i][1]] < n)
+					
+				
 	def setGermanWhispersLine(self,inlist):
 		inlist = self.__procCellList(inlist)
 		for j in range(len(inlist)-1):
@@ -1330,6 +1356,25 @@ class sudoku:
 		
 		for i in range(len(inlist)):
 			self.model.Add(sum(vars[i][j] for j in range(len(inlist)) if j != i) == 1)	#For each cell along line, exactly one cell has a matching value
+			
+	def setShiftLine(self,inlist):
+		# Like a palindrome, except one side of the line is uniformly one larger than its counterpart on the other side
+		inlist = self.__procCellList(inlist)
+		c = self.model.NewBoolVar('ShiftLineR{:d}C{:d}'.format(inlist[0][0],inlist[0][1]))
+		for j in range(len(inlist) // 2):
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] == self.cellValues[inlist[-j-1][0]][inlist[-j-1][1] + 1]).OnlyEnforceIf(c)
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] + 1 == self.cellValues[inlist[-j-1][0]][inlist[-j-1][1]]).OnlyEnforceIf(c.Not())
+			
+	def setUpAndDownLine(self,inlist):
+		inlist = self.__procCellList(inlist)
+		c = self.model.NewBoolVar('UpAndDownLineR{:d}C{:d}'.format(inlist[0][0],inlist[0][1]))
+		for i in range(len(inlist)-1):
+			if i % 2 == 0:
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] > self.cellValues[inlist[i+1][0]][inlist[i+1][1]]).OnlyEnforceIf(c)
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] < self.cellValues[inlist[i+1][0]][inlist[i+1][1]]).OnlyEnforceIf(c.Not())
+			else:
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] < self.cellValues[inlist[i+1][0]][inlist[i+1][1]]).OnlyEnforceIf(c)
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] > self.cellValues[inlist[i+1][0]][inlist[i+1][1]]).OnlyEnforceIf(c.Not())
 
 ####Model solving
 	def applyNegativeConstraints(self):

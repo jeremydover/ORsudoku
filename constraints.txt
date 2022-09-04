@@ -42,6 +42,7 @@ Look-and-Say Cages - see Zones
 Magic Squares
 Min-Max
 Modular Lines
+Neighbor Sums
 Non-Consecutive
 Numbered Room
 Palindrome Lines
@@ -54,8 +55,10 @@ Ratio Pairs - see Kropki and Kropki pairs
 Region Sum Lines (sum of all cells along a line in a region is fixed)
 Region Segment Sum Lines - see Region Sum Lines
 Renban Lines
+Run-On Renban Lines - see Renban Lines
 Samurai Sudoku
 Sandwich Sums
+Shift Lines
 Slow Thermometers (see Thermometers)
 Sum Dots (see Killer Cages)
 Thermometers
@@ -437,6 +440,16 @@ Modular Lines
 setModularLine(list): creates a modular line constraint
   list: a list of cell specifications
   
+Neighbor Sums
+-------------
+setNeighborSum(cell): asserts a cell is the sum of its orthogonally adjacent neighbors
+	cell: single cell specification
+	
+setNeighborSumArray(list): asserts multiple neighbor sum constraints
+	list: list of cell specifications
+	
+Note: setNeighbourSum and setNeighbourSumArray aliases are supported
+
 Non-Consecutive
 ---------------
 setNonConsecutive(): sets the global non-consecutive cells constraint
@@ -495,6 +508,10 @@ Renban Lines
 ------------
 setRenbanLine(list): set a Renban line constraint
   list: list of cell specifications
+  
+setRunOnRenbanLine(list,n): set a run-on Renban line, i.e. a line where each contiguous subsegment of length n is a Renban line
+  list: list of cell specifications
+  n: length of subsegment that is a Renban. If not present, defaults to 5
 
 Samurai Sudoku
 --------------
@@ -520,11 +537,21 @@ set SandwichSum(row,col,rc,value): sets a sandwich sum constraint
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: The sum of the values between the 1 and 9 in the clued row/column
   
+Shift Lines
+-----------
+setShiftLine(inlist): sets a shift line constraint; like a plaindrome, but one side is uniformly one larger than the other
+  inlist: list of cell specifications
+
 Unicorn Digits
 --------------
 setUnicornDigit(value): set a unicorn digit, i.e. for any instance of that digit in the grid, all of the cells a knight's move away have distinct values
 	value: value of the digit to be a unicorn
 
+Up and Down Lines
+-----------------
+setUpAndDownLine(inlist): sets an up and down line constraint; cells must laternately increase and decrease
+  inlist: list of cell specifications
+  
 Thermometers
 ------------
 setThermo(list): asserts that the values in cells increase from the beginning of the line to the end
