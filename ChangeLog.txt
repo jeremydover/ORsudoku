@@ -1,3 +1,11 @@
+9/10/2022
+	Fixed Issue #4
+	Fixed Issue #1 - added support for GSP
+	Fixed Issue #5 - added support for multi-digit arrow sums
+	Fixed Issue #6 - added support for genetics ruleset
+	Fixed Issue #7 - added support for friendly cells
+	Implemented several bug fixes affecting the negative Battenburg constraint and little killer cages found during development
+
 9/4/2022
 	Added support for shift lines
 	Added support for up-and-down lines (alternately increase/decrease)

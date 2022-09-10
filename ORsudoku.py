@@ -119,6 +119,9 @@ class sudoku:
 		self.kropkiDiff = 1
 		self.kropkiRatio = 2
 		
+		self.isFriendlyInitialized = False
+		self.isFriendlyNegative = False
+		
 		self.isXVInitialized = False
 		self.isXVNegative = False
 		
@@ -393,6 +396,32 @@ class sudoku:
 
 				self.model.Add(self.cellValues[i][j] != value).OnlyEnforceIf(c.Not())		
 
+	def setGSP(self,pairs=[]):
+		# Adds a global constraint asserting a symmetry where cells are transformed by pairs under 180 degree rotation
+		
+		# Set default to pairs adding to maxDigit+minDigit
+		if len(pairs) == 0:
+			total = self.maxDigit + self.minDigit
+			pairs = [[i,total-i] for i in self.digits if i < total - i]
+		
+		for i in range((self.boardWidth + 1)//2):
+			for j in range(self.boardWidth):
+				if (i == self.boardWidth//2) and (j >= i): continue	# Does top half of board, and if there is a center row, do left half of it
+				else:
+					varBitmap = self._sudoku__varBitmap('GSPRow{:d}Col{:d}'.format(i,j),len(pairs))
+					otherDigit = self.model.NewBoolVar('GSPOtherRow{:d}Col{:d}'.format(i,j)) # Allows for the case that other non-constrained digits are placed
+					pairOrder = self.model.NewBoolVar('GSPPairRow{:d}Col{:d}'.format(i,j))
+					for k in range(len(pairs)):
+						self.model.Add(self.cellValues[i][j] == pairs[k][0]).OnlyEnforceIf(varBitmap[k] + [pairOrder,otherDigit.Not()])
+						self.model.Add(self.cellValues[self.boardWidth-1-i][self.boardWidth-1-j] == pairs[k][1]).OnlyEnforceIf(varBitmap[k] + [pairOrder,otherDigit.Not()])
+						self.model.Add(self.cellValues[i][j] == pairs[k][1]).OnlyEnforceIf(varBitmap[k] + [pairOrder.Not(),otherDigit.Not()])
+						self.model.Add(self.cellValues[self.boardWidth-1-i][self.boardWidth-1-j] == pairs[k][0]).OnlyEnforceIf(varBitmap[k] + [pairOrder.Not(),otherDigit.Not()])
+						self.model.Add(self.cellValues[i][j] != pairs[k][0]).OnlyEnforceIf([otherDigit])
+						self.model.Add(self.cellValues[i][j] != pairs[k][1]).OnlyEnforceIf([otherDigit])
+						self.model.Add(self.cellValues[self.boardWidth-1-i][self.boardWidth-1-j] != pairs[k][0]).OnlyEnforceIf([otherDigit])
+						self.model.Add(self.cellValues[self.boardWidth-1-i][self.boardWidth-1-j] != pairs[k][1]).OnlyEnforceIf([otherDigit])
+					
+
 ####Single cell constraints
 	def setGiven(self,row,col=-1,value=-1):
 		if col == -1:
@@ -469,6 +498,54 @@ class sudoku:
 		for x in cells: self.setNeighborSum(x)
 	setNeighbourSumArray = setNeighborSumArray
 	
+	def setFriendly(self,row,col=-1):
+		if col == -1:
+			(row,col) = self.__procCell(row)
+			
+		if self.isFriendlyInitialized is not True:
+			self.friendlyCells = [(row,col)]
+			self.isFriendlyInitialized = True
+		else:
+			self.friendlyCells.append((row,col))
+			
+		rowMatch = self.model.NewBoolVar('FriendlyRowRow{:d}Col{:d}'.format(row,col))
+		colMatch = self.model.NewBoolVar('FriendlyColRow{:d}Col{:d}'.format(row,col))
+		boxMatch = self.model.NewBoolVar('FriendlyBoxRow{:d}Col{:d}'.format(row,col))
+		
+		self.model.Add(self.cellValues[row][col] == row+1).OnlyEnforceIf(rowMatch)
+		self.model.Add(self.cellValues[row][col] != row+1).OnlyEnforceIf(rowMatch.Not())
+		self.model.Add(self.cellValues[row][col] == col+1).OnlyEnforceIf(colMatch)
+		self.model.Add(self.cellValues[row][col] != col+1).OnlyEnforceIf(colMatch.Not())
+		
+		rowInd = row // self.boardSizeRoot	# Determines box row: 0,1,2 -> 0; 3,4,5 -> 1, 6,7,8 -> 2
+		colInd = col // self.boardSizeRoot	# Determines box col: 0,1,2 -> 0; 3,4,5 -> 1, 6,7,8 -> 2
+		box = 3*rowInd + colInd				# Determines 0-base box index
+		
+		self.model.Add(self.cellValues[row][col] == box+1).OnlyEnforceIf(boxMatch)
+		self.model.Add(self.cellValues[row][col] != box+1).OnlyEnforceIf(boxMatch.Not())
+		
+		self.model.AddBoolOr([rowMatch,colMatch,boxMatch])
+		
+	def setFriendlyArray(self,cells):
+		for x in cells: self.setFriendly(x)
+		
+	def setFriendlyNegative(self):
+		if self.isFriendlyInitialized is not True:
+			self.friendlyCells = []
+			self.isFriendlyInitialized = True
+		self.isFriendlyNegative = True
+		
+	def __applyFriendlyNegative(self):
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				if (i,j) not in self.friendlyCells:
+					self.model.Add(self.cellValues[i][j] != i+1)
+					self.model.Add(self.cellValues[i][j] != j+1)
+					rowInd = i // self.boardSizeRoot
+					colInd = j // self.boardSizeRoot
+					box = 3*rowInd + colInd
+					self.model.Add(self.cellValues[i][j] != box+1)
+		
 ####Multi-cell constraints
 	def setFortress(self,inlist):
 		inlist = self.__procCellList(inlist)
@@ -737,20 +814,60 @@ class sudoku:
 				self.setEntropkiWhite(x[0],x[1],x[2])
 			else:
 				self.setEntropkiBlack(x[0],x[1],x[2])
+				
+	def setGenetic(self,inlist):
+		inlist = self.__procCellList(inlist)
+		if self.isEntropy is False:
+			self.__setEntropy()
+			
+		# Calculate the parity differences between the daughter and each parent
+		maxDiff = self.maxDigit-self.minDigit
+		diff1 = self.model.NewIntVar(0,2*maxDiff,'GeneticP1Difference+8Row{:d}Col{:d}'.format(inlist[0][0],inlist[0][1]))
+		diff2 = self.model.NewIntVar(0,2*maxDiff,'GeneticP2Difference+8Row{:d}Col{:d}'.format(inlist[1][0],inlist[1][1]))
+		div1 = self.model.NewIntVar(0,maxDiff,'GeneticP1Div2Row{:d}Col{:d}'.format(inlist[0][0],inlist[0][1]))
+		div2 = self.model.NewIntVar(0,maxDiff,'GeneticP2Div2Row{:d}Col{:d}'.format(inlist[1][0],inlist[1][1]))
+		mod1 = self.model.NewIntVar(0,1,'GeneticP1Mod2Row{:d}Col{:d}'.format(inlist[0][0],inlist[0][1]))
+		mod2 = self.model.NewIntVar(0,1,'GeneticP2Mod2Row{:d}Col{:d}'.format(inlist[1][0],inlist[1][1]))
+		self.model.Add(diff1 == self.cellValues[inlist[0][0]][inlist[0][1]] - self.cellValues[inlist[2][0]][inlist[2][1]] + maxDiff)
+		self.model.Add(diff2 == self.cellValues[inlist[1][0]][inlist[1][1]] - self.cellValues[inlist[2][0]][inlist[2][1]] + maxDiff)
+		self.model.Add(2*div1 <= diff1)
+		self.model.Add(2*(div1+1) > diff1)
+		self.model.Add(2*div2 <= diff2)
+		self.model.Add(2*(div2+1) > diff2)
+		self.model.Add(mod1 == diff1-2*div1)
+		self.model.Add(mod2 == diff2-2*div2)
 		
+		p1Parity = self.model.NewBoolVar('GeneticsP1ParityMatchRow{:d}Col{:d}'.format(inlist[0][0],inlist[0][1]))
+		p1Entropy = self.model.NewBoolVar('GeneticsP1EntropyMatchRow{:d}Col{:d}'.format(inlist[0][0],inlist[0][1]))
+		p2Parity = self.model.NewBoolVar('GeneticsP2ParityMatchRow{:d}Col{:d}'.format(inlist[1][0],inlist[1][1]))
+		p2Entropy = self.model.NewBoolVar('GeneticsP2EntropyMatchRow{:d}Col{:d}'.format(inlist[1][0],inlist[1][1]))
+		
+		self.model.Add(mod1 == 0).OnlyEnforceIf(p1Parity)
+		self.model.Add(mod1 == 1).OnlyEnforceIf(p1Parity.Not())
+		self.model.Add(mod2 == 0).OnlyEnforceIf(p2Parity)
+		self.model.Add(mod2 == 1).OnlyEnforceIf(p2Parity.Not())
+		self.model.Add(self.cellEntropy[inlist[0][0]][inlist[0][1]] == self.cellEntropy[inlist[2][0]][inlist[2][1]]).OnlyEnforceIf(p1Entropy)
+		self.model.Add(self.cellEntropy[inlist[0][0]][inlist[0][1]] != self.cellEntropy[inlist[2][0]][inlist[2][1]]).OnlyEnforceIf(p1Entropy.Not())
+		self.model.Add(self.cellEntropy[inlist[1][0]][inlist[1][1]] == self.cellEntropy[inlist[2][0]][inlist[2][1]]).OnlyEnforceIf(p2Entropy)
+		self.model.Add(self.cellEntropy[inlist[1][0]][inlist[1][1]] != self.cellEntropy[inlist[2][0]][inlist[2][1]]).OnlyEnforceIf(p2Entropy.Not())
+		
+		self.model.AddBoolOr([p1Parity,p2Parity])	#Inherit parity from a parent
+		self.model.AddBoolOr([p1Entropy,p2Entropy])	#Inherit entropy from a parent
+		self.model.AddBoolOr([p1Parity,p1Entropy])	#Inherit something from parent 1
+		self.model.AddBoolOr([p2Parity,p2Entropy])	#Inherit something from parent 2
+		
+	def setGeneticArray(self,cells):
+		for x in cells: self.setGenetic(x)
+
 ####Externally-clued constraints
-	def setLittleKiller(self,row11,col11,row21,col21,value):
+	def setLittleKiller(self,row1,col1,row2,col2,value):
 		# row1,col1 is the position of the first cell in the sum
 		# row2,col2 is the position of the second cell in the sum
 		
-		# Convert from 1-base to 0-base
-		row1 = row11 - 1
-		row2 = row21 - 1
-		col1 = col11 - 1
-		col2 = col21 - 1
+		# Note: leave cell specs 1-based, since the call to setRepeatingCage will 0-base them
 		hStep = col2 - col1
 		vStep = row2 - row1
-		cells = [(row1+vStep*k,col1+hStep*k) for k in range(self.boardWidth) if row1+vStep*k in range(self.boardWidth) and col1+hStep*k in range(self.boardWidth)]
+		cells = [(row1+vStep*k,col1+hStep*k) for k in range(self.boardWidth) if row1+vStep*k-1 in range(self.boardWidth) and col1+hStep*k-1 in range(self.boardWidth)]
 		self.setRepeatingCage(cells,value)
 		
 	def setXSum(self,row1,col1,rc,value):
@@ -1022,7 +1139,7 @@ class sudoku:
 		for i in range(self.boardWidth-1):
 			for j in range(self.boardWidth-1):
 				if (i,j) not in self.battenburgCells:
-					maxDiff = self.MaxDigit-self.minDigit
+					maxDiff = self.maxDigit-self.minDigit
 					diff1 = self.model.NewIntVar(0,2*maxDiff,'BattenburgNegativeTopDifference+8Row{:d}Col{:d}'.format(i,j))
 					diff2 = self.model.NewIntVar(0,2*maxDiff,'BattenburgNegativeRightDifference+8Row{:d}Col{:d}'.format(i,j))
 					diff3 = self.model.NewIntVar(0,2*maxDiff,'BattenburgNegativeBottomDifference+8Row{:d}Col{:d}'.format(i,j))
@@ -1161,6 +1278,14 @@ class sudoku:
 			self.model.Add(tcells[j] == self.cellValues[inlist[0][0]][inlist[0][1]]).OnlyEnforceIf(tvars[j])
 			self.model.Add(tcells[j] != self.cellValues[inlist[0][0]][inlist[0][1]]).OnlyEnforceIf(tvars[j].Not())
 		self.model.AddBoolOr(tvars)
+		
+	def setMultiDigitSumArrow(self,inlist,n=1):
+		# Arrow where the bulb is multiple digits. First n elements of the list are in the circle, most significant (100s or 10s, usually) to least.
+		inlist = self.__procCellList(inlist)
+		circle = self.cellValues[inlist[0][0]][inlist[0][1]]
+		for i in range(1,n):
+			circle = 10*circle + self.cellValues[inlist[i][0]][inlist[i][1]]
+		self.model.Add(circle == sum(self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(n,len(inlist))))
 		
 	def setThermo(self,inlist):
 		inlist = self.__procCellList(inlist)
@@ -1308,7 +1433,7 @@ class sudoku:
 		for region in self.regions:
 			tempSum = set(region) & set(varlist)
 			if len(tempSum) != 0: sumSets.append(tempSum)
-		
+
 		baseSum = sum(x for x in sumSets[0])
 		for i in range(1,len(sumSets)):
 			self.model.Add(sum(x for x in sumSets[i]) == baseSum)
@@ -1388,6 +1513,7 @@ class sudoku:
 		if self.isXVXVNegative is True: self.__applyXVXVNegative()
 		if self.isEntropyQuadNegative is True: self.__applyEntropyQuadNegative()
 		if self.isEntropyBattenburgNegative is True: self.__applyEntropyBattenburgNegative()
+		if self.isFriendlyNegative is True: self.__applyFriendlyNegative()
 
 	def findSolution(self):
 		self.applyNegativeConstraints()
@@ -1595,13 +1721,15 @@ class doublerSudoku(sudoku):
 		for rowBox in range(self.boardSizeRoot):
 			for colBox in range(self.boardSizeRoot):
 				tempBaseArray = []
+				tempCellArray = []
 				tempDoubleArray = []
 				for rowIndex in range(self.boardSizeRoot):
 					for colIndex in range(self.boardSizeRoot):
 						tempBaseArray.append(self.baseValues[self.boardSizeRoot*rowBox+rowIndex][self.boardSizeRoot*colBox+colIndex])
+						tempCellArray.append(self.cellValues[self.boardSizeRoot*rowBox+rowIndex][self.boardSizeRoot*colBox+colIndex])
 						tempDoubleArray.append(self.doubleInt[self.boardSizeRoot*rowBox+rowIndex][self.boardSizeRoot*colBox+colIndex])
 				self.model.AddAllDifferent(tempBaseArray)	# Ensures square regions have all different values
-				self.regions.append(tempBaseArray)			# Set squares up as regions for region sum rules
+				self.regions.append(tempCellArray)			# Set squares up as regions for region sum rules
 				self.model.Add(sum(tempDoubleArray) == 1)	# Ensure there is only one doubler per square
 				
 	def setRegion(self,inlist):

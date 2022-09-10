@@ -24,10 +24,13 @@ Entropy Quads (partial Entropy, asserts Entropy on an individual 2x2)
 Even-Odd
 Extra Regions - see irregular Sudoku
 Fortress
+Friendly Cells
+Genetics
 German Whispers Lines
 Given Digits
 Global Entropy
 Global Whispers (Dutch, et. al.)
+Gurth's Symmetric Placement (GSP)
 Indexing
 Irregular Sudoku
 Japanese Sum Sudoku
@@ -161,6 +164,10 @@ setDoubleArrow(inlist): creates a double arrow constraint - sum of cells between
 setPointingArrow(list): creates a pointing arrow, which is both a regular arrow, and whose other end points (as determined by the last two cells) at another copy of the sum
   list: a list of cells along arrow, where the first element of list is the circle
   
+setMultiDigitSumArrow(list,n): creates an arrow where the sum is multi-digit, interpreted base 10
+  list: a list of cells along the arrow where the first n elements are in the circle, listed from most-significant to least significant
+  n: the number of digits in the circle
+  
 Battenburg
 ----------
 setBattenburg(cell): creates a Battenburg constraint (no cells on the quad with the same parity share an edge)
@@ -286,6 +293,25 @@ Fortress
 setFortress(list): creates a Fortress constraint on a group of cells
   list: list of cell specifications
   
+Friendly Cells
+--------------
+setFriendly(cell): creates a friendly cell, i.e., one whose value matches one or mor of its row, column, or box number
+	cell: single cell specification
+	
+setFriendlyArray(list): set multiple friendly cells
+	list: list of cell specifications
+
+setFriendlyNegative(): assert a negative constraint, namely that cells not marked friendly are NOT friendly
+
+Genetics
+--------
+setGenetic(list): applies a genetic constraint to the cells: daughter must inherit parity/entropic rank from parents, and must inherit at least one from each
+	list: a list of three cell specifications - first two are parent cells, last is daughter cell specification
+
+setGeneticArray(list): applies genetic constraint to multiple specification lists
+	list: a list of lists of cell specifications, where each element of the list is formatted per the setGenetic guidelines
+	
+
 German Whispers Lines
 ---------------------
 setGermanWhispersLine(list): creates a German whispers line constraint
@@ -307,6 +333,12 @@ setGlobalEntropy(): assert the Entropy condition on all quads. Effectively the s
 Global Whispers
 ---------------
 setGlobalWhispers(n=4): assert the global whispers constraint: every cell has at least one neighbor with which it has a difference of at least n. The default for n is 4
+
+Gurth's Symmetric Placement
+---------------------------
+Asserts that the the grid has symmetry based on 180 degree rotation plus some permutation of the digits.
+setGSP(pairs): assert the GSP constraint
+  pairs: a list of lists of pairs of digits whose placement implements the symmetry. Default is pairs that sum to the grid size + 1, e.g. (19,28,37,46). Computationally, this list does NOT need to be complete, so one could use this to assert that everywhere a 1 appears, a 7 appears in the rotational symmetric position, and leave it at that. Don't know if that makes for an interesting puzzle though.
 
 Indexing (159)
 --------------
