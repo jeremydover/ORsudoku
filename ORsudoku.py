@@ -107,6 +107,14 @@ class sudoku:
 	Even = 0	# Constant to determine whether parity constraint is even or odd
 	Odd = 1		# Constant to determine whether parity constraint is even or odd
 	
+	Top = 0		# Constant to determine direction arrow on 2x2 points...note code assumes this value is the same as Left
+	Bottom = 1	# Constant to determine direction arrow on 2x2 points
+	Left = 0	# Constant to determine direction arrow on 2x2 points
+	Right = 1	# Constant to determine direction arrow on 2x2 points
+	
+	Corner = 0	# Constant to determine clue type for corner/edge clues
+	Edge = 1	# Constant to determine clue type for corner/edge clues
+	
 	def __init__(self,boardSizeRoot,irregular=None,digitSet=None,model=None):
 		self.boardSizeRoot = boardSizeRoot
 		self.boardWidth = boardSizeRoot*boardSizeRoot
@@ -122,6 +130,10 @@ class sudoku:
 		self.isFriendlyInitialized = False
 		self.isFriendlyNegative = False
 		
+		self.isRossiniInitialized = False
+		self.isRossiniNegative = False
+		self.rossiniLength = -1
+		
 		self.isXVInitialized = False
 		self.isXVNegative = False
 		
@@ -134,6 +146,7 @@ class sudoku:
 		self.isEntropyBattenburgInitialized = False
 		self.isEntropyBattenburgNegative = False
 		
+		self.isParity = False
 		self.isEntropy = False
 		self.isModular = False
 		
@@ -192,6 +205,25 @@ class sudoku:
 		# Allow setting of multiple regions
 		for x in inlist: self.setRegion(x)
 
+	def __setParity(self):
+		# Set up variables to track parity constraints
+		divVars = []
+		self.cellParity = []
+		
+		maxDiff = self.maxDigit-self.minDigit
+		for i in range(self.boardWidth):
+			t = []
+			for j in range(self.boardWidth):
+				div = self.model.NewIntVar(0,2*maxDiff,'ParityDiv')
+				mod = self.model.NewIntVar(0,1,'parityValue{:d}{:d}'.format(i,j))
+				t.append(mod)
+				self.model.Add(2*div <= self.cellValues[i][j])
+				self.model.Add(2*div+2 > self.cellValues[i][j])
+				self.model.Add(mod == self.cellValues[i][j]-2*div)
+			self.cellParity.insert(i,t)
+		
+		self.isParity = True
+		
 	def __setEntropy(self):
 		# Set up variables to track entropy and modular constraints
 		self.cellEntropy = []
@@ -206,7 +238,7 @@ class sudoku:
 			self.cellEntropy.insert(i,t)
 		
 		self.isEntropy = True
-		
+
 	def __setModular(self):
 		# Set up variables to track modular constraints
 		if self.isEntropy is False:
@@ -757,6 +789,23 @@ class sudoku:
 		inlist = self.__procCellList(inlist)
 		self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in inlist) == value)
 		
+	def setMedianCage(self,inlist,value):
+		inlist = self.__procCellList(inlist)
+		equalVars = [self.model.NewBoolVar('MedianEqual{:d}'.format(i)) for i in range(len(inlist))]
+		gtltVars = [self.model.NewBoolVar('MedianGreaterThan{:d}'.format(i)) for i in range(len(inlist))]
+		ternVars = [self.model.NewIntVar(-1,1,'MedianTern{:d}'.format(i)) for i in range(len(inlist))]
+		for i in range(len(inlist)):
+			self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] == value).OnlyEnforceIf([equalVars[i]])
+			self.model.AddBoolAnd([gtltVars[i]]).OnlyEnforceIf(equalVars[i])	#Pegs unneeded gtlt to True if equal
+			self.model.Add(ternVars[i] == 0).OnlyEnforceIf(equalVars[i])
+			self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] > value).OnlyEnforceIf([equalVars[i].Not(),gtltVars[i]])
+			self.model.Add(ternVars[i] == 1).OnlyEnforceIf([equalVars[i].Not(),gtltVars[i]])
+			self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] < value).OnlyEnforceIf([equalVars[i].Not(),gtltVars[i].Not()])
+			self.model.Add(ternVars[i] == -1).OnlyEnforceIf([equalVars[i].Not(),gtltVars[i].Not()])
+			
+		self.model.AddBoolOr(equalVars)	# At least some cell equals the median
+		self.model.Add(sum(ternVars) == 0)	# Ensures there are an equal number of values less than vs. greater than the median
+		
 	def setZone(self,inlist,values):
 		# A zone is an area with potentially repeating values; the clue is a list of digits that must appear in the zone
 		inlist = self.__procCellList(inlist)
@@ -819,33 +868,18 @@ class sudoku:
 		inlist = self.__procCellList(inlist)
 		if self.isEntropy is False:
 			self.__setEntropy()
+		if self.isParity is False:
+			self.__setParity()
 			
-		# Calculate the parity differences between the daughter and each parent
-		maxDiff = self.maxDigit-self.minDigit
-		diff1 = self.model.NewIntVar(0,2*maxDiff,'GeneticP1Difference+8Row{:d}Col{:d}'.format(inlist[0][0],inlist[0][1]))
-		diff2 = self.model.NewIntVar(0,2*maxDiff,'GeneticP2Difference+8Row{:d}Col{:d}'.format(inlist[1][0],inlist[1][1]))
-		div1 = self.model.NewIntVar(0,maxDiff,'GeneticP1Div2Row{:d}Col{:d}'.format(inlist[0][0],inlist[0][1]))
-		div2 = self.model.NewIntVar(0,maxDiff,'GeneticP2Div2Row{:d}Col{:d}'.format(inlist[1][0],inlist[1][1]))
-		mod1 = self.model.NewIntVar(0,1,'GeneticP1Mod2Row{:d}Col{:d}'.format(inlist[0][0],inlist[0][1]))
-		mod2 = self.model.NewIntVar(0,1,'GeneticP2Mod2Row{:d}Col{:d}'.format(inlist[1][0],inlist[1][1]))
-		self.model.Add(diff1 == self.cellValues[inlist[0][0]][inlist[0][1]] - self.cellValues[inlist[2][0]][inlist[2][1]] + maxDiff)
-		self.model.Add(diff2 == self.cellValues[inlist[1][0]][inlist[1][1]] - self.cellValues[inlist[2][0]][inlist[2][1]] + maxDiff)
-		self.model.Add(2*div1 <= diff1)
-		self.model.Add(2*(div1+1) > diff1)
-		self.model.Add(2*div2 <= diff2)
-		self.model.Add(2*(div2+1) > diff2)
-		self.model.Add(mod1 == diff1-2*div1)
-		self.model.Add(mod2 == diff2-2*div2)
-		
 		p1Parity = self.model.NewBoolVar('GeneticsP1ParityMatchRow{:d}Col{:d}'.format(inlist[0][0],inlist[0][1]))
 		p1Entropy = self.model.NewBoolVar('GeneticsP1EntropyMatchRow{:d}Col{:d}'.format(inlist[0][0],inlist[0][1]))
 		p2Parity = self.model.NewBoolVar('GeneticsP2ParityMatchRow{:d}Col{:d}'.format(inlist[1][0],inlist[1][1]))
 		p2Entropy = self.model.NewBoolVar('GeneticsP2EntropyMatchRow{:d}Col{:d}'.format(inlist[1][0],inlist[1][1]))
 		
-		self.model.Add(mod1 == 0).OnlyEnforceIf(p1Parity)
-		self.model.Add(mod1 == 1).OnlyEnforceIf(p1Parity.Not())
-		self.model.Add(mod2 == 0).OnlyEnforceIf(p2Parity)
-		self.model.Add(mod2 == 1).OnlyEnforceIf(p2Parity.Not())
+		self.model.Add(self.cellParity[inlist[0][0]][inlist[0][1]] == self.cellParity[inlist[2][0]][inlist[2][1]]).OnlyEnforceIf(p1Parity)
+		self.model.Add(self.cellParity[inlist[0][0]][inlist[0][1]] != self.cellParity[inlist[2][0]][inlist[2][1]]).OnlyEnforceIf(p1Parity.Not())
+		self.model.Add(self.cellParity[inlist[1][0]][inlist[1][1]] == self.cellParity[inlist[2][0]][inlist[2][1]]).OnlyEnforceIf(p2Parity)
+		self.model.Add(self.cellParity[inlist[1][0]][inlist[1][1]] != self.cellParity[inlist[2][0]][inlist[2][1]]).OnlyEnforceIf(p2Parity.Not())
 		self.model.Add(self.cellEntropy[inlist[0][0]][inlist[0][1]] == self.cellEntropy[inlist[2][0]][inlist[2][1]]).OnlyEnforceIf(p1Entropy)
 		self.model.Add(self.cellEntropy[inlist[0][0]][inlist[0][1]] != self.cellEntropy[inlist[2][0]][inlist[2][1]]).OnlyEnforceIf(p1Entropy.Not())
 		self.model.Add(self.cellEntropy[inlist[1][0]][inlist[1][1]] == self.cellEntropy[inlist[2][0]][inlist[2][1]]).OnlyEnforceIf(p2Entropy)
@@ -1051,7 +1085,137 @@ class sudoku:
 				self.model.Add(self.cellValues[row][col] + self.cellValues[row+vStep][col+hStep] == value1).OnlyEnforceIf(varBitmap[varTrack])
 				self.model.Add(self.cellValues[row+(allowableDigits[i]-1)*vStep][col+(allowableDigits[i]-1)*hStep] + self.cellValues[row+(allowableDigits[j]-1)*vStep][col+(allowableDigits[j]-1)*hStep] == value2).OnlyEnforceIf(varBitmap[varTrack])
 				varTrack = varTrack + 1
+
+	def setOutside(self,row1,col1,rc,valueList):
+		# row,col are the coordinates of the cell next to the clues
+		# rc is whether things are row/column
+		# valueList is a list of values that must appear in the first region in that direction
+		
+		# Convert from 1-base to 0-base
+		row = row1 - 1
+		col = col1 - 1
+		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
+		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
+		
+		# List of cell variables in the row/column we're looking at
+		candCells = {self.cellValues[row+i*vStep][col+i*hStep] for i in range(self.boardWidth)}
+		for i in range(len(self.regions)):
+			if len({self.cellValues[row][col]} & set(self.regions[i])) > 0: currentRegion = i
+			
+		clueCells = list(candCells & set(self.regions[currentRegion]))
+		vars = [[self.model.NewBoolVar('OutsideClue') for i in range(len(clueCells))] for j in range(len(valueList))]
+		for j in range(len(valueList)):
+			for i in range(len(clueCells)):
+				self.model.Add(clueCells[i] == valueList[j]).OnlyEnforceIf(vars[j][i])
+				self.model.Add(clueCells[i] != valueList[j]).OnlyEnforceIf(vars[j][i].Not())
+			self.model.AddBoolOr(vars[j])
+
+	def setCornerEdge(self,box1,ce,valueList):
+		# box is the box number to which to apply the clue. 1-based so, upper left corner is 1, to its right is 2, etc.
+		# ce specifies whether the clue is for corner (0) or edge (1). Use class variable Corner and Edge
+		# valueList is the list of values to appear in these locations
+		
+		box = box1 - 1
+		boxRow = box // self.boardSizeRoot
+		boxCol = box % self.boardSizeRoot
+		ulRow = self.boardSizeRoot * boxRow	# Cell in upper left corner of box
+		ulCol = self.boardSizeRoot * boxCol
+			
+		for i in range(self.boardSizeRoot):
+			for j in range(self.boardSizeRoot):
+				if ((i > 0) and (i < self.boardSizeRoot - 1) and (j > 0) and (j < self.boardSizeRoot - 1)) or\
+					((ce == self.Corner) and (i % (self.boardSizeRoot-1) != 0 or j % (self.boardSizeRoot-1) != 0)) or\
+					((ce == self.Edge) and (i % (self.boardSizeRoot-1) == 0 and j % (self.boardSizeRoot-1) == 0)):	# Moddle, edge, and corner square
+						for k in valueList: self.model.Add(self.cellValues[ulRow+i][ulCol+j] != k)
+						
+	def setRossini(self,row1,col1,rc,udlr):
+		# row,col is the cell next to the clue
+		# rc is whether things are row/column
+		# udlr determines whether the arrow points up/down or left/right
+		# value is optional. By default the increase condition holds in the first region, but if value is set it will hold
+		# only for a fixed number of cells.
+		
+		# Convert from 1-base to 0-base
+		row = row1 - 1
+		col = col1 - 1
+		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
+		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
+
+		if self.isRossiniInitialized is not True:
+			self.rossiniCells = [(row,col,rc)]
+			self.isRossiniInitialized = True
+		else:
+			self.rossiniCells.append((row,col,rc))
+			
+		if self.rossiniLength == -1:	# We are using the default region-based cluing
+			for i in range(len(self.regions)):
+				if len({self.cellValues[row][col]} & set(self.regions[i])) > 0: region = i
+			clueCells = [self.cellValues[row+i*vStep][col+i*hStep] for i in range(self.boardWidth) if len({self.cellValues[row+i*vStep][col+i*hStep]} & set(self.regions[region])) > 0]
+		else:
+			clueCells = [self.cellValues[row+i*vStep][col+i*hStep] for i in range(self.rossiniLength)]
+			
+		# So this is weird in external cluing, that the arrows are absolute with respect to the grid. So a left arrow on a row, regardless
+		# of which side it is on, indicates the values increase from right to left. In this case, arrows on right or bottom are in the
+		# "wrong" order, since they proceed from the edge into the grid (which is usually what you want.) So we reverse the array in these cases.
+		
+		if (rc == self.Row and col != 0) or (rc == self.Col and row != 0):
+			clueCells.reverse()
+			
+		if udlr == self.Top:		# Same value as self.Left
+			for i in range(len(clueCells)-1):
+				self.model.Add(clueCells[i] > clueCells[i+1])
+		else:
+			for i in range(len(clueCells)-1):
+				self.model.Add(clueCells[i] < clueCells[i+1])
 				
+	def setRossiniLength(self,value):
+		self.rossiniLength = value
+	
+	def setRossiniNegative(self):
+		if self.isRossiniInitialized is not True:
+			self.rossiniCells = []
+			self.isRossiniInitialized = True
+		self.isRossiniNegative = True
+		
+	def __applyRossiniNegative(self):
+		for i in range(0,self.boardWidth,self.boardWidth-1):	# Gives two values 0 and self.boardWidth-1...picks top/bottom , left/right
+			for j in range(self.boardWidth):					# Pick which index to process
+				for k in range(2):									# Pick row/col
+					row = j if k is self.Row else i
+					col = j if k is self.Col else i
+					if (row,col,k) not in self.rossiniCells:
+						hStep = 0 if k == sudoku.Col else (1 if col == 0 else -1)
+						vStep = 0 if k == sudoku.Row else (1 if row == 0 else -1)
+						if self.rossiniLength == -1:	# We are using the default region-based cluing
+							for m in range(len(self.regions)):
+								if len({self.cellValues[row][col]} & set(self.regions[m])) > 0: region = m
+							clueCells = [self.cellValues[row+m*vStep][col+m*hStep] for m in range(self.boardWidth) if len({self.cellValues[row+m*vStep][col+m*hStep]} & set(self.regions[region])) > 0]
+						else:
+							clueCells = [self.cellValues[row+m*vStep][col+m*hStep] for m in range(self.rossiniLength)]
+						# Note: no need to reverse since we're going to exclude a run in either direction
+						
+						# We're going to test each triple for an up-down, or down-up pattern
+						varlist = []
+						n = len(clueCells)
+						for x in range(n):
+							for y in range(x+1,n):
+								for z in range(y+1,n):
+									good = self.model.NewBoolVar('RossiniNeg')
+									ud = self.model.NewBoolVar('RossiniNeg')
+									self.model.Add(clueCells[x] < clueCells[y]).OnlyEnforceIf([good,ud])
+									self.model.Add(clueCells[z] < clueCells[y]).OnlyEnforceIf([good,ud])
+									self.model.Add(clueCells[x] > clueCells[y]).OnlyEnforceIf([good,ud.Not()])
+									self.model.Add(clueCells[z] > clueCells[y]).OnlyEnforceIf([good,ud.Not()])
+									self.model.Add(clueCells[x] < clueCells[y]).OnlyEnforceIf([good.Not(),ud])
+									self.model.Add(clueCells[y] < clueCells[z]).OnlyEnforceIf([good.Not(),ud])
+									self.model.Add(clueCells[x] > clueCells[y]).OnlyEnforceIf([good.Not(),ud.Not()])
+									self.model.Add(clueCells[y] > clueCells[z]).OnlyEnforceIf([good.Not(),ud.Not()])
+									varlist.append(good)
+						self.model.AddBoolOr(varlist)		# Just need one triple to be good
+									
+								
+					
+		
 ####2x2 constraints
 	def setQuadruple(self,row,col=-1,values=-1):
 		if col == -1:
@@ -1113,19 +1277,17 @@ class sudoku:
 			self.isBattenburgInitialized = True
 		else:
 			self.battenburgCells.append((row,col))
-		# We calculate the differences between the top two cells, the two right cells, and the bottom two, and ensure all are odd.
+			
+		if self.isParity is False:
+			self.__setParity()
+			
+		# Now that we can track parity globally, only need to check that the three pairs: top, right, and bottom are different parity.
 		# This ensures either OE  or  EO
 		#                     EO      OE
-		diff1 = self.model.NewIntVar(self.minDigit-self.maxDigit,self.maxDigit-self.minDigit,'BattenburgTopRow{:d}Col{:d}'.format(row,col))
-		diff2 = self.model.NewIntVar(self.minDigit-self.maxDigit,self.maxDigit-self.minDigit,'BattenburgRightRow{:d}Col{:d}'.format(row,col))
-		diff3 = self.model.NewIntVar(self.minDigit-self.maxDigit,self.maxDigit-self.minDigit,'BattenburgBottomRow{:d}Col{:d}'.format(row,col))
-		self.model.Add(diff1 == self.cellValues[row][col] - self.cellValues[row][col+1])
-		self.model.Add(diff2 == self.cellValues[row][col+1] - self.cellValues[row+1][col+1])
-		self.model.Add(diff3 == self.cellValues[row+1][col+1] - self.cellValues[row+1][col])
-		self.model.AddModuloEquality(1,diff1,2)
-		self.model.AddModuloEquality(1,diff2,2)
-		self.model.AddModuloEquality(1,diff3,2)
-		
+		self.model.Add(self.cellParity[row][col] != self.cellParity[row][col+1])
+		self.model.Add(self.cellParity[row][col+1] != self.cellParity[row+1][col+1])
+		self.model.Add(self.cellParity[row+1][col] != self.cellParity[row+1][col+1])
+				
 	def setBattenburgArray(self,cells):
 		for x in cells: self.setBattenburg(x)
 			
@@ -1135,41 +1297,22 @@ class sudoku:
 			self.isBattenburgInitialized = True
 		self.isBattenburgNegative = True
 		
+		if self.isParity is False:
+			self.__setParity()
+		
 	def __applyBattenburgNegative(self):
 		for i in range(self.boardWidth-1):
 			for j in range(self.boardWidth-1):
 				if (i,j) not in self.battenburgCells:
-					maxDiff = self.maxDigit-self.minDigit
-					diff1 = self.model.NewIntVar(0,2*maxDiff,'BattenburgNegativeTopDifference+8Row{:d}Col{:d}'.format(i,j))
-					diff2 = self.model.NewIntVar(0,2*maxDiff,'BattenburgNegativeRightDifference+8Row{:d}Col{:d}'.format(i,j))
-					diff3 = self.model.NewIntVar(0,2*maxDiff,'BattenburgNegativeBottomDifference+8Row{:d}Col{:d}'.format(i,j))
-					div1 = self.model.NewIntVar(0,maxDiff,'BattenburgNegativeTopDiv2Row{:d}Col{:d}'.format(i,j))
-					div2 = self.model.NewIntVar(0,maxDiff,'BattenburgNegativeRightDiv2Row{:d}Col{:d}'.format(i,j))
-					div3 = self.model.NewIntVar(0,maxDiff,'BattenburgNegativeBottomDiv2Row{:d}Col{:d}'.format(i,j))
-					mod1 = self.model.NewIntVar(0,1,'BattenburgNegativeTopMod2Row{:d}Col{:d}'.format(i,j))
-					mod2 = self.model.NewIntVar(0,1,'BattenburgNegativeRightMod2Row{:d}Col{:d}'.format(i,j))
-					mod3 = self.model.NewIntVar(0,1,'BattenburgNegativeBottomMod2Row{:d}Col{:d}'.format(i,j))
-					self.model.Add(diff1 == self.cellValues[i][j] - self.cellValues[i][j+1] + maxDiff)
-					self.model.Add(diff2 == self.cellValues[i][j+1] - self.cellValues[i+1][j+1] + maxDiff)
-					self.model.Add(diff3 == self.cellValues[i+1][j+1] - self.cellValues[i+1][j] + maxDiff)
-					self.model.Add(2*div1 <= diff1)
-					self.model.Add(2*(div1+1) > diff1)
-					self.model.Add(2*div2 <= diff2)
-					self.model.Add(2*(div2+1) > diff2)
-					self.model.Add(2*div3 <= diff3)
-					self.model.Add(2*(div3+1) > diff3)
-					self.model.Add(mod1 == diff1-2*div1)
-					self.model.Add(mod2 == diff2-2*div2)
-					self.model.Add(mod3 == diff3-2*div3)
 					bit1 = self.model.NewBoolVar('BattenburgNegativeTopSameParityTestRow{:d}Col{:d}'.format(i,j))
 					bit2 = self.model.NewBoolVar('BattenburgNegativeRightSameParityTestRow{:d}Col{:d}'.format(i,j))
 					bit3 = self.model.NewBoolVar('BattenburgNegativeBottomSameParityTestRow{:d}Col{:d}'.format(i,j))
-					self.model.Add(mod1 == 0).OnlyEnforceIf(bit1)
-					self.model.Add(mod1 == 1).OnlyEnforceIf(bit1.Not())
-					self.model.Add(mod2 == 0).OnlyEnforceIf(bit2)
-					self.model.Add(mod2 == 1).OnlyEnforceIf(bit2.Not())
-					self.model.Add(mod3 == 0).OnlyEnforceIf(bit3)
-					self.model.Add(mod3 == 1).OnlyEnforceIf(bit3.Not())
+					self.model.Add(self.cellParity[i][j] == self.cellParity[i][j+1]).OnlyEnforceIf(bit1)
+					self.model.Add(self.cellParity[i][j] != self.cellParity[i][j+1]).OnlyEnforceIf(bit1.Not())
+					self.model.Add(self.cellParity[i][j+1] == self.cellParity[i+1][j+1]).OnlyEnforceIf(bit2)
+					self.model.Add(self.cellParity[i][j+1] != self.cellParity[i+1][j+1]).OnlyEnforceIf(bit2.Not())
+					self.model.Add(self.cellParity[i+1][j+1] == self.cellParity[i+1][j]).OnlyEnforceIf(bit3)
+					self.model.Add(self.cellParity[i+1][j+1] != self.cellParity[i+1][j]).OnlyEnforceIf(bit3.Not())
 					self.model.AddBoolOr([bit1,bit2,bit3])
 
 	def setEntropyQuad(self,row,col=-1):
@@ -1254,7 +1397,37 @@ class sudoku:
 					self.model.Add(self.cellEntropy[i+1][j] == self.cellEntropy[i][j]).OnlyEnforceIf(bit4)
 					self.model.Add(self.cellEntropy[i+1][j] != self.cellEntropy[i][j]).OnlyEnforceIf(bit4.Not())
 					self.model.AddBoolOr([bit1,bit2,bit3,bit4])
+					
+	def setQuadMaxArrow(self,row,col=-1,dir1=-1,dir2=-1):
+		# row,col defines the 2x2 to which the arrow applies
+		# dir1,dir2 defines which cell the arrow points to
+		if col == -1:
+			(row,col,dir1,dir2) = self.__procCell(row)
+		
+		for i in range(2):
+			for j in range(2):
+				if i != dir1 or j != dir2:
+					self.model.Add(self.cellValues[row+i][col+j] < self.cellValues[row+dir1][col+dir2])
+					
+	def setQuadMaxArrowArray(self,cells):
+		for x in cells: self.setQuadMaxArrow(x)
+		
+	def setQuadMaxValue(self,row,col=-1,value=-1):
+		# row,col defines the 2x2 to which the clue applies
+		# value is the largest value which occurs in the quad
+		if col == -1:
+			(row,col,value) = self.__procCell(row)
 
+		equalVars = [self.model.NewBoolVar('QuadMaxValueEqualRow{:d}Col{:d}'.format(row+i,col+j)) for i in range(2) for j in range(2)]
+		for i in range(2):
+			for j in range(2):
+				self.model.Add(self.cellValues[row+i][col+j] == value).OnlyEnforceIf(equalVars[2*i+j])
+				self.model.Add(self.cellValues[row+i][col+j] < value).OnlyEnforceIf(equalVars[2*i+j].Not())
+		self.model.AddBoolOr(equalVars)
+		
+	def setQuadMaxValueArray(self,cells):
+		for x in cells: self.setQuadMaxValue(x)
+		
 ####Linear constraints
 	def setArrow(self,inlist):
 		inlist = self.__procCellList(inlist)
@@ -1297,6 +1470,13 @@ class sudoku:
 		for j in range(len(inlist)-1):
 			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] <= self.cellValues[inlist[j+1][0]][inlist[j+1][1]])
 			
+	def setCountTheOddsLine(self,inlist):
+		if self.isParity is False:
+			self.__setParity()
+			
+		inlist = self.__procCellList(inlist)
+		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] == sum([self.cellParity[inlist[j][0]][inlist[j][1]] for j in range(1,len(inlist))]))
+
 	def setKeyboardKnightLine(self,inlist):
 		if self.boardWidth != 9:
 			print('Keyboard lines only supported on 9x9 board')
@@ -1327,11 +1507,11 @@ class sudoku:
 			self.model.AddAllowedAssignments([self.cellValues[inlist[j][0]][inlist[j][1]],self.cellValues[inlist[-j-1][0]][inlist[-j-1][1]]],[(1,1),(1,3),(3,1),(3,3),(2,2),(2,4),(4,2),(4,4),(5,5),(5,7),(5,9),(7,5),(7,7),(7,9),(6,6),(6,8),(8,6),(8,8)])
 	
 	def setParityLine(self,inlist):
+		if self.isParity is False:
+			self.__setParity()
 		inlist = self.__procCellList(inlist)
 		for j in range(len(inlist)-1):
-			diff = self.model.NewIntVar(self.minDigit-self.maxDigit,self.maxDigit-self.minDigit,'ParityLineRow{:d}Col{:d}toRow{:d}Col{:d}'.format(inlist[j][0],inlist[j][1],inlist[j+1][0],inlist[j+1][1]))
-			self.model.Add(diff == self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]])
-			self.model.AddModuloEquality(1,diff,2)
+			self.model.Add(self.cellParity[inlist[j][0]][inlist[j][1]] != self.cellParity[inlist[j+1][0]][inlist[j+1][1]])
 			
 	def setRenbanLine(self,inlist):
 		inlist = self.__procCellList(inlist)
@@ -1514,6 +1694,7 @@ class sudoku:
 		if self.isEntropyQuadNegative is True: self.__applyEntropyQuadNegative()
 		if self.isEntropyBattenburgNegative is True: self.__applyEntropyBattenburgNegative()
 		if self.isFriendlyNegative is True: self.__applyFriendlyNegative()
+		if self.isRossiniNegative is True: self.__applyRossiniNegative()
 
 	def findSolution(self):
 		self.applyNegativeConstraints()

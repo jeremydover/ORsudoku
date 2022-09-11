@@ -1,3 +1,14 @@
+9/11/2022
+	Implemented parity values (similar to modular values for mod 3) to ease implementation of parity based clues
+	Issue #16 - added support for count-the-odds lines
+	Issue #12 - added support for Rossini cluing, including the negative constraint
+	Issue #13 - added support for corner/edge clues
+	Issue #15 - added support for outside clues
+	Issue #14 - added support for corner max under the "quad max value" name
+	Issue #10 - added support for quad max arrows
+	Issue #8 - added support for median cages
+	Note: thanks to the GAS setters at CtC Discord: clover, Philip and Sam for mining numerous Sudoku variants, which comprise most of this push
+
 9/10/2022
 	Fixed Issue #4
 	Fixed Issue #1 - added support for GSP

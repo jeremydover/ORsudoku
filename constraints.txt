@@ -10,6 +10,8 @@ Battlefield
 Between Lines
 Chinese Whispers Lines
 Clone Regions
+Corner/Edge Clues
+Count the Odds Lines
 Difference Pairs - see Kropki and Kropki Pairs
 Disjoint Groups
 Double Arrows - see Arrows
@@ -43,21 +45,26 @@ Little Killer
 Lockout Lines
 Look-and-Say Cages - see Zones
 Magic Squares
+Median Cages
 Min-Max
 Modular Lines
 Neighbor Sums
 Non-Consecutive
 Numbered Room
+Outside Clues
 Palindrome Lines
 Parity Lines (alternating parity along line)
 Pointing Arrows - see Arrows
 Position Sums
 Quadruple
+Quad Max Arrows
+Quad Max Values
 Quad Sums (one digit on a quad is the sum of the three others)
 Ratio Pairs - see Kropki and Kropki pairs
 Region Sum Lines (sum of all cells along a line in a region is fixed)
 Region Segment Sum Lines - see Region Sum Lines
 Renban Lines
+Rossini Clues
 Run-On Renban Lines - see Renban Lines
 Samurai Sudoku
 Sandwich Sums
@@ -200,6 +207,18 @@ Clone Regions
 setCloneRegion(list): creates a set of regions that are clones of each other, i.e., the same digit appears in the ith position for each i
   list: a list OF LISTS of cell specifications
   
+Corner/Edge Clues
+-----------------
+setCornerEdge(box,ce,valueList): sets a list of values that must appear in a corner or on an edge of a BOX (not region)
+  box: integer denoting box, upper left corner is 1, to its right is 2, etc.
+  ce: determines whether clue is for corners or edges. 0 or class variable Corner for corner, 1 or class variable Edge for edge
+  valueList: list of cell values for which to assert placement
+
+Count the Odds Lines
+--------------------
+setCountTheOddsLine(list): set a count the odds line, where the digit in the first cell of the line counts the number of odd digits on the rest of the line
+	list: list of cell specifications
+
 Disjoint Groups
 ---------------
 setDisjointGroups(): sets the global disjoint groups constraint
@@ -447,6 +466,12 @@ Magic Squares
 setMagicSquare(cell): creates a magic square with given cell the upper left corner
   cell: single cell specification
 
+Median Cages
+------------
+setMedianCage(list,value): sets the median value in the region (which must appear in the region)
+	list: list of cell specifications
+	value: target median value
+
 Min-Max
 -------
 setMinCell(cell): assert a cell is smaller than all orthogonally adjacent cells
@@ -493,6 +518,13 @@ setNumberedRoom(row,col,rc,value): sets a numbered room constraint
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: The value (1-9) to be placed based on the indexing cell
   
+Outside Clues
+-------------
+setOutside(row,col,rc,valueList): provides a set of values on a row or column that must appear in that row/column in the first box (region for irregular sudoku) appearing next to the clue
+  row,col: The coordinates of the cell containing the indexing clue, i.e. the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  valueList: a list of values to be placed
+
 Palindrome Lines
 ----------------
 setPalindromeLine(list): creates a palindrome line constraint
@@ -519,6 +551,22 @@ setQuadruple(cellVals): create a quadruple constraint on a 2x2 region
 setQuadrupleArray(list): set multiple quadruples
   list: list of cellVal specifications; see setQuadruple
   
+Quad Max Arrows
+---------------
+setQuadMaxArrow(cellDir): constraint on a 2x2 points to the unique maximum value in the quad
+  cellDir: an extended cell specification which has the coordinates of the 2x2, followed by a direction specification which uses a pair of 01 values to indicate Top/Bottom,Left/Right, in order. The class variables Top, Bottom, Left and Right can be used. So for example, 1401 and (1,4,p.Top,p.Right) both indicate that the cell 15 should be larger than all of 14, 24 and 25.
+  
+setQuadMaxArrowArray(list): set multiple Quad Max arrow constraints
+  list: list of extended cell specifications per setQuadMaxArrow method
+  
+Quad Max Values
+---------------
+setQuadMaxValue(cellValue): constraint on a 2x2 indicating the maximum value in the quad
+  cellValue: an extended cell specification which has the coordinates of the 2x2, followed by the maximum value in the quad
+  
+setQuadMaxValueArray(list): set multiple Quad Max value constraints
+  list: list of extended cell specifications per setQuadMaxValue method
+
 Quad Sums
 ---------
 setQuadSum(cell): assert that one of the digits in a quad is the sum of the other 3
@@ -544,6 +592,21 @@ setRenbanLine(list): set a Renban line constraint
 setRunOnRenbanLine(list,n): set a run-on Renban line, i.e. a line where each contiguous subsegment of length n is a Renban line
   list: list of cell specifications
   n: length of subsegment that is a Renban. If not present, defaults to 5
+
+Rossini Clues
+-------------
+Rossini clues appear as arrows on the outside of of the grid, and indicate that the first few cells next to the clue increase in the given direction. In normal Sudoku there is no ambiguity, since the number of cells used is 3, but is that 3 because of the region, or because 3 is a nice number? We provide the option to define the length of the run applied either by using regions, or specifying a value.
+
+setRossini(row,col,rc,uldr): sets a Rossini constraint on a row or column
+  row,col: The coordinates of the cell containing the cell next to which the clue values sit
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  uldr: Determines if the arrow points Top/Bottom (for columns) or Left/Right (for rows)...use class variables Top, Bottom, Left, and Right
+  By default, Rossini conditions operate on regions
+  
+setRossiniLength(value): changes cluing behavior to work on a fixed number of cells from the border
+	value: number of cells to test for increase/decrease
+	
+setRossiniNegative(): assert a negative constraint on the Rossini conditions, i.e. rows/columns without clues do not strictly increase/decrease in the Rossini window
 
 Samurai Sudoku
 --------------
