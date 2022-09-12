@@ -1,3 +1,5 @@
+9/12/22
+	Issue #17 - implemented test harness support, and added test for global whispers
 	Issue #11 - added support for max ascending constraints
 	Issue #9 - added support for average lines
 	Note: again thanks to the GAS setters at CtC Discord: clover, Philip and Sam for unearthing/developing the constraints implemented here
