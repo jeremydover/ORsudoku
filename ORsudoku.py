@@ -1213,9 +1213,36 @@ class sudoku:
 									varlist.append(good)
 						self.model.AddBoolOr(varlist)		# Just need one triple to be good
 									
-								
-					
+	def setMaxAscending(self,row1,col1,rc,value):
+		# row,col are the coordinates of the cell containing the index of the target cell
+		# rc is whether things are row/column
+		# value is the length of the longest adjacent ascending run, looking from the clue
 		
+		# Convert from 1-base to 0-base
+		row = row1 - 1
+		col = col1 - 1
+		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
+		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
+		incBools = [self.model.NewBoolVar('MaxAscendingIncBoolRow{:d}Col{:d}RC{:d}'.format(row,col,rc)) for i in range(self.boardWidth-1)]
+		incInts = [self.model.NewIntVar(0,1,'MaxAscendingIncIntRow{:d}Col{:d}RC{:d}'.format(row,col,rc)) for i in range(self.boardWidth-1)]
+		for i in range(len(incBools)):
+			self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] < self.cellValues[row+(i+1)*vStep][col+(i+1)*hStep]).OnlyEnforceIf(incBools[i])
+			self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] >= self.cellValues[row+(i+1)*vStep][col+(i+1)*hStep]).OnlyEnforceIf(incBools[i].Not())
+			self.model.Add(incInts[i] == 1).OnlyEnforceIf(incBools[i])
+			self.model.Add(incInts[i] == 0).OnlyEnforceIf(incBools[i].Not())
+			
+		if value == 1:		# In this case the row/col must be strictly decreasing
+			self.model.AddBoolAnd([x.Not() for x in incBools])
+		else:
+			lenBools = [self.model.NewBoolVar('MaxAscendingLenBoolRow{:d}Col{:d}RC{:d}'.format(row,col,rc)) for i in range(self.boardWidth+1-value)]
+			for i in range(self.boardWidth+1-value):
+				self.model.Add(sum([incInts[j] for j in range(i,i+value-1)]) == value-1).OnlyEnforceIf(lenBools[i])
+				self.model.Add(sum([incInts[j] for j in range(i,i+value-1)]) < value-1).OnlyEnforceIf(lenBools[i].Not())
+			self.model.AddBoolOr(lenBools)	#There is a run of length value
+			
+			for i in range(self.boardWidth-value):	#There is no longer run
+				self.model.Add(sum([incInts[j] for j in range(i,i+value)]) < value)
+					
 ####2x2 constraints
 	def setQuadruple(self,row,col=-1,values=-1):
 		if col == -1:
@@ -1681,6 +1708,10 @@ class sudoku:
 				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] < self.cellValues[inlist[i+1][0]][inlist[i+1][1]]).OnlyEnforceIf(c)
 				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] > self.cellValues[inlist[i+1][0]][inlist[i+1][1]]).OnlyEnforceIf(c.Not())
 
+	def setAverageLine(self,inlist):
+		inlist = self.__procCellList(inlist)
+		self.model.Add((len(inlist)-1)*self.cellValues[inlist[0][0]][inlist[0][1]] == sum([self.cellValues[inlist[i][0]][inlist[i][1]] for i in range(1,len(inlist))]))
+
 ####Model solving
 	def applyNegativeConstraints(self):
 		# This method is used to prepare the model for solution. If negative constraints have been set, i.e. all items not marked
@@ -1696,7 +1727,7 @@ class sudoku:
 		if self.isFriendlyNegative is True: self.__applyFriendlyNegative()
 		if self.isRossiniNegative is True: self.__applyRossiniNegative()
 
-	def findSolution(self):
+	def findSolution(self,test=False):
 		self.applyNegativeConstraints()
 		self.solver = cp_model.CpSolver()
 		consolidatedCellValues = []
@@ -1704,10 +1735,13 @@ class sudoku:
 		solution_printer = SolutionPrinter(consolidatedCellValues)
 		self.solveStatus = self.solver.Solve(self.model)
 	
-		print('Solver status = %s' % self.solver.StatusName(self.solveStatus))
-		if self.solveStatus == cp_model.OPTIMAL:
-			print('Solution found!')
-			self.printCurrentSolution()
+		if test is True:
+			return self.testStringSolution()
+		else:
+			print('Solver status = %s' % self.solver.StatusName(self.solveStatus))
+			if self.solveStatus == cp_model.OPTIMAL:
+				print('Solution found!')
+				self.printCurrentSolution()
 
 	def countSolutions(self,printAll = False):
 		self.applyNegativeConstraints()
@@ -1723,7 +1757,6 @@ class sudoku:
 			print('Sample solution')
 			self.printCurrentSolution()
 				
-
 	def printCurrentSolution(self):
 		dW = max([len(str(x)) for x in self.digits])
 		for rowIndex in range(self.boardWidth):
@@ -1731,7 +1764,14 @@ class sudoku:
 				print('{:d}'.format(self.solver.Value(self.cellValues[rowIndex][colIndex])).rjust(dW),end = " ")
 			print()
 		print()
-
+		
+	def testStringSolution(self):
+		testString = ''
+		for rowIndex in range(self.boardWidth):
+			for colIndex in range(self.boardWidth):
+				testString = testString + '{:d}'.format(self.solver.Value(self.cellValues[rowIndex][colIndex]))
+		return testString
+		
 	def __varBitmap(self,string,num):
 		# Utility function to create a list of Boolean vaariable propositions that encode num possibilities exactly.
 		# string is used to label the variables
@@ -1796,6 +1836,15 @@ class doublerSudoku(sudoku):
 		
 		self.isKropkiInitialized = False
 		self.isKropkiNegative = False
+		self.kropkiDiff = 1
+		self.kropkiRatio = 2
+		
+		self.isFriendlyInitialized = False
+		self.isFriendlyNegative = False
+		
+		self.isRossiniInitialized = False
+		self.isRossiniNegative = False
+		self.rossiniLength = -1
 		
 		self.isXVInitialized = False
 		self.isXVNegative = False
@@ -1809,6 +1858,7 @@ class doublerSudoku(sudoku):
 		self.isEntropyBattenburgInitialized = False
 		self.isEntropyBattenburgNegative = False
 		
+		self.isParity = False
 		self.isEntropy = False
 		self.isModular = False
 		
@@ -1931,6 +1981,16 @@ class doublerSudoku(sudoku):
 					print('{:d}'.format(self.solver.Value(self.baseValues[i][j])).rjust(dW),end = " ")
 			print()
 		print()
+		
+	def testStringSolution(self):
+		testString = ''
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				if self.solver.Value(self.doubleInt[i][j]) == 1: # This one is doubled!
+					testString = testString + '*{:d}*'.format(self.solver.Value(self.baseValues[i][j]))
+				else:
+					testString = testString + '{:d}'.format(self.solver.Value(self.baseValues[i][j]))
+		return testString
 					
 class japaneseSumSudoku(sudoku):
 	"""A class used to implement Japanese Sum puzzles."""
@@ -1944,6 +2004,15 @@ class japaneseSumSudoku(sudoku):
 		
 		self.isKropkiInitialized = False
 		self.isKropkiNegative = False
+		self.kropkiDiff = 1
+		self.kropkiRatio = 2
+		
+		self.isFriendlyInitialized = False
+		self.isFriendlyNegative = False
+		
+		self.isRossiniInitialized = False
+		self.isRossiniNegative = False
+		self.rossiniLength = -1
 		
 		self.isXVInitialized = False
 		self.isXVNegative = False
@@ -1957,6 +2026,7 @@ class japaneseSumSudoku(sudoku):
 		self.isEntropyBattenburgInitialized = False
 		self.isEntropyBattenburgNegative = False
 		
+		self.isParity = False
 		self.isEntropy = False
 		self.isModular = False
 		

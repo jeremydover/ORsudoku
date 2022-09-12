@@ -1,3 +1,7 @@
+	Issue #11 - added support for max ascending constraints
+	Issue #9 - added support for average lines
+	Note: again thanks to the GAS setters at CtC Discord: clover, Philip and Sam for unearthing/developing the constraints implemented here
+
 9/11/2022
 	Implemented parity values (similar to modular values for mod 3) to ease implementation of parity based clues
 	Issue #16 - added support for count-the-odds lines

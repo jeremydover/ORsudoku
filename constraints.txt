@@ -5,6 +5,7 @@ Alternate Digits
 Anti-King
 Anti-Knight
 Arrows
+Average Lines
 Battenburg
 Battlefield
 Between Lines
@@ -45,6 +46,7 @@ Little Killer
 Lockout Lines
 Look-and-Say Cages - see Zones
 Magic Squares
+MaxAscending
 Median Cages
 Min-Max
 Modular Lines
@@ -174,6 +176,11 @@ setPointingArrow(list): creates a pointing arrow, which is both a regular arrow,
 setMultiDigitSumArrow(list,n): creates an arrow where the sum is multi-digit, interpreted base 10
   list: a list of cells along the arrow where the first n elements are in the circle, listed from most-significant to least significant
   n: the number of digits in the circle
+  
+Average Lines
+-------------
+setAverageLine(inlist): creates an average line, where the first cell in the list is the average (arithmetical mean) of the cell values in the list
+  inlist: a list of cells specifications
   
 Battenburg
 ----------
@@ -466,6 +473,13 @@ Magic Squares
 setMagicSquare(cell): creates a magic square with given cell the upper left corner
   cell: single cell specification
 
+Max Ascending
+-------------
+setMaxAscending(row,col,rc,value): sets a max ascending constraint, specifying the longest consective run of increasing digits in the row/col, looking from the clue
+  row,col: The coordinates of the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  value: the length of the longest run of increasing digits in the row/col
+  
 Median Cages
 ------------
 setMedianCage(list,value): sets the median value in the region (which must appear in the region)
@@ -627,7 +641,7 @@ setSamuraiConstraint(puzzle,constraint,argsd): sets a Samurai constraint
 
 Sandwich Sums
 -------------
-set SandwichSum(row,col,rc,value): sets a sandwich sum constraint
+setSandwichSum(row,col,rc,value): sets a sandwich sum constraint
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: The sum of the values between the 1 and 9 in the clued row/column
