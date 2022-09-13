@@ -1,3 +1,8 @@
+9/12/22bis
+	Added support for parity dots
+	Added support for parindrome lines
+	Added a bunch of tests
+	
 9/12/22
 	Issue #17 - implemented test harness support, and added test for global whispers
 	Issue #11 - added support for max ascending constraints

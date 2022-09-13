@@ -864,6 +864,36 @@ class sudoku:
 			else:
 				self.setEntropkiBlack(x[0],x[1],x[2])
 				
+	def setParityDotWhite(self,row,col=-1,hv=-1):
+		if self.isParity is False:
+			self.__setParity()
+		if col == -1:
+			(row,col,hv) = self.__procCell(row)
+		# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
+		self.model.Add(self.cellParity[row][col] != self.cellParity[row+hv][col+(1-hv)])
+		
+	def setParityDotBlack(self,row,col=-1,hv=-1):
+		if self.isParity is False:
+			self.__setParity()
+		if col == -1:
+			(row,col,hv) = self.__procCell(row)
+		# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
+		self.model.Add(self.cellParity[row][col] == self.cellParity[row+hv][col+(1-hv)])
+
+	def setParityDotWhiteArray(self,cells):
+		for x in cells: self.setParityDotWhite(x)
+		
+	def setParityDotBlackArray(self,cells):
+		for x in cells: self.setParityDotBlack(x)
+		
+	def setParityDotArray(self,cells):
+		cellList = self.__procCellList(cells)
+		for x in cellList:
+			if x[3] == sudoku.White:
+				self.setParityDotWhite(x[0],x[1],x[2])
+			else:
+				self.setParityDotBlack(x[0],x[1],x[2])
+
 	def setGenetic(self,inlist):
 		inlist = self.__procCellList(inlist)
 		if self.isEntropy is False:
@@ -1524,6 +1554,13 @@ class sudoku:
 		inlist = self.__procCellList(inlist)
 		for j in range(len(inlist) // 2):
 			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] == self.cellValues[inlist[-j-1][0]][inlist[-j-1][1]])
+			
+	def setParindromeLine(self,inlist):
+		if self.isParity is False:
+			self.__setParity()
+		inlist = self.__procCellList(inlist)
+		for j in range(len(inlist) // 2):
+			self.model.Add(self.cellParity[inlist[j][0]][inlist[j][1]] == self.cellParity[inlist[-j-1][0]][inlist[-j-1][1]])
 			
 	def setWeakPalindromeLine(self,inlist):
 		if self.boardWidth != 9:
