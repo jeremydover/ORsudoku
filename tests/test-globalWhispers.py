@@ -4,6 +4,7 @@ import ORsudoku
 class TestPuzzle(unittest.TestCase):
 	# Puzzle: World Wide Whispers
 	# Author: jeremydover
+	# Link: https://logic-masters.de/Raetselportal/Raetsel/zeigen.php?id=000ASP
 	# Constraints tested: setGivenArray, setGlobalWhispers
 	
 	def test_puzzle(self):
