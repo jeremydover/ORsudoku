@@ -1,5 +1,11 @@
+9/14/22
+	Issue #18 - Implemented block cage constraints
+	Issue #19 - Implemented skyscraper constraints
+	Fixed method names for keypad king and keypad knight lines
+	Added additional tests
+	
 9/12/22bis
-	Added support for parity dots
+	Added support for parity dots (Thanks to BremSter for introducing me to these constraints.)
 	Added support for parindrome lines
 	Added a bunch of tests
 	

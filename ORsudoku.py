@@ -806,6 +806,19 @@ class sudoku:
 		self.model.AddBoolOr(equalVars)	# At least some cell equals the median
 		self.model.Add(sum(ternVars) == 0)	# Ensures there are an equal number of values less than vs. greater than the median
 		
+	def setBlockCage(self,inlist,values):
+		# A block cage is an area with a list of values that cannot appear in that area
+		inlist = self.__procCellList(inlist)
+		if isinstance(values,list):
+			myValues = values
+		else:
+			myValues = [int(x) for x in str(values)]
+		
+		for i in range(len(inlist)):
+			for j in range(len(myValues)):
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] != myValues[j])
+				
+
 	def setZone(self,inlist,values):
 		# A zone is an area with potentially repeating values; the clue is a list of digits that must appear in the zone
 		inlist = self.__procCellList(inlist)
@@ -1272,7 +1285,44 @@ class sudoku:
 			
 			for i in range(self.boardWidth-value):	#There is no longer run
 				self.model.Add(sum([incInts[j] for j in range(i,i+value)]) < value)
-					
+
+	def setSkyscraper(self,row1,col1,rc,value):
+		# row,col are the coordinates of the cell containing the index of the target cell
+		# rc is whether things are row/column
+		# value is the number of digits that can be "seen" (i.e. are greater than all their predecessors) from the direction of the clue
+		
+		# Convert from 1-base to 0-base
+		row = row1 - 1
+		col = col1 - 1
+		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
+		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
+		
+		# Create Boolean variables to determine where cell i in the row (from the correct direction) is greater than each of its predecessors
+		incVars = [[]]
+		for i in range(1,self.boardWidth):
+			t = []
+			for j in range(i):
+				c = self.model.NewBoolVar('SkyscraperRow{:d}Col{:d}Cell{:d}Cell{:d}'.format(row,col,i,j))
+				t.append(c)
+				self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] > self.cellValues[row+j*vStep][col+j*hStep]).OnlyEnforceIf(c)
+				self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] < self.cellValues[row+j*vStep][col+j*hStep]).OnlyEnforceIf(c.Not())
+			incVars.insert(i,t)
+		
+		seenBools = [self.model.NewBoolVar('SkyscraperSeenBool{:d}{:d}'.format(row+i*vStep,col+i*hStep)) for i in range(self.boardWidth)]
+		seenInts = [self.model.NewIntVar(0,1,'SkyscraperSeenInt{:d}{:d}'.format(row+i*vStep,col+i*hStep)) for i in range(self.boardWidth)]
+		for i in range(self.boardWidth):
+			self.model.Add(seenInts[i] == 1).OnlyEnforceIf(seenBools[i])
+			self.model.Add(seenInts[i] == 0).OnlyEnforceIf(seenBools[i].Not())
+			
+		# Need to treat i=0 separately, since it is always seen, so seenBool[0] is always true
+		self.model.AddBoolAnd([seenBools[0]])
+		
+		for i in range(1,self.boardWidth):
+			self.model.AddBoolAnd(incVars[i]).OnlyEnforceIf(seenBools[i])
+			self.model.AddBoolAnd([seenBools[i]]).OnlyEnforceIf(incVars[i])
+			
+		self.model.Add(sum([seenInts[i] for i in range(self.boardWidth)]) == value)
+		
 ####2x2 constraints
 	def setQuadruple(self,row,col=-1,values=-1):
 		if col == -1:
@@ -1534,17 +1584,17 @@ class sudoku:
 		inlist = self.__procCellList(inlist)
 		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] == sum([self.cellParity[inlist[j][0]][inlist[j][1]] for j in range(1,len(inlist))]))
 
-	def setKeyboardKnightLine(self,inlist):
+	def setKeypadKnightLine(self,inlist):
 		if self.boardWidth != 9:
-			print('Keyboard lines only supported on 9x9 board')
+			print('Keypad lines only supported on 9x9 board')
 			sys.exit()
 		inlist = self.__procCellList(inlist)
 		for j in range(len(inlist)-1):
 			self.model.AddAllowedAssignments([self.cellValues[inlist[j][0]][inlist[j][1]],self.cellValues[inlist[j+1][0]][inlist[j+1][1]]],[(1,6),(1,8),(2,7),(2,9),(3,4),(3,8),(4,3),(4,9),(6,1),(6,7),(7,2),(7,6),(8,1),(8,3),(9,2),(9,4)])
 			
-	def setKeyboardKingLine(self,inlist):
+	def setKeypadKingLine(self,inlist):
 		if self.boardWidth != 9:
-			print('Keyboard lines only supported on 9x9 board')
+			print('Keypad lines only supported on 9x9 board')
 			sys.exit()
 		inlist = self.__procCellList(inlist)
 		for j in range(len(inlist)-1):

@@ -9,6 +9,7 @@ Average Lines
 Battenburg
 Battlefield
 Between Lines
+Block Cages
 Chinese Whispers Lines
 Clone Regions
 Corner/Edge Clues
@@ -37,8 +38,8 @@ Gurth's Symmetric Placement (GSP)
 Indexing
 Irregular Sudoku
 Japanese Sum Sudoku
-Keyboard King Lines
-Keyboard Knight Lines
+Keypad King Lines
+Keypad Knight Lines
 Killer Cages (repeating and non-repeating)
 Kropki (see Kropki Pairs)
 Kropki Pairs
@@ -206,6 +207,12 @@ Between Lines
 setBetweenLine(list): creates a between line constraint
   list: a list of cell specifications
   
+Block Cages
+-----------
+setBlockCage(list,values): creates a block cage, that is an list of cells and a list of values, such that those values cannot appear within the cage
+  list: list of cell specifications
+  values: a list of values...if unambiguous the punctuation can be omitted, so that [1,2,3,9] and 1239 can both be entered as a value list
+
 Chinese Whispers Lines
 ----------------------
 setChineseWhispersLine(list): creates a Chinese whispers line constraint
@@ -409,14 +416,14 @@ setJapaneseSum(row,col,rc,value): sets a Japanese sum constraint
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: A list of values representing the sums in a clue. Use 0 to stand-in for an unshaded group with an indeterminate sum, i.e. to replace a ?
 
-Keyboard King Lines
--------------------
-setKeyboardKingLine(list): creates a keyboard king line constraint (adjacent digits must be a king's move apart on a telephone keypad). Designed by Zegres
+Keypad King Lines
+-----------------
+setKeypadKingLine(list): creates a keypad king line constraint (adjacent digits must be a king's move apart on a telephone keypad). Designed by Zegres
   list: a list of cell specifications
   
-Keyboard Knight Lines
----------------------
-setKeyboardKnightLine(list): creates a keyboard knight line constraint (adjacent digits must be a knight's move apart on a telephone keypad). Designed by Zegres.
+Keypad Knight Lines
+-------------------
+setKeypadKnightLine(list): creates a keypad knight line constraint (adjacent digits must be a knight's move apart on a telephone keypad). Designed by Zegres.
   list: a list of cell specifications
   
 Killer Cages
@@ -678,6 +685,13 @@ Shift Lines
 setShiftLine(inlist): sets a shift line constraint; like a plaindrome, but one side is uniformly one larger than the other
   inlist: list of cell specifications
 
+Skyscrapers
+-----------
+setSkyscraper(row,col,rc,value): sets a skyscraper constraint, specifying the number of digits that can be "seen" from the clue, where seen means greater than all digits between it and the clue
+  row,col: The coordinates of the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  value: the number of digits that can be seen
+  
 Unicorn Digits
 --------------
 setUnicornDigit(value): set a unicorn digit, i.e. for any instance of that digit in the grid, all of the cells a knight's move away have distinct values
