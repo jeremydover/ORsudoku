@@ -1,3 +1,6 @@
+9/14/22bis
+	Issue #20 - Implemented pencilmarks
+
 9/14/22
 	Issue #18 - Implemented block cage constraints
 	Issue #19 - Implemented skyscraper constraints

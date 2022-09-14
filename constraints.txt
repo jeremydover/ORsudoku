@@ -59,6 +59,7 @@ Palindrome Lines
 Parindrome Lines - see Palindrome Lines
 Parity Dots
 Parity Lines (alternating parity along line)
+Pencilmarks
 Pointing Arrows - see Arrows
 Position Sums
 Quadruple
@@ -583,6 +584,16 @@ Parity Lines
 setParityLine(list): creates a parity line constraint (parity must alternate along the line)
   list: a list of cell specifications
   
+Pencilmarks
+-----------
+setPencilmarks(row,col,values): set pencilmarks (possible values) for a single cell
+	row,col: position of cell
+	values: list of possible values for the cell
+	Note: instead of three positional arguments, one can use a shorthand without punctuation, e.g. 12378 assigns pencilmarks 3/7/8 to cell 1,2.
+	
+setPencilmarksArray(list): set multiple pencilmark constraints
+	list: a list of shorthand pencilmark specifications, e.g. [12123,15289]
+
 Position Sums
 -------------
 setPositionSum(row,col,rc,value1,values2): set a position sum, namely giving the sum (value1) of the first two cells adjacent to the clue (determined by row,col) and the sum of the two cells indexed by the first two cells in the column.

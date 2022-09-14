@@ -577,6 +577,22 @@ class sudoku:
 					colInd = j // self.boardSizeRoot
 					box = 3*rowInd + colInd
 					self.model.Add(self.cellValues[i][j] != box+1)
+
+	def setPencilmarks(self,row1,col1=-1,values=-1):
+		# A block cage is an area with a list of values that cannot appear in that area
+		if col1 == -1:
+			T = self.__procCell(row1)
+			row = T[0]
+			col = T[1]
+			values = [T[i] for i in range(2,len(T))]
+		else:
+			row = row1 - 1
+			col = col1 - 1
+			
+		self.model.AddAllowedAssignments([self.cellValues[row][col]],[(x,) for x in values])
+		
+	def setPencilmarksArray(self,list):
+		for x in list: self.setPencilmarks(x)
 		
 ####Multi-cell constraints
 	def setFortress(self,inlist):
