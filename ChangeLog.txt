@@ -1,3 +1,7 @@
+9/15/22
+	Added test code
+	Updated Battenburg code to allow single cells to be labelled "Anti-Battenburg", i.e. specifically not having the constraint, and updated the global negative constraint code to use it
+
 9/14/22bis
 	Issue #20 - Implemented pencilmarks
 

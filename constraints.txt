@@ -194,6 +194,12 @@ setBattenburg(cell): creates a Battenburg constraint (no cells on the quad with 
 setBattenburgArray(list): creates multiple Battenburg constraints
   list: a list of cell specifications
   
+setAntiBattenburg(cell): creates a negative Battenburg constraint (the Battenburg condition does NOT hold)
+  cell: a single cell specification, e.g., 13,'25',(4,7)
+  
+setAntiBattenburgArray(list): creates multiple negative Battenburg constraints
+  list: a list of cell specifications
+
 setBattenburgNegative(): specify that all cells not specifically designated with Battenburgs do NOT satisfy the Battenburg constraint
 
 Battlefield

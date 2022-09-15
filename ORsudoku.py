@@ -1422,21 +1422,30 @@ class sudoku:
 		
 		if self.isParity is False:
 			self.__setParity()
+			
+	def setAntiBattenburg(self,row,col=-1):
+		if col == -1:
+			(row,col) = self.__procCell(row)
+		# No need to set battenburgInitialized...if we call negative later, this will just be duplicated.
+		bit1 = self.model.NewBoolVar('AntiBattenburgTopSameParityTestRow{:d}Col{:d}'.format(row,col))
+		bit2 = self.model.NewBoolVar('AntiBattenburgRightSameParityTestRow{:d}Col{:d}'.format(row,col))
+		bit3 = self.model.NewBoolVar('AntiBattenburgBottomSameParityTestRow{:d}Col{:d}'.format(row,col))
+		self.model.Add(self.cellParity[row][col] == self.cellParity[row][col+1]).OnlyEnforceIf(bit1)
+		self.model.Add(self.cellParity[row][col] != self.cellParity[row][col+1]).OnlyEnforceIf(bit1.Not())
+		self.model.Add(self.cellParity[row][col+1] == self.cellParity[row+1][col+1]).OnlyEnforceIf(bit2)
+		self.model.Add(self.cellParity[row][col+1] != self.cellParity[row+1][col+1]).OnlyEnforceIf(bit2.Not())
+		self.model.Add(self.cellParity[row+1][col+1] == self.cellParity[row+1][col]).OnlyEnforceIf(bit3)
+		self.model.Add(self.cellParity[row+1][col+1] != self.cellParity[row+1][col]).OnlyEnforceIf(bit3.Not())
+		self.model.AddBoolOr([bit1,bit2,bit3])
+		
+	def setAntiBattenburgArray(self,cells):
+		for x in cells: self.setAntiBattenburg(x)
 		
 	def __applyBattenburgNegative(self):
 		for i in range(self.boardWidth-1):
 			for j in range(self.boardWidth-1):
 				if (i,j) not in self.battenburgCells:
-					bit1 = self.model.NewBoolVar('BattenburgNegativeTopSameParityTestRow{:d}Col{:d}'.format(i,j))
-					bit2 = self.model.NewBoolVar('BattenburgNegativeRightSameParityTestRow{:d}Col{:d}'.format(i,j))
-					bit3 = self.model.NewBoolVar('BattenburgNegativeBottomSameParityTestRow{:d}Col{:d}'.format(i,j))
-					self.model.Add(self.cellParity[i][j] == self.cellParity[i][j+1]).OnlyEnforceIf(bit1)
-					self.model.Add(self.cellParity[i][j] != self.cellParity[i][j+1]).OnlyEnforceIf(bit1.Not())
-					self.model.Add(self.cellParity[i][j+1] == self.cellParity[i+1][j+1]).OnlyEnforceIf(bit2)
-					self.model.Add(self.cellParity[i][j+1] != self.cellParity[i+1][j+1]).OnlyEnforceIf(bit2.Not())
-					self.model.Add(self.cellParity[i+1][j+1] == self.cellParity[i+1][j]).OnlyEnforceIf(bit3)
-					self.model.Add(self.cellParity[i+1][j+1] != self.cellParity[i+1][j]).OnlyEnforceIf(bit3.Not())
-					self.model.AddBoolOr([bit1,bit2,bit3])
+					self.setAntiBattenburg(i,j)
 
 	def setEntropyQuad(self,row,col=-1):
 		if col == -1:
