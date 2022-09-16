@@ -146,6 +146,9 @@ class sudoku:
 		self.isEntropyBattenburgInitialized = False
 		self.isEntropyBattenburgNegative = False
 		
+		self.isConsecutiveQuadInitialized = False
+		self.isConsecutiveQuadNegative = False
+		
 		self.isParity = False
 		self.isEntropy = False
 		self.isModular = False
@@ -561,6 +564,20 @@ class sudoku:
 	def setFriendlyArray(self,cells):
 		for x in cells: self.setFriendly(x)
 		
+	def setUnfriendly(self,row,col=-1):
+		# To label a single cell as specifically not friendly
+		if col == -1:
+			(row,col) = self.__procCell(row)
+		self.model.Add(self.cellValues[row][col] != row+1)
+		self.model.Add(self.cellValues[row][col] != col+1)
+		rowInd = row // self.boardSizeRoot
+		colInd = col // self.boardSizeRoot
+		box = 3*rowInd + colInd
+		self.model.Add(self.cellValues[row][col] != box+1)			
+		
+	def setUnfriendlyArray(self,cells):
+		for x in cells: self.setUnfriendly(x)
+
 	def setFriendlyNegative(self):
 		if self.isFriendlyInitialized is not True:
 			self.friendlyCells = []
@@ -571,12 +588,7 @@ class sudoku:
 		for i in range(self.boardWidth):
 			for j in range(self.boardWidth):
 				if (i,j) not in self.friendlyCells:
-					self.model.Add(self.cellValues[i][j] != i+1)
-					self.model.Add(self.cellValues[i][j] != j+1)
-					rowInd = i // self.boardSizeRoot
-					colInd = j // self.boardSizeRoot
-					box = 3*rowInd + colInd
-					self.model.Add(self.cellValues[i][j] != box+1)
+					self.setUnfriendly(i,j)
 
 	def setPencilmarks(self,row1,col1=-1,values=-1):
 		# A block cage is an area with a list of values that cannot appear in that area
@@ -653,19 +665,24 @@ class sudoku:
 			self.isKropkiInitialized = True
 		self.isKropkiNegative = True
 		
+	def setAntiKropki(self,row,col=-1,hv=-1):
+		if col == -1:
+			(row,col,hv) = self.__procCell(row)
+		self.model.Add(self.cellValues[row][col] - self.cellValues[row+hv][col+(1-hv)] != self.kropkiDiff)
+		self.model.Add(self.cellValues[row][col] - self.cellValues[row+hv][col+(1-hv)] != -1*self.kropkiDiff)
+		self.model.Add(self.cellValues[row][col] != self.kropkiRatio*self.cellValues[row+hv][col+(1-hv)])
+		self.model.Add(self.kropkiRatio*self.cellValues[row][col] != self.cellValues[row+hv][col+(1-hv)])
+		
+	def setAntiKropkiArray(self,cells):
+		for x in cells: self.setAntiKropki(x)
+	
 	def __applyKropkiNegative(self):
 		for i in range(self.boardWidth):
 			for j in range(self.boardWidth):
 				if i < 8 and (i,j,1) not in self.kropkiCells:
-					self.model.Add(self.cellValues[i][j] - self.cellValues[i+1][j] != self.kropkiDiff)
-					self.model.Add(self.cellValues[i][j] - self.cellValues[i+1][j] != -1*self.kropkiDiff)
-					self.model.Add(self.cellValues[i][j] != self.kropkiRatio*self.cellValues[i+1][j])
-					self.model.Add(self.kropkiRatio*self.cellValues[i][j] != self.cellValues[i+1][j])
+					self.setAntiKropki(i,j,1)
 				if j < 8 and (i,j,0) not in self.kropkiCells:
-					self.model.Add(self.cellValues[i][j] - self.cellValues[i][j+1] != self.kropkiDiff)
-					self.model.Add(self.cellValues[i][j] - self.cellValues[i][j+1] != -1*self.kropkiDiff)
-					self.model.Add(self.cellValues[i][j] != self.kropkiRatio*self.cellValues[i][j+1])
-					self.model.Add(self.kropkiRatio*self.cellValues[i][j] != self.cellValues[i][j+1])
+					self.setAntiKropki(i,j,0)
 	
 	def setKropkiDifference(self,diff=1):
 		# Sets the difference used in all subseqequent white Kropki dots
@@ -713,6 +730,15 @@ class sudoku:
 			else:
 				self.setXVX(x[0],x[1],x[2])
 				
+	def setAntiXV(self,row,col=-1,hv=-1):
+		if col == -1:
+			(row,col,hv) = self.__procCell(row)
+		self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] != 5)
+		self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] != 10)
+		
+	def setAntiXVArray(self,cells):
+		for x in cells: self.setAntiXV(x)
+
 	def setXVNegative(self):
 		if self.isXVInitialized is not True:
 			self.xvCells = []
@@ -723,11 +749,9 @@ class sudoku:
 		for i in range(self.boardWidth):
 			for j in range(self.boardWidth):
 				if i < 8 and (i,j,1) not in self.xvCells:
-					self.model.Add(self.cellValues[i][j] + self.cellValues[i+1][j] != 5)
-					self.model.Add(self.cellValues[i][j] + self.cellValues[i+1][j] != 10)
+					self.setAntiXV(i,j,1)
 				if j < 8 and (i,j,0) not in self.xvCells:
-					self.model.Add(self.cellValues[i][j] + self.cellValues[i][j+1] != 5)
-					self.model.Add(self.cellValues[i][j] + self.cellValues[i][j+1] != 10)
+					self.setAntiXV(i,j,0)
 					
 	def setXVXVV(self,row,col=-1,hv=-1):
 		if col == -1:
@@ -771,6 +795,16 @@ class sudoku:
 			else:
 				self.setXVXVX(x[0],x[1],x[2])
 
+	def setAntiXVXV(self,row,col=-1,hv=-1):
+		if col == -1:
+			(row,col,hv) = self.__procCell(row)
+		self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] != 5)
+		self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] != 10)
+		self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] != 15)
+		
+	def setAntiXVXVArray(self,cells):
+		for x in cells: self.setAntiXVXV(x)
+
 	def setXVXVNegative(self):
 		if self.isXVXVInitialized is not True:
 			self.xvxvCells = []
@@ -781,13 +815,9 @@ class sudoku:
 		for i in range(self.boardWidth):
 			for j in range(self.boardWidth):
 				if i < 8 and (i,j,1) not in self.xvxvCells:
-					self.model.Add(self.cellValues[i][j] + self.cellValues[i+1][j] != 5)
-					self.model.Add(self.cellValues[i][j] + self.cellValues[i+1][j] != 10)
-					self.model.Add(self.cellValues[i][j] + self.cellValues[i+1][j] != 15)
+					self.setAntiXVXV(i,j,1)
 				if j < 8 and (i,j,0) not in self.xvxvCells:
-					self.model.Add(self.cellValues[i][j] + self.cellValues[i][j+1] != 5)
-					self.model.Add(self.cellValues[i][j] + self.cellValues[i][j+1] != 10)
-					self.model.Add(self.cellValues[i][j] + self.cellValues[i][j+1] != 15)
+					self.setAntiXVXV(i,j,0)
 
 	def setCloneRegion(self,inlist):
 		inlist = list(map(self.__procCellList,inlist))
@@ -834,6 +864,19 @@ class sudoku:
 			for j in range(len(myValues)):
 				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] != myValues[j])
 				
+	def setMOTECage(self,inlist):
+		# A MOTE cage has more odd than even cells
+		inlist = self.__procCellList(inlist)
+		if self.isParity is False:
+			self.__setParity()
+		self.model.Add(sum([self.cellParity[inlist[i][0]][inlist[i][1]] for i in range(len(inlist))]) >= (len(inlist)+2)//2)
+		
+	def setMETOCage(self,inlist):
+		# A METO cage has more even than odd cells
+		inlist = self.__procCellList(inlist)
+		if self.isParity is False:
+			self.__setParity()
+		self.model.Add(sum([self.cellParity[inlist[i][0]][inlist[i][1]] for i in range(len(inlist))]) <= (len(inlist)-1)//2)
 
 	def setZone(self,inlist,values):
 		# A zone is an area with potentially repeating values; the clue is a list of digits that must appear in the zone
@@ -1474,17 +1517,25 @@ class sudoku:
 			self.__setEntropy()
 			
 		self.isEntropyQuadNegative = True
+
+	def setAntiEntropyQuad(self,row,col=-1):
+		if col == -1:
+			(row,col) = self.__procCell(row)
+		self.model.AddAllowedAssignments([self.cellEntropy[row][col],self.cellEntropy[row][col+1],self.cellEntropy[row+1][col],self.cellEntropy[row+1][col+1]],[(0,0,0,0),(1,1,1,1),(2,2,2,2),(0,0,0,1),(0,0,1,0),(0,1,0,0),(1,0,0,0),(0,0,0,2),(0,0,2,0),(0,2,0,0),(2,0,0,0),(1,1,1,0),(1,1,0,1),(1,0,1,1),(0,1,1,1),(1,1,1,2),(1,1,2,1),(1,2,1,1),(2,1,1,1),(2,2,2,0),(2,2,0,2),(2,0,2,2),(0,2,2,2),(2,2,2,1),(2,2,1,2),(2,1,2,2),(1,2,2,2),(0,0,1,1),(0,0,2,2),(1,1,0,0),(1,1,2,2),(2,2,0,0),(2,2,1,1),(0,1,0,1),(0,2,0,2),(1,0,1,0),(1,2,1,2),(2,0,2,0),(2,1,2,1),(0,1,1,0),(0,2,2,0),(1,0,0,1),(1,2,2,1),(2,0,0,2),(2,1,1,2)])
 		
+	def setAntiEntropyQuadArray(self,inlist):
+		for x in inlist: self.setAntiEntropyQuad(x)
+
 	def __applyEntropyQuadNegative(self):
 		for i in range(self.boardWidth-1):
 			for j in range(self.boardWidth-1):
 				if (i,j) not in self.entropyQuadCells:
-					self.model.AddAllowedAssignments([self.cellEntropy[i][j],self.cellEntropy[i][j+1],self.cellEntropy[i+1][j],self.cellEntropy[i+1][j+1]],[(0,0,0,0),(1,1,1,1),(2,2,2,2),(0,0,0,1),(0,0,1,0),(0,1,0,0),(1,0,0,0),(0,0,0,2),(0,0,2,0),(0,2,0,0),(2,0,0,0),(1,1,1,0),(1,1,0,1),(1,0,1,1),(0,1,1,1),(1,1,1,2),(1,1,2,1),(1,2,1,1),(2,1,1,1),(2,2,2,0),(2,2,0,2),(2,0,2,2),(0,2,2,2),(2,2,2,1),(2,2,1,2),(2,1,2,2),(1,2,2,2),(0,0,1,1),(0,0,2,2),(1,1,0,0),(1,1,2,2),(2,2,0,0),(2,2,1,1),(0,1,0,1),(0,2,0,2),(1,0,1,0),(1,2,1,2),(2,0,2,0),(2,1,2,1),(0,1,1,0),(0,2,2,0),(1,0,0,1),(1,2,2,1),(2,0,0,2),(2,1,1,2)])
+					self.setAntiEntropyQuad(i,j)
 					
 	def setEntropyBattenburg(self,row,col=-1):
 		if col == -1:
 			(row,col) = self.__procCell(row)
-		# A 2x2 square of cells is entropic if it includes a low, middle, and high digit
+		# A 2x2 square of cells is an entropy battenburg if no two adjacent cells on the quad have the same rank
 		if self.isEntropyBattenburgInitialized is not True:
 			self.entropyBattenburgCells = [(row,col)]
 			self.isEntropyBattenburgInitialized = True
@@ -1502,6 +1553,26 @@ class sudoku:
 	def setEntropyBattenburgArray(self,inlist):
 		for x in inlist: self.setEntropyBattenburg(x)
 		
+	def setAntiEntropyBattenburg(self,row,col=-1):
+		if col == -1:
+			(row,col) = self.__procCell(row)
+		bit1 = self.model.NewBoolVar('AntiEntrBattRow{:d}Col{:d}V1'.format(row,col))
+		bit2 = self.model.NewBoolVar('AntiEntrBattRow{:d}Col{:d}V2'.format(row,col))
+		bit3 = self.model.NewBoolVar('AntiEntrBattRow{:d}Col{:d}V3'.format(row,col))
+		bit4 = self.model.NewBoolVar('AntiEntrBattRow{:d}Col{:d}V4'.format(row,col))
+		self.model.Add(self.cellEntropy[row][col] == self.cellEntropy[row][col+1]).OnlyEnforceIf(bit1)
+		self.model.Add(self.cellEntropy[row][col] != self.cellEntropy[row][col+1]).OnlyEnforceIf(bit1.Not())
+		self.model.Add(self.cellEntropy[row][col+1] == self.cellEntropy[row+1][col+1]).OnlyEnforceIf(bit2)
+		self.model.Add(self.cellEntropy[row][col+1] != self.cellEntropy[row+1][col+1]).OnlyEnforceIf(bit2.Not())
+		self.model.Add(self.cellEntropy[row+1][col+1] == self.cellEntropy[row+1][col]).OnlyEnforceIf(bit3)
+		self.model.Add(self.cellEntropy[row+1][col+1] != self.cellEntropy[row+1][col]).OnlyEnforceIf(bit3.Not())
+		self.model.Add(self.cellEntropy[row+1][col] == self.cellEntropy[row][col]).OnlyEnforceIf(bit4)
+		self.model.Add(self.cellEntropy[row+1][col] != self.cellEntropy[row][col]).OnlyEnforceIf(bit4.Not())
+		self.model.AddBoolOr([bit1,bit2,bit3,bit4])
+		
+	def setAntiEntropyBattenburgArray(self,inlist):
+		for x in inlist: self.setAntiEntropyBattenburg(x)
+
 	def setEntropyBattenburgNegative(self):
 		if self.isEntropyBattenburgInitialized is not True:
 			self.entropyBattenburgCells = []
@@ -1516,19 +1587,7 @@ class sudoku:
 		for i in range(self.boardWidth-1):
 			for j in range(self.boardWidth-1):
 				if (i,j) not in self.entropyBattenburgCells:
-					bit1 = self.model.NewBoolVar('EntrBattNegRow{:d}Col{:d}V1'.format(i,j))
-					bit2 = self.model.NewBoolVar('EntrBattNegRow{:d}Col{:d}V2'.format(i,j))
-					bit3 = self.model.NewBoolVar('EntrBattNegRow{:d}Col{:d}V3'.format(i,j))
-					bit4 = self.model.NewBoolVar('EntrBattNegRow{:d}Col{:d}V4'.format(i,j))
-					self.model.Add(self.cellEntropy[i][j] == self.cellEntropy[i][j+1]).OnlyEnforceIf(bit1)
-					self.model.Add(self.cellEntropy[i][j] != self.cellEntropy[i][j+1]).OnlyEnforceIf(bit1.Not())
-					self.model.Add(self.cellEntropy[i][j+1] == self.cellEntropy[i+1][j+1]).OnlyEnforceIf(bit2)
-					self.model.Add(self.cellEntropy[i][j+1] != self.cellEntropy[i+1][j+1]).OnlyEnforceIf(bit2.Not())
-					self.model.Add(self.cellEntropy[i+1][j+1] == self.cellEntropy[i+1][j]).OnlyEnforceIf(bit3)
-					self.model.Add(self.cellEntropy[i+1][j+1] != self.cellEntropy[i+1][j]).OnlyEnforceIf(bit3.Not())
-					self.model.Add(self.cellEntropy[i+1][j] == self.cellEntropy[i][j]).OnlyEnforceIf(bit4)
-					self.model.Add(self.cellEntropy[i+1][j] != self.cellEntropy[i][j]).OnlyEnforceIf(bit4.Not())
-					self.model.AddBoolOr([bit1,bit2,bit3,bit4])
+					self.setAntiEntropyBattenburg(i,j)
 					
 	def setQuadMaxArrow(self,row,col=-1,dir1=-1,dir2=-1):
 		# row,col defines the 2x2 to which the arrow applies
@@ -1559,6 +1618,77 @@ class sudoku:
 		
 	def setQuadMaxValueArray(self,cells):
 		for x in cells: self.setQuadMaxValue(x)
+		
+	def setConsecutiveQuad(self,row,col=-1,value=-1):
+		# Of the SIX pairs of cells, if value is 0 (white), exactly one pair is consecutive. If value is 1 (black), at least two pairs are consecutive. If value is 2 (anti), no pairs are consecutive
+		
+		if col == -1:
+			(row,col,value) = self.__procCell(row)
+		bits = [self.model.NewBoolVar('ConsecQuadRow{:d}Col{:d}'.format(row,col)) for i in range(6)]
+		intVars = [self.model.NewIntVar(0,1,'ConsecQuadIntRow{:d}Col{:d}'.format(row,col)) for i in range(6)]
+		c = [(0,0,0,1),(0,0,1,0),(0,0,1,1),(0,1,1,0),(0,1,1,1),(1,0,1,1)]
+		for i in range(6):
+			self.model.Add(intVars[i] == 1).OnlyEnforceIf(bits[i])
+			self.model.Add(intVars[i] == 0).OnlyEnforceIf(bits[i].Not())
+			gt = self.model.NewBoolVar('ConsecQuadGT')
+			self.model.Add(self.cellValues[row+c[i][0]][col+c[i][1]] - self.cellValues[row+c[i][2]][col+c[i][3]] >= 0).OnlyEnforceIf(gt)
+			self.model.Add(self.cellValues[row+c[i][0]][col+c[i][1]] - self.cellValues[row+c[i][2]][col+c[i][3]] < 0).OnlyEnforceIf(gt.Not())
+			self.model.Add(self.cellValues[row+c[i][0]][col+c[i][1]] - self.cellValues[row+c[i][2]][col+c[i][3]] == 1).OnlyEnforceIf([bits[i],gt])
+			self.model.Add(self.cellValues[row+c[i][0]][col+c[i][1]] - self.cellValues[row+c[i][2]][col+c[i][3]] == -1).OnlyEnforceIf([bits[i],gt.Not()])
+			self.model.Add(self.cellValues[row+c[i][0]][col+c[i][1]] - self.cellValues[row+c[i][2]][col+c[i][3]] != 1).OnlyEnforceIf([bits[i].Not(),gt])
+			self.model.Add(self.cellValues[row+c[i][0]][col+c[i][1]] - self.cellValues[row+c[i][2]][col+c[i][3]] != -1).OnlyEnforceIf([bits[i].Not(),gt.Not()])
+		
+		if value == sudoku.White:
+			self.model.Add(sum(intVars) == 1)
+		elif value == sudoku.Black:
+			self.model.Add(sum(intVars) > 1)
+		else:
+			self.model.Add(sum(intVars) == 0)
+	
+	def setConsecutiveQuadWhite(self,row,col=-1):
+		if col == -1:
+			(row,col) = self.__procCell(row)
+		self.setConsecutiveQuad(row,col,sudoku.White)
+	
+	def setConsecutiveQuadWhiteArray(self,cells):
+		for x in cells: self.setConsecutiveQuadWhite(x)
+		
+	def setConsecutiveQuadBlack(self,row,col=-1):
+		if col == -1:
+			(row,col) = self.__procCell(row)
+		self.setConsecutiveQuad(row,col,sudoku.Black)
+	
+	def setConsecutiveQuadBlackArray(self,cells):
+		for x in cells: self.setConsecutiveQuadBlack(x)	
+		
+	def setConsecutiveQuadArray(self,cells):
+		cellList = self.__procCellList(cells)
+		for x in cellList:
+			if x[2] == sudoku.White:
+				self.setConsecutiveQuadWhite(x[0],x[1])
+			else:
+				self.setConsecutiveQuadBlack(x[0],x[1])
+
+	def setAntiConsecutiveQuad(self,row,col=-1):
+		# To label a single cell as specifically not having any consecutive pairs
+		if col == -1:
+			(row,col) = self.__procCell(row)
+		self.setConsecutiveQuad(row,col,2)
+		
+	def setAntiConsecutiveQuadArray(self,cells):
+		for x in cells: self.setAntiConsecutiveQuad(x)
+
+	def setConsecutiveQuadNegative(self):
+		if self.isConsecutiveQuadInitialized is not True:
+			self.consecutiveQuadCells = []
+			self.isConsecutiveQuadInitialized = True
+		self.isConsecutiveQuadNegative = True
+		
+	def __applyConsecutiveQuadNegative(self):
+		for i in range(self.boardWidth-1):
+			for j in range(self.boardWidth-1):
+				if (i,j) not in self.consecutiveQuadCells:
+					self.setAntiConsecutiveQuad(i,j)	
 		
 ####Linear constraints
 	def setArrow(self,inlist):
@@ -1838,6 +1968,7 @@ class sudoku:
 		if self.isEntropyBattenburgNegative is True: self.__applyEntropyBattenburgNegative()
 		if self.isFriendlyNegative is True: self.__applyFriendlyNegative()
 		if self.isRossiniNegative is True: self.__applyRossiniNegative()
+		if self.isConsecutiveQuadNegative is True: self.__applyConsecutiveQuadNegative()
 
 	def findSolution(self,test=False):
 		self.applyNegativeConstraints()

@@ -1,3 +1,13 @@
+9/16/22
+	Implemented MOTE (more odd than even) and METO (more even than odd) cages.
+	Implemented consecutive quads contstraints, including negative constraint (thanks for the inspiration in today's GAS, clover!)
+	Updated Kropki code to allow addition of individual anti-Kropki constraints, and modified negative constraint to call it
+	Updated XVXV code to allow addition of individual anti-XVXV constraints, and modified negative constraint to call it
+	Updated XV code to allow addition of individual anti-XV constraints, and modified negative constraint to call it
+	Updated entropy Battenburg code to allow addition of individual anti-entropy Battenburgs, and modified negative constraint to call it
+	Updated entropy quad code to allow addition of individual anti-entropy quads, and modified negative constraint to call it
+	Updated friendly cell code to allow addition of individual unfriendly cells, and modified negative constraint to call it
+
 9/15/22
 	Added test code
 	Updated Battenburg code to allow single cells to be labelled "Anti-Battenburg", i.e. specifically not having the constraint, and updated the global negative constraint code to use it
