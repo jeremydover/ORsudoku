@@ -1081,10 +1081,15 @@ class sudoku:
 			self.model.Add(self.cellValues[row][col] == allowableDigits[i]).OnlyEnforceIf(varBitmap[i])
 			self.model.Add(self.cellValues[row+(allowableDigits[i]-1)*vStep][col+(allowableDigits[i]-1)*hStep] == value).OnlyEnforceIf(varBitmap[i])
 			
-	def setSandwichSum(self,row1,col1,rc,value):
+	def setSandwichSum(self,row1,col1,rc,value,digits=[]):
 		# row,col are the coordinates of the cell containing the index of the target cell
 		# rc is whether things are row/column
-		# value is the sum of values between the lowest and higest digits (usually 1 and 9)
+		# value is the sum of values between two given digits (highest and lowest by default)
+		# digits the two digits in the digit set to bound the sandwich sums
+		
+		# If digits is null, set it to highest and lowest
+		if len(digits) == 0:
+			digits = [self.minDigit,self.maxDigit]
 		
 		# Convert from 1-base to 0-base
 		row = row1 - 1
@@ -1105,8 +1110,10 @@ class sudoku:
 				firstCell = self.cellValues[row+j*vStep][col+j*hStep]
 				secondCell = self.cellValues[row+(j+1)*vStep][col+(j+1)*hStep]
 				# Note: High/low pairs forces if difference is maximal
-				self.model.Add(firstCell - secondCell == self.maxDigit - self.minDigit).OnlyEnforceIf(varBitmap[j] + [lgr,adj])
-				self.model.Add(secondCell - firstCell == self.maxDigit - self.minDigit).OnlyEnforceIf(varBitmap[j] + [lgr.Not(),adj])
+				self.model.Add(firstCell == digits[0]).OnlyEnforceIf(varBitmap[j] + [lgr,adj])
+				self.model.Add(secondCell == digits[1]).OnlyEnforceIf(varBitmap[j] + [lgr,adj])
+				self.model.Add(firstCell == digits[1]).OnlyEnforceIf(varBitmap[j] + [lgr.Not(),adj])
+				self.model.Add(secondCell == digits[0]).OnlyEnforceIf(varBitmap[j] + [lgr.Not(),adj])
 		else:
 			# If value is not 0, then we need to make sure adj does not occur, since otherwise constraint is ignored
 			self.model.AddBoolAnd([adj.Not()]).OnlyEnforceIf(adj)
@@ -1123,8 +1130,10 @@ class sudoku:
 			for k in range(j+2,self.boardWidth):
 				firstCell = self.cellValues[row+j*vStep][col+j*hStep]
 				secondCell = self.cellValues[row+k*vStep][col+k*hStep]
-				self.model.Add(firstCell - secondCell == self.maxDigit - self.minDigit).OnlyEnforceIf(varBitmap[varTrack] + [lgr,adj.Not()])
-				self.model.Add(secondCell - firstCell == self.maxDigit - self.minDigit).OnlyEnforceIf(varBitmap[varTrack] + [lgr.Not(),adj.Not()])
+				self.model.Add(firstCell == digits[0]).OnlyEnforceIf(varBitmap[varTrack] + [lgr,adj.Not()])
+				self.model.Add(secondCell == digits[1]).OnlyEnforceIf(varBitmap[varTrack] + [lgr,adj.Not()])
+				self.model.Add(firstCell == digits[1]).OnlyEnforceIf(varBitmap[varTrack] + [lgr.Not(),adj.Not()])
+				self.model.Add(secondCell == digits[0]).OnlyEnforceIf(varBitmap[varTrack] + [lgr.Not(),adj.Not()])
 				self.model.Add(sum(self.cellValues[row+m*vStep][col+m*hStep] for m in range(j+1,k)) == value).OnlyEnforceIf(varBitmap[varTrack] + [adj.Not()])
 				varTrack = varTrack + 1
 					
@@ -1227,7 +1236,7 @@ class sudoku:
 			for j in range(self.boardSizeRoot):
 				if ((i > 0) and (i < self.boardSizeRoot - 1) and (j > 0) and (j < self.boardSizeRoot - 1)) or\
 					((ce == self.Corner) and (i % (self.boardSizeRoot-1) != 0 or j % (self.boardSizeRoot-1) != 0)) or\
-					((ce == self.Edge) and (i % (self.boardSizeRoot-1) == 0 and j % (self.boardSizeRoot-1) == 0)):	# Moddle, edge, and corner square
+					((ce == self.Edge) and (i % (self.boardSizeRoot-1) == 0 and j % (self.boardSizeRoot-1) == 0)):	# Middle, edge, and corner square
 						for k in valueList: self.model.Add(self.cellValues[ulRow+i][ulCol+j] != k)
 						
 	def setRossini(self,row1,col1,rc,udlr):
@@ -1381,6 +1390,31 @@ class sudoku:
 			self.model.AddBoolAnd([seenBools[i]]).OnlyEnforceIf(incVars[i])
 			
 		self.model.Add(sum([seenInts[i] for i in range(self.boardWidth)]) == value)
+		
+	def setNextToNine(self,row1,col1,rc,values,digit=9):
+		if type(values) is int:
+			values  = [values]
+		row = row1 - 1
+		col = col1 - 1
+		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
+		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
+		
+		varBitmap = self.__varBitmap('NextToNineRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth)
+		lr = self.model.NewBoolVar('NextToNineLeftRightChoice')
+		lrA = [lr,lr.Not()]
+		for i in range(self.boardWidth):
+			self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] == digit).OnlyEnforceIf(varBitmap[i])
+			for j in range(len(values)):
+				if i == 0:
+					self.model.Add(self.cellValues[row+(i+1)*vStep][col+(i+1)*hStep] == values[j]).OnlyEnforceIf(varBitmap[i])
+					self.model.AddBoolAnd([lr]).OnlyEnforceIf(varBitmap[i])
+				elif i == self.boardWidth - 1:
+					self.model.Add(self.cellValues[row+(i-1)*vStep][col+(i-1)*hStep] == values[j]).OnlyEnforceIf(varBitmap[i])
+					self.model.AddBoolAnd([lr.Not()]).OnlyEnforceIf(varBitmap[i])
+				else:
+					# If there are two values, the %2 trick in the variable ensures they alternate, so that values are put on different sides
+					self.model.Add(self.cellValues[row+(i+1)*vStep][col+(i+1)*hStep] == values[j]).OnlyEnforceIf(varBitmap[i] + [lrA[j%2]])
+					self.model.Add(self.cellValues[row+(i-1)*vStep][col+(i-1)*hStep] == values[j]).OnlyEnforceIf(varBitmap[i] + [lrA[(j+1)%2]])
 		
 ####2x2 constraints
 	def setQuadruple(self,row,col=-1,values=-1):
@@ -1802,26 +1836,29 @@ class sudoku:
 				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]]-self.cellValues[inlist[i-j][0]][inlist[i-j][1]] < n)
 				self.model.Add(self.cellValues[inlist[i-j][0]][inlist[i-j][1]]-self.cellValues[inlist[i][0]][inlist[i][1]] < n)
 					
-				
-	def setGermanWhispersLine(self,inlist):
+	def setMinWhispersLine(self,inlist,value):
+		# Sets a whispers line where the minimum difference between two cells on the line is value
 		inlist = self.__procCellList(inlist)
 		for j in range(len(inlist)-1):
-			bit = self.model.NewBoolVar('GermanWhisperBiggerRow{:d}Col{:d}'.format(inlist[j][0],inlist[j][1]))
-			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] >= 5).OnlyEnforceIf(bit)
-			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] <= -5).OnlyEnforceIf(bit.Not())
+			bit = self.model.NewBoolVar('MaxWhisperBiggerRow{:d}Col{:d}'.format(inlist[j][0],inlist[j][1]))
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] >= value).OnlyEnforceIf(bit)
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] <= -1*value).OnlyEnforceIf(bit.Not())
+	
+	def setMaxWhispersLine(self,inlist,value):
+		# Sets a whispersline where the maximum difference between two cells on the line is value
+		inlist = self.__procCellList(inlist)
+		for j in range(len(inlist)-1):
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] <= value)
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] >= -1*value)
+	
+	def setGermanWhispersLine(self,inlist):
+		self.setMinWhispersLine(inlist,5)
 			
 	def setDutchWhispersLine(self,inlist):
-		inlist = self.__procCellList(inlist)
-		for j in range(len(inlist)-1):
-			bit = self.model.NewBoolVar('DutchWhisperBiggerRow{:d}Col{:d}'.format(inlist[j][0],inlist[j][1]))
-			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] >= 4).OnlyEnforceIf(bit)
-			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] <= -4).OnlyEnforceIf(bit.Not())
+		self.setMinWhispersLine(inlist,4)
 			
 	def setChineseWhispersLine(self,inlist):
-		inlist = self.__procCellList(inlist)
-		for j in range(len(inlist)-1):
-			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] <= 2)
-			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] >= -2)
+		self.setMaxWhispersLine(inlist,2)
 			
 	def setEntropicLine(self,inlist):
 		inlist = self.__procCellList(inlist)
@@ -1953,6 +1990,12 @@ class sudoku:
 	def setAverageLine(self,inlist):
 		inlist = self.__procCellList(inlist)
 		self.model.Add((len(inlist)-1)*self.cellValues[inlist[0][0]][inlist[0][1]] == sum([self.cellValues[inlist[i][0]][inlist[i][1]] for i in range(1,len(inlist))]))
+		
+	def setNabnerLine(self,inlist):
+		# All cells on the line have a difference of at least 2, so we put each pair as its own line
+		for i in range(len(inlist)):
+			for j in range(i+1,len(inlist)):
+				self.setMinWhispersLine([inlist[i],inlist[j]],2)
 
 ####Model solving
 	def applyNegativeConstraints(self):
@@ -2100,6 +2143,9 @@ class doublerSudoku(sudoku):
 		
 		self.isEntropyBattenburgInitialized = False
 		self.isEntropyBattenburgNegative = False
+		
+		self.isConsecutiveQuadInitialized = False
+		self.isConsecutiveQuadNegative = False
 		
 		self.isParity = False
 		self.isEntropy = False
@@ -2268,6 +2314,9 @@ class japaneseSumSudoku(sudoku):
 		
 		self.isEntropyBattenburgInitialized = False
 		self.isEntropyBattenburgNegative = False
+		
+		self.isConsecutiveQuadInitialized = False
+		self.isConsecutiveQuadNegative = False
 		
 		self.isParity = False
 		self.isEntropy = False

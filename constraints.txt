@@ -10,7 +10,7 @@ Battenburg
 Battlefield
 Between Lines
 Block Cages
-Chinese Whispers Lines
+Chinese Whispers Lines - see Whispers Lines
 Clone Regions
 Consecutive Quads
 Corner/Edge Clues
@@ -20,7 +20,7 @@ Disjoint Groups
 Double Arrows - see Arrows
 Doubler Sudoku
 Doubling Lines
-Dutch Whispers Lines
+Dutch Whispers Lines - see Whispers Lines
 Entropic Lines
 Entropki Dots (same/different entropy classes)
 Entropy (see Global Entropy)
@@ -31,7 +31,7 @@ Extra Regions - see irregular Sudoku
 Fortress
 Friendly Cells
 Genetics
-German Whispers Lines
+German Whispers Lines - see Whispers Lines
 Given Digits
 Global Entropy
 Global Whispers (Dutch, et. al.)
@@ -53,7 +53,9 @@ Median Cages
 Min-Max
 Modular Lines
 More-Odd-Than-Even/More-Even-Than-Odd Cages
+Nabner Lines
 Neighbor Sums
+Next-To-Nine
 Non-Consecutive
 Numbered Room
 Outside Clues
@@ -122,7 +124,7 @@ When a constraint requires a cell or list of cells, they can be input in one of 
 
 Note: The non-tuple cell inputs WILL break on boards larger than 9x9. However, since 9x9 is by far the most popular use case, these shortcuts are worth having.
 
-Quadruples are indexed similarly, from 00 to 77:
+Quadruples are indexed similarly, from 11 to 88:
 
 -------------------------------------
 |   |   |   |   |   |   |   |   |   |
@@ -222,11 +224,6 @@ setBlockCage(list,values): creates a block cage, that is an list of cells and a 
   list: list of cell specifications
   values: a list of values...if unambiguous the punctuation can be omitted, so that [1,2,3,9] and 1239 can both be entered as a value list
 
-Chinese Whispers Lines
-----------------------
-setChineseWhispersLine(list): creates a Chinese whispers line constraint
-  list: a list of cell specifications
-  
 Clone Regions
 -------------
 setCloneRegion(list): creates a set of regions that are clones of each other, i.e., the same digit appears in the ith position for each i
@@ -287,11 +284,6 @@ Doubling Lines
 setDoublingLine(list): creates a doubling line constraint: every digit appears exactly twice on the line
   list: a list of cell specifications
 
-Dutch Whispers Lines
---------------------
-setDutchWhispersLine(list): creates a Dutch whispers line constraint
-  list: a list of cell specifications
-  
 Entropic Lines
 --------------
 setEntropicLine(list): creates an entropic line constraint
@@ -399,13 +391,7 @@ setGenetic(list): applies a genetic constraint to the cells: daughter must inher
 
 setGeneticArray(list): applies genetic constraint to multiple specification lists
 	list: a list of lists of cell specifications, where each element of the list is formatted per the setGenetic guidelines
-	
-
-German Whispers Lines
----------------------
-setGermanWhispersLine(list): creates a German whispers line constraint
-  list: a list of cell specifications
-  
+ 
 Given Digits
 ------------
 setGiven(cellVal): set the value in a particular cell
@@ -589,6 +575,11 @@ setMOTECage(list): set a MOTE cage
 setMETOCage(list): set a METO cage
 	list: list of cell specifications
 
+Nabner Lines
+------------
+setNabnerLine(inlist): assert that there are no two digits lying on the line are the same or consecutive
+	inlist: list of cell specifications
+
 Neighbor Sums
 -------------
 setNeighborSum(cell): asserts a cell is the sum of its orthogonally adjacent neighbors
@@ -598,6 +589,14 @@ setNeighborSumArray(list): asserts multiple neighbor sum constraints
 	list: list of cell specifications
 	
 Note: setNeighbourSum and setNeighbourSumArray aliases are supported
+
+Next-to-Nine
+------------
+setNextToNine(row,col,rc,values,digit): given a set of 1/2 digits on a row/column, these digits must appear in next to the nine in that row/column
+  row,col: The coordinates of the cell containing the clue, i.e. the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  values: A list of values to go next to 9; if only one value is given it may be given as an integer
+  digit (optional): defines which digit is the one the clued digits must appear next to...defaults to 9
 
 Non-Consecutive
 ---------------
@@ -725,7 +724,7 @@ Rossini Clues
 Rossini clues appear as arrows on the outside of of the grid, and indicate that the first few cells next to the clue increase in the given direction. In normal Sudoku there is no ambiguity, since the number of cells used is 3, but is that 3 because of the region, or because 3 is a nice number? We provide the option to define the length of the run applied either by using regions, or specifying a value.
 
 setRossini(row,col,rc,uldr): sets a Rossini constraint on a row or column
-  row,col: The coordinates of the cell containing the cell next to which the clue values sit
+  row,col: The coordinates of the cell next to which the clue values sit
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   uldr: Determines if the arrow points Top/Bottom (for columns) or Left/Right (for rows)...use class variables Top, Bottom, Left, and Right
   By default, Rossini conditions operate on regions
@@ -754,10 +753,11 @@ setSamuraiConstraint(puzzle,constraint,argsd): sets a Samurai constraint
 
 Sandwich Sums
 -------------
-setSandwichSum(row,col,rc,value): sets a sandwich sum constraint
+setSandwichSum(row,col,rc,value,digits): sets a sandwich sum constraint
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: The sum of the values between the 1 and 9 in the clued row/column
+  digits (optional): A list of two digits to form the "bread" of the sandwich. Defaults to the minimum and maximum digit.
   
 Shift Lines
 -----------
@@ -794,6 +794,25 @@ Weak Palindrome Lines
 setWeakPalindromeLine(list): creates a weak palindrome line constraint: instead of matching digits, palindromic positions must match on parity and magnitude (1-4 vs. 5-9)
   list: a list of cell specifications
   
+Whispers Lines
+--------------
+setMinWhispersLine(inlist,value): asserts two adjacent cells on a line have a difference of at least value
+	inlist: list of cell specifications
+	value: integer
+
+setMaxWhispersLine(inlist,value): asserts two adjacent cells on a line have a difference of at most value
+	inlist: list of cell specifications
+	value: integer
+	
+setChineseWhispersLine(inlist): two adjacent cells on a line have a difference of at most 2
+	inlist: list of cell specifications
+	
+setDutchWhispersLine(inlist): two adjacent cells on a line have a difference of at least 4
+	inlist: list of cell specifications
+	
+setGermanWhispersLine(inlist): two adjacent cells on a line have a difference of at least 5
+	inlist: list of cell specifications
+
 Windoku
 -------
 setWindoku(): assert Windoku rules

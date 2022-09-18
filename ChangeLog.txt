@@ -1,3 +1,11 @@
+9/17/22
+	Added support for nabner lines
+	Updated whispers line logic to use a generic minimum whispers and maximum whispers, and alias the existing nationality lines
+	Updated sandwich sums to allow arbitrary "bread" digits for the sandwich on a constraint by constraint basis
+	Implemented Next-To-Nine constraints
+	Fixed error in doubler and japanese sum sudoku...needed to synchronize additional negative constraint variable between init methods.
+	Added 7 new test cases
+
 9/16/22
 	Implemented MOTE (more odd than even) and METO (more even than odd) cages.
 	Implemented consecutive quads contstraints, including negative constraint (thanks for the inspiration in today's GAS, clover!)
