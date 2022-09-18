@@ -4,13 +4,13 @@ import ORsudoku
 class TestPuzzle(unittest.TestCase):
 	# Puzzle: Let them eat cake
 	# Author: jeremydover
-	# Link: https://f-puzzles.com/?id=2zhcfzeg
-	# Link: https://tinyurl.com/mx6ku29j
-	# Constraints tested: setRegion, setCage
+	# Link: https://f-puzzles.com/?id=2eh4mqwr
+	# Link: https://tinyurl.com/ypwm7n2s
+	# Constraints tested: setAntiKing, setBattenburgArray, setGivenArray, setBattenburgNegative
 	
 	def test_puzzle(self):
 		p = ORsudoku.sudoku(3)
-		p.setGivenArray([455,152,958,687,626,221,889,413,815,195])
+		p.setGivenArray([455,152,958,687,626,221,889,413,815,195,561])
 		p.setAntiKing()
 		p.setBattenburgArray([13,33,63,83,16,36,66,86])
 		p.setBattenburgNegative()
