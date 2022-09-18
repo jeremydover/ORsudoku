@@ -29,7 +29,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setParindromeLine([14,25,36])
 		p.setParindromeLine([22,31,41,51,61,71])
 		p.setParindromeLine([26,16,17,18,19,29])
-		p.setParindromeLine([38,49])
+		p.setParindromeLine([39,48])
 		p.setParindromeLine([32,43,53])
 		p.setParindromeLine([47,58])
 		p.setParindromeLine([55,65,74])
