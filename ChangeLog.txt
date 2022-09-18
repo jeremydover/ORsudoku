@@ -1,3 +1,8 @@
+9/17/22bis
+	Added test cases
+	Added aliases for EvenOdd (to OddEven) and MinMax (to MaxMin) so that both directions should work seemlessly
+	Added Isotopes support per request from rockratzero
+
 9/17/22
 	Added support for nabner lines
 	Updated whispers line logic to use a generic minimum whispers and maximum whispers, and alias the existing nationality lines

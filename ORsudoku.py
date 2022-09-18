@@ -456,6 +456,27 @@ class sudoku:
 						self.model.Add(self.cellValues[self.boardWidth-1-i][self.boardWidth-1-j] != pairs[k][0]).OnlyEnforceIf([otherDigit])
 						self.model.Add(self.cellValues[self.boardWidth-1-i][self.boardWidth-1-j] != pairs[k][1]).OnlyEnforceIf([otherDigit])
 					
+	def setIsotopic(self):
+		# Only for 9x9 puzzle. If two boxes have the same center cell, then the other cells in the box must be in the same order around the center cell, with rotations considered the same.
+		
+		# This is the walk order of cells around the center
+		w = [(-1,-1),(-1,0),(-1,1),(0,1),(1,1),(1,0),(1,-1),(0,-1)]
+		for x in range(9):
+			i = x // 3
+			j = x % 3
+			for y in range(x+1,9):
+				k = y // 3
+				m = y % 3
+				if (i == k) or (j == m): continue
+				
+				c = self.model.NewBoolVar('RotorCenterSquaresEqual')
+				self.model.Add(self.cellValues[3*i+1][3*j+1] == self.cellValues[3*k+1][3*m+1]).OnlyEnforceIf(c)
+				self.model.Add(self.cellValues[3*i+1][3*j+1] != self.cellValues[3*k+1][3*m+1]).OnlyEnforceIf(c.Not())
+				varBitmap = self._sudoku__varBitmap('RotorOffset'.format(i,j),8)
+				self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf(c.Not())		# Pegs variables if there is no match
+				for n in range(8):
+					for p in range(8):
+						self.model.Add(self.cellValues[3*i+1+w[p][0]][3*j+1+w[p][1]] == self.cellValues[3*k+1+w[(p+n)%8][0]][3*m+1+w[(p+n)%8][1]]).OnlyEnforceIf(varBitmap[n]+[c])
 
 ####Single cell constraints
 	def setGiven(self,row,col=-1,value=-1):
@@ -477,6 +498,7 @@ class sudoku:
 			self.model.Add(self.cellValues[row][col] < self.cellValues[row][col-1]) if minmax == 0 else self.model.Add(self.cellValues[row][col] > self.cellValues[row][col-1])
 		if col < self.boardWidth-1:
 			self.model.Add(self.cellValues[row][col] < self.cellValues[row][col+1]) if minmax == 0 else self.model.Add(self.cellValues[row][col] > self.cellValues[row][col+1])
+	setMaxMinCell = setMinMaxCell
 			
 	def setMinCell(self,row,col=-1):
 		if col == -1:
@@ -490,6 +512,7 @@ class sudoku:
 		
 	def setMinMaxArray(self,cells):
 		for x in cells: self.setMinMaxCell(x)
+	setMaxMinArray = setMinMaxArray
 		
 	def setMinArray(self,cells):
 		for x in cells: self.setMinCell(x)
@@ -501,6 +524,7 @@ class sudoku:
 		if col == -1:
 			(row,col,parity) = self.__procCell(row)
 		self.model.AddModuloEquality(parity,self.cellValues[row][col],2)
+	setOddEven = setEvenOdd	
 		
 	def setEven(self,row,col=-1):
 		if col == -1:
@@ -520,6 +544,7 @@ class sudoku:
 		
 	def setEvenOddArray(self,cells):
 		for x in cells: self.setEvenOdd(x)
+	setOddEvenArray = setEvenOddArray
 		
 	def setNeighborSum(self,row,col=-1):
 		# Cell whose value is the sum of its orthogonally adjacent neighbors

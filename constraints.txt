@@ -38,6 +38,7 @@ Global Whispers (Dutch, et. al.)
 Gurth's Symmetric Placement (GSP)
 Indexing
 Irregular Sudoku
+Isotopes
 Japanese Sum Sudoku
 Keypad King Lines
 Keypad Knight Lines
@@ -352,6 +353,7 @@ setOdd(cell): asserts the cell value is odd
   cell: single cell specification
   
 setEvenOdd(cellEO): asserts the parity of a cell
+setOddEven(cellEO): asserts the parity of a cell
   cellEO: a cell specification augmented with an even odd specification. Tuple specification may use the Even and Odd variables, e.g. (5,8,p.Odd). Shorthand is possible, using 0 for even and 1 for odd. Thus 581 is an alternative specification for the same assertion.
   
 setEvenArray(list): create multiple even constraints
@@ -361,6 +363,7 @@ setOddArray(list): create multiple odd constraints
   list: list of cell specifications
   
 setEvenOddArray(list): create multipl parity constraints
+setOddEvenArray(list): create multipl parity constraints
   list: list of cellEO specifications; see setEvenOdd
   
 Fortress
@@ -441,6 +444,11 @@ setRegion(list): creates an Irregular Sudoku region
 	
 set Regions(list): create multiple irregular Sudoku regions
 	list: list OF LISTS of cell specifications
+
+Isotopes
+--------
+Note: this constraint is only accurate for 9x9 puzzles with boxes...created by rockratzero
+setRRZRotor(): asserts that if any two boxes have the same center cell, then the other digits in each box appear in the same order, modulo rotation
 
 Japanese Sum Sudoku
 -------------------
@@ -555,9 +563,11 @@ setMaxArray(list): set multiple maximum cells
   list: list of cell specifications
   
 setMinMaxCell(cellMM): set a minimum or maximum constraint
+setMaxMinCell(cellMM): set a minimum or maximum constraint
   cellMM: an extended cell specification which adds the minmax parameter. All parameters can be given positionally, or in a tuple, and these can use the Min and Max variables for the minmax specification. Shorthand is possible, appending 0 to a cell spec to indicate a minimum and 1 to indicate a maximum.
   
 setMinMaxCellArray(list): set multiple min/max constraints
+setMaxMinCellArray(list): set multiple min/max constraints
   list: list of cellMM specifications; see setMinMaxCell
   
 Modular Lines
