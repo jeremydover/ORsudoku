@@ -13,22 +13,30 @@ class SolutionPrinter(cp_model.CpSolverSolutionCallback):
 		self.__variables = variables
 		self.__solution_count = 0
 		self.__printAll = False
+		self.__debug = False
 
 	def setPrintAll(self):
 		self.__printAll = True
+		
+	def setDebug(self):
+		self.__debug = True
 		
 	def OnSolutionCallback(self):
 		self.__solution_count += 1
 		cntr = 0
 				
 		if self.__printAll is True:
-			for v in self.__variables:
-				print('%i' % (self.Value(v)), end = ' ')
-				cntr += 1
-				if cntr == 9:
-					print ()
-					cntr = 0
-			print()
+			if self.__debug is False:
+				for v in self.__variables:
+					print('%i' % (self.Value(v)), end = ' ')
+					cntr += 1
+					if cntr == 9:
+						print ()
+						cntr = 0
+				print()
+			else:
+				for v in self.__variables:
+					print('%s=%i' % (v,self.Value(v)))
 
 	def SolutionCount(self):
 		return self.__solution_count
@@ -166,6 +174,7 @@ class sudoku:
 		else:
 			self.model = model
 		self.cellValues = []
+		self.allVars = []
 		
 		# Create the variables containing the cell values
 		for rowIndex in range(self.boardWidth):
@@ -175,6 +184,7 @@ class sudoku:
 				if (self.maxDigit - self.minDigit) >= self.boardWidth:	#Digit set is not continguous, so force values
 					self.model.AddAllowedAssignments([tempCell],[(x,) for x in digitSet])
 				tempArray.append(tempCell)
+				self.allVars.append(tempCell)
 			self.cellValues.insert(rowIndex,tempArray)
 			
 		# Create rules to ensure rows and columns have no repeats
@@ -220,6 +230,7 @@ class sudoku:
 				div = self.model.NewIntVar(0,2*maxDiff,'ParityDiv')
 				mod = self.model.NewIntVar(0,1,'parityValue{:d}{:d}'.format(i,j))
 				t.append(mod)
+				self.allVars.append(mod)
 				self.model.Add(2*div <= self.cellValues[i][j])
 				self.model.Add(2*div+2 > self.cellValues[i][j])
 				self.model.Add(mod == self.cellValues[i][j]-2*div)
@@ -236,6 +247,7 @@ class sudoku:
 			for j in range(self.boardWidth):
 				c = self.model.NewIntVar(self.minDigit // 3 - 1,self.maxDigit // 3,'entropyValue{:d}{:d}'.format(i,j))
 				t.append(c)
+				self.allVars.append(c)
 				self.model.Add(3*c+1 <= self.cellValues[i][j])
 				self.model.Add(3*c+4 > self.cellValues[i][j])
 			self.cellEntropy.insert(i,t)
@@ -254,13 +266,14 @@ class sudoku:
 			for j in range(self.boardWidth):
 				c = self.model.NewIntVar(1,3,'modularValue{:d}{:d}'.format(i,j))
 				t.append(c)
+				self.allVars.append(c)
 				self.model.Add(c == self.cellValues[i][j] - 3*self.cellEntropy[i][j])
 			self.cellModular.insert(i,t)
 		
 		self.isModular = True
 
 	def getCellVar(self,i,j):
-		# Returns the model variable associated with a cell valuable. Useful when tying several puzzles together, e.g. Samurai
+		# Returns the model variable associated with a cell value. Useful when tying several puzzles together, e.g. Samurai
 		return self.cellValues[i][j]
 				
 ####Global constraints
@@ -320,21 +333,25 @@ class sudoku:
 		# pm determines whether this is a positive or a negative constraint on the index cell: +1 or -1 values
 		
 		varBitmap = self.__varBitmap('IndexRow{:d}Col{:d}'.format(row,col),self.boardWidth)
-					
-		if pm == 1:
-			for k in range(self.boardWidth):
-				self.model.Add(self.cellValues[row][col] == k+1).OnlyEnforceIf(varBitmap[k])
-				if rc == sudoku.Row:
-					self.model.Add(self.cellValues[row][k] == col+1).OnlyEnforceIf(varBitmap[k])
+
+		for k in range(self.boardWidth):
+			if k == col:
+				if pm == 1:
+					self.model.Add(self.cellValues[row][col] == k+1).OnlyEnforceIf(varBitmap[k])
 				else:
-					self.model.Add(self.cellValues[k][col] == row+1).OnlyEnforceIf(varBitmap[k])
-		else:
-			for k in range(self.boardWidth):
+					self.model.Add(self.cellValues[row][col] != k+1).OnlyEnforceIf(varBitmap[k])
+			else:
 				self.model.Add(self.cellValues[row][col] == k+1).OnlyEnforceIf(varBitmap[k])
-				if rc == sudoku.Row:
-					self.model.Add(self.cellValues[row][k] != col+1).OnlyEnforceIf(varBitmap[k])
+				if pm == 1:
+					if rc == sudoku.Row:
+						self.model.Add(self.cellValues[row][k] == col+1).OnlyEnforceIf(varBitmap[k])
+					else:
+						self.model.Add(self.cellValues[k][col] == row+1).OnlyEnforceIf(varBitmap[k])
 				else:
-					self.model.Add(self.cellValues[k][col] != row+1).OnlyEnforceIf(varBitmap[k])
+					if rc == sudoku.Row:
+						self.model.Add(self.cellValues[row][k] != col+1).OnlyEnforceIf(varBitmap[k])
+					else:
+						self.model.Add(self.cellValues[k][col] != row+1).OnlyEnforceIf(varBitmap[k])
 	
 	def setIndexRow(self,row1,neg=False,inlist1=[]):
 		# This sets up an indexing row. Each cell indexes the *column* so don't be surprised when we call 
@@ -345,13 +362,16 @@ class sudoku:
 		
 		# Convert 1-base to 0-base
 		row0 = row1 - 1
-		inlist0 = [x-1 for x in inlist1]
+		if len(inlist1) == 0:
+			inlist0 = [x for x in range(self.boardWidth)]
+		else:
+			inlist0 = [x-1 for x in inlist1]
 		
 		for i in range(self.boardWidth):
-			if neg is True and i not in inlist0:
-				self.__setIndexCell(row0,i,sudoku.Col,-1)
-			else:
+			if i in inlist0:
 				self.__setIndexCell(row0,i,sudoku.Col,1)
+			elif neg is True:
+				self.__setIndexCell(row0,i,sudoku.Col,-1)				
 				
 	def setIndexColumn(self,col1,neg=False,inlist1=[]):
 		# This sets up an indexing column. Each cell indexes the *row* so don't be surprised when we call 
@@ -362,13 +382,16 @@ class sudoku:
 		
 		# Convert 1-base to 0-base
 		col0 = col1 - 1
-		inlist0 = [x-1 for x in inlist1]
+		if len(inlist1) == 0:
+			inlist0 = [x for x in range(self.boardWidth)]
+		else:
+			inlist0 = [x-1 for x in inlist1]
 		
 		for i in range(self.boardWidth):
-			if neg is True and i not in inlist0:
-				self.__setIndexCell(i,col0,sudoku.Row,-1)
-			else:
+			if i in inlist0:
 				self.__setIndexCell(i,col0,sudoku.Row,1)
+			elif neg is True:	
+				self.__setIndexCell(i,col0,sudoku.Row,-1)
 
 	def setGlobalWhispers(self,diff=4):
 		# Every cell must have at least one neighbor which with its difference is at least diff
@@ -2054,13 +2077,17 @@ class sudoku:
 				print('Solution found!')
 				self.printCurrentSolution()
 
-	def countSolutions(self,printAll = False):
+	def countSolutions(self,printAll = False,debug = False):
 		self.applyNegativeConstraints()
 		self.solver = cp_model.CpSolver()
 		consolidatedCellValues = []
 		for tempArray in self.cellValues: consolidatedCellValues = consolidatedCellValues + tempArray
-		solution_printer = SolutionPrinter(consolidatedCellValues)
+		if debug is True:
+			solution_printer = SolutionPrinter(self.allVars)
+		else:	
+			solution_printer = SolutionPrinter(consolidatedCellValues)
 		if printAll is True: solution_printer.setPrintAll()
+		if debug is True: solution_printer.setDebug()
 		self.solveStatus = self.solver.SearchForAllSolutions(self.model, solution_printer)
 		
 		print('Solutions found : %i' % solution_printer.SolutionCount())
@@ -2084,7 +2111,7 @@ class sudoku:
 		return testString
 		
 	def __varBitmap(self,string,num):
-		# Utility function to create a list of Boolean vaariable propositions that encode num possibilities exactly.
+		# Utility function to create a list of Boolean variable propositions that encode num possibilities exactly.
 		# string is used to label the variables
 		# Implements model constraints to ensure "extra"
 		
@@ -2092,6 +2119,7 @@ class sudoku:
 		bits = []
 		for i in range(n):
 			bits.append(self.model.NewBoolVar(string + 'BM{:d}'.format(i)))
+		self.allVars = self.allVars + bits
 		
 		# Create full array of first n-1 variables. We need them all.
 		var = [[bits[0]],[bits[0].Not()]]
@@ -2108,6 +2136,7 @@ class sudoku:
 				var.append(var[j] + [bits[-1].Not()])
 			else:
 				# This ensures an unused combination of variables cannot occur
+				#self.model.AddBoolAnd([bits[-1]]).OnlyEnforceIf(var[j] + [bits[-1].Not()])
 				self.model.AddBoolAnd(var[j] + [bits[-1]]).OnlyEnforceIf(var[j] + [bits[-1].Not()])
 				
 			# Either way append to existing lists
@@ -2135,10 +2164,10 @@ class sudoku:
 		# required by our functions
 		return list(map(lambda x: self.__procCell(x),inlist))
 		
-class doublerSudoku(sudoku):
-	"""A class used to implement doubler puzzles. A doubler puzzle has a doubler in each row, column and region. Moreover, each digit is doubled exactly one time. The digit entered is used to determine normal Sudoku contraints, i.e., one of each digit per row, column and region. But for each other constraint, its value needs to be doubled."""	
+class cellTransformSudoku(sudoku):
+	"""A class used to implement doubler puzzles. A doubler puzzle has a doubler in each row, column and region. Moreover, each digit is doubled exactly one time. The digit entered is used to determine normal Sudoku contraints, i.e., one of each digit per row, column and region. But for each other constraint, its value needs to be doubled. There are optional parameters to modify the operation from doubling to an arbitrary ratio and/or shift."""	
 	
-	def __init__(self,boardSizeRoot,irregular=None,digitSet=None):
+	def __init__(self,boardSizeRoot,canRepeatDigits=False,irregular=None,digitSet=None):
 		self.boardSizeRoot = boardSizeRoot
 		self.boardWidth = boardSizeRoot*boardSizeRoot
 
@@ -2185,8 +2214,11 @@ class doublerSudoku(sudoku):
 		self.digitRange = self.maxDigit - self.minDigit
 
 		self.model = cp_model.CpModel()
-		self.cellValues = [] 		# Since this array is used throughout for the constraints, we'll make this the doubled values
+		self.cellValues = [] 		# Since this array is used throughout for the constraints, we'll make this the modified
 		self.baseValues = []
+		cellValueSet = set(self.digits)
+		for x in self.digits:
+			cellValueSet = cellValueSet.union(self.transformDoublerValue(x))
 		
 		# Create the variables containing the cell values
 		for rowIndex in range(self.boardWidth):
@@ -2194,16 +2226,15 @@ class doublerSudoku(sudoku):
 			tempArrayBase = []
 			for colIndex in range(self.boardWidth):
 				tempBase = self.model.NewIntVar(self.minDigit,self.maxDigit,'cellValue{:d}{:d}'.format(rowIndex,colIndex))
-				tempCell = self.model.NewIntVar(min(0,2*self.minDigit),max(0,2*self.maxDigit),'cellValue{:d}{:d}'.format(rowIndex,colIndex))
+				tempCell = self.model.NewIntVar(min(cellValueSet),max(cellValueSet),'cellValue{:d}{:d}'.format(rowIndex,colIndex))
 				if (self.maxDigit - self.minDigit) >= self.boardWidth:	# If base digit set is not continguous, force values
-					self.model.AddAllowedAssignments([tempBase],[(x,) for x in digitSet])
+					self.model.AddAllowedAssignments([tempBase],[(x,) for x in self.digits])
 					# Note: no need to force values on cellValues, because they will be tied to base
 				tempArrayCell.append(tempCell)
 				tempArrayBase.append(tempBase)
 			self.cellValues.insert(rowIndex,tempArrayCell)
 			self.baseValues.insert(rowIndex,tempArrayBase)
-			
-			
+						
 		# Create rules to ensure rows and columns have no repeats for the BASE digits
 		for rcIndex in range(self.boardWidth):
 			self.model.AddAllDifferent([self.baseValues[rcIndex][crIndex] for crIndex in range(self.boardWidth)]) 	# Rows
@@ -2230,10 +2261,11 @@ class doublerSudoku(sudoku):
 			self.doubleInt.insert(i,tempDoubleArray)
 		
 		# Doubling conditions
-		# First we tie the values of the underlying digits to their apparent values
+		
+		# First we tie the values of the underlying digits to their apparent values: we function this out so we can override for other cases
 		for i in range(self.boardWidth):
 			for j in range(self.boardWidth):
-				self.model.Add(self.cellValues[i][j] == 2*self.baseValues[i][j]).OnlyEnforceIf([self.double[i][j]])
+				self.transformDoublerCell(i,j)
 				self.model.Add(self.cellValues[i][j] == self.baseValues[i][j]).OnlyEnforceIf([self.double[i][j].Not()])
 			
 		# Now tie double and doubleInt variables
@@ -2253,13 +2285,20 @@ class doublerSudoku(sudoku):
 			self.__setBoxes()
 	
 		# The ugly part: ensuring all doubled digits are distinct
-	
-		for i in range(self.boardWidth):
-			for j in range(self.boardWidth):
-				for k in range(self.boardWidth):
-					for l in range(self.boardWidth):
-						if k>i or l>j:
-							self.model.Add(self.baseValues[i][j] != self.baseValues[k][l]).OnlyEnforceIf([self.double[i][j],self.double[k][l]]) 
+		if canRepeatDigits is False:
+			for i in range(self.boardWidth):
+				for j in range(self.boardWidth):
+					for k in range(self.boardWidth):
+						for l in range(self.boardWidth):
+							if k>i or l>j:
+								self.model.Add(self.baseValues[i][j] != self.baseValues[k][l]).OnlyEnforceIf([self.double[i][j],self.double[k][l]]) 
+	def transformDoublerCell(self,i,j):
+		# We default to the original doubler rules
+		self.model.Add(self.cellValues[i][j] == 2*self.baseValues[i][j]).OnlyEnforceIf([self.double[i][j]])
+		
+	def transformDoublerValue(self,value):
+		# Default to the original doubler rules
+		return {2*value}
 			
 	def __setBoxes(self):
 		# Create rules to ensure boxes have no repeats in the BASE digits
@@ -2305,7 +2344,50 @@ class doublerSudoku(sudoku):
 				else:
 					testString = testString + '{:d}'.format(self.solver.Value(self.baseValues[i][j]))
 		return testString
-					
+
+class doublerSudoku(cellTransformSudoku):
+
+	def __init__(self,boardSizeRoot,canRepeatDigits=False,irregular=None,digitSet=None):
+		cellTransformSudoku.__init__(self,boardSizeRoot,canRepeatDigits=canRepeatDigits,irregular=irregular,digitSet=digitSet)
+		
+class negatorSudoku(cellTransformSudoku):
+	
+	def __init__(self,boardSizeRoot,canRepeatDigits=False,irregular=None,digitSet=None):
+		cellTransformSudoku.__init__(self,boardSizeRoot,canRepeatDigits=canRepeatDigits,irregular=irregular,digitSet=digitSet)
+		
+	def transformDoublerCell(self,i,j):
+		self.model.Add(self.cellValues[i][j] == -1*self.baseValues[i][j]).OnlyEnforceIf([self.double[i][j]])
+		
+	def transformDoublerValue(self,value):
+		return {-1*value}
+		
+class doubleOrNothingSudoku(cellTransformSudoku):
+	
+	def __init__(self,boardSizeRoot,canRepeatDigits=False,irregular=None,digitSet=None):
+		cellTransformSudoku.__init__(self,boardSizeRoot,canRepeatDigits=canRepeatDigits,irregular=irregular,digitSet=digitSet)
+		
+	def transformDoublerCell(self,i,j):
+		c = self.model.NewBoolVar('doublerCellDoubledorNothing')
+		self.model.Add(self.cellValues[i][j] == 2*self.baseValues[i][j]).OnlyEnforceIf([self.double[i][j],c])
+		self.model.Add(self.cellValues[i][j] == 0).OnlyEnforceIf([self.double[i][j],c.Not()])
+		self.model.AddBoolAnd([c]).OnlyEnforceIf([self.double[i][j].Not()])
+		
+	def transformDoublerValue(self,value):
+		return {0,2*value}
+		
+class affineTransformSudoku(cellTransformSudoku):
+	
+	def __init__(self,boardSizeRoot,ratio,shift,canRepeatDigits=False,irregular=None,digitSet=None):
+		cellTransformSudoku.__init__(self,boardSizeRoot,canRepeatDigits=canRepeatDigits,irregular=irregular,digitSet=digitSet)
+		self.ratio = ratio
+		self.shift = shift
+		
+	def transformDoublerCell(self,i,j):
+		self.model.Add(self.cellValues[i][j] == self.ratio*self.baseValues[i][j]+self.shift).OnlyEnforceIf([self.double[i][j]])
+		
+	def transformDoublerValue(self,value):
+		return {self.ratio*value+self.shift}
+		
 class japaneseSumSudoku(sudoku):
 	"""A class used to implement Japanese Sum puzzles."""
 	

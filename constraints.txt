@@ -10,6 +10,7 @@ Battenburg
 Battlefield
 Between Lines
 Block Cages
+Cell Transform Sudoku
 Chinese Whispers Lines - see Whispers Lines
 Clone Regions
 Consecutive Quads
@@ -18,7 +19,8 @@ Count the Odds Lines
 Difference Pairs - see Kropki and Kropki Pairs
 Disjoint Groups
 Double Arrows - see Arrows
-Doubler Sudoku
+Double or Nothing Sudoku - see Cell Transform Sudoku
+Doubler Sudoku - see Cell Transform Sudoku
 Doubling Lines
 Dutch Whispers Lines - see Whispers Lines
 Entropic Lines
@@ -55,6 +57,7 @@ Min-Max
 Modular Lines
 More-Odd-Than-Even/More-Even-Than-Odd Cages
 Nabner Lines
+Negator Sudoku - see Cell Transform Sudoku
 Neighbor Sums
 Next-To-Nine
 Non-Consecutive
@@ -225,6 +228,31 @@ setBlockCage(list,values): creates a block cage, that is an list of cells and a 
   list: list of cell specifications
   values: a list of values...if unambiguous the punctuation can be omitted, so that [1,2,3,9] and 1239 can both be entered as a value list
 
+Cell Transform Sudoku
+---------------------
+Inspired by the doubler rules invented by zetamath. Grid is as normal, but one cell in each row, column in region is doubled when used in other constraints. To model cell transform contraints requires use of a different class:
+
+p = ORsudoku.cellTransformSudoku(boardSizeRoot,canRepeatDigits,irregular,digitSet)
+  All three parameters are optional:
+  canRepeatDigits: if canRepeatDigits is True, then the constraint that the base digits of all transformed cells need to be distinct is waived. Default is False
+  irregular and digitSet are settable just like the regular Sudoku class
+
+By default the cellTransformSudoku class just implements Doubler Sudoku. Doubler Sudoku can also be initialized with:
+p = ORsudoku.doublerSudoku(boardSizeRoot,canRepeatDigits,irregular,digitSet)
+
+To implement other rulesets, one needs additional classes:
+
+negatorSudoku(boardSizeRoot,canRepeatDigits,irregular,digitSet)
+  Just like doubler Sudoku, but the designated cells are negated, not doubled
+  
+doubleOrNothingSudoku(boardSizeRoot,canRepeatDigits,irregular,digitSet)
+  The designated cells are either doubled, or count as zero, in other constraints. Note: this behavior is consistent; each cell is either doubled or nothing, and does not vary depending on which constraint is applied.
+  
+affineTransformSudoku(boardSizeRoot,ratio,shift,canRepeatDigits,irregular,digitSet)
+  The parameters ratio and shift are required, and the transformed digits count as ratio*value+shift to all constraints.
+  Doubler Sudoku is the same as affineTransformSudoku(3,2,0)
+  Negator Sudoku is the same as affineTransformSudoku(3,-1,0)
+
 Clone Regions
 -------------
 setCloneRegion(list): creates a set of regions that are clones of each other, i.e., the same digit appears in the ith position for each i
@@ -272,13 +300,6 @@ setCountTheOddsLine(list): set a count the odds line, where the digit in the fir
 Disjoint Groups
 ---------------
 setDisjointGroups(): sets the global disjoint groups constraint
-
-Doubler Sudoku
---------------
-Doubler rules were invented by zetamath. Grid is as normal, but one cell in each row, column in region is doubled when used in other constraints
-To model a doubler puzzle, you must use the class doublerSudoku, e.g.
-
-p = ORsudoku.doublerSudoku(boardSizeRoot)
 
 Doubling Lines
 --------------
@@ -420,6 +441,10 @@ setGSP(pairs): assert the GSP constraint
 
 Indexing (159)
 --------------
+****NOTE****
+There is something about the indexing code that the underlying SAT solver does not like. Be wary of trying to gather
+all solutions.
+
 setIndexRow(row,neg=False,inlist=[]): set an index row, namely one which indicates the position of the digit corresponding to the row within some subset of columns
   row: the row (1-9) used as an index. By default, all column positions index
   neg (optional): if a column position is indicated as not indexing, then position indicate specifically does NOT indicate the position of the digit. Default is False.

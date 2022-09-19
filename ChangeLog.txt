@@ -1,3 +1,8 @@
+9/18/22
+	Added some debug code to try to troubleshoot weird Broken 159 error in finding all solutions. (Repeatedly reports same solution.)
+	Generalized doubler code to accomodate variants, including arbitrary affine transformations (ax+b) and double-or-nothing rules. New framework allows additional generalizations.
+	Added new test cases
+
 9/17/22bis
 	Added test cases
 	Added aliases for EvenOdd (to OddEven) and MinMax (to MaxMin) so that both directions should work seemlessly
