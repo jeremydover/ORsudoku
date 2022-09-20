@@ -1,3 +1,8 @@
+9/20/22
+	Re-factored indexing code to fix bug introduced with previous "fix" for Broken 159
+	Added support for vaults
+	Added additional test cases
+
 9/19/22
 	Added test cases
 	Added support for Digit Count Cages (thanks clover!)

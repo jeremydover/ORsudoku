@@ -88,6 +88,7 @@ Slow Thermometers (see Thermometers)
 Sum Dots (see Killer Cages)
 Thermometers
 Unicorn Digits
+Vaults
 Weak Palindrome Lines
 Windoku
 X-Kropki
@@ -935,6 +936,11 @@ setAntiXVXVArray(list): creates multiple anti-XVXV clues
   list: list of cellHV specifications, see setXVXVV
   
 setXVXVNegative(): implements negative constraint
+
+Vaults
+------
+setVault(list): sets a vault, i.e., a region sich that no cell inside the region can appear in any cell outside, but orthogonally adjacent to any cell of the region
+  list: list of cell specifications
 
 Zones
 -----

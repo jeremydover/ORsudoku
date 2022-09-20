@@ -336,34 +336,42 @@ class sudoku:
 		self.model.AddAllDifferent([self.cellValues[i][j] for i in range(5,8) for j in range(1,4)])
 		self.model.AddAllDifferent([self.cellValues[i][j] for i in range(5,8) for j in range(5,8)])
 		
-	def __setIndexCell(self,row,col,rc,pm):
+	def __setIndexCell(self,row,col,rc):
 		# This is the atomic call to set an index condition. Dealing with whether it's a whole row, whether or not there's a negative
 		# constraint is dealt with higher level functions. This is not generally meant to be set outside the class.
 		# row,col is exactly what you think
 		# rc determines whether the cell is indexing its row or its column: 0 -> row, 1 -> column
-		# pm determines whether this is a positive or a negative constraint on the index cell: +1 or -1 values
 		
+		hStep = 0 if rc == sudoku.Col else 1
+		vStep = 0 if rc == sudoku.Row else 1		
+		target = row+1 if rc == sudoku.Col else col+1
 		varBitmap = self.__varBitmap('IndexRow{:d}Col{:d}'.format(row,col),self.boardWidth)
-
+		
 		for k in range(self.boardWidth):
-			if k == col:
-				if pm == 1:
-					self.model.Add(self.cellValues[row][col] == k+1).OnlyEnforceIf(varBitmap[k])
-				else:
-					self.model.Add(self.cellValues[row][col] != k+1).OnlyEnforceIf(varBitmap[k])
-			else:
-				self.model.Add(self.cellValues[row][col] == k+1).OnlyEnforceIf(varBitmap[k])
-				if pm == 1:
-					if rc == sudoku.Row:
-						self.model.Add(self.cellValues[row][k] == col+1).OnlyEnforceIf(varBitmap[k])
-					else:
-						self.model.Add(self.cellValues[k][col] == row+1).OnlyEnforceIf(varBitmap[k])
-				else:
-					if rc == sudoku.Row:
-						self.model.Add(self.cellValues[row][k] != col+1).OnlyEnforceIf(varBitmap[k])
-					else:
-						self.model.Add(self.cellValues[k][col] != row+1).OnlyEnforceIf(varBitmap[k])
+			self.model.Add(self.cellValues[row][col] == k+1).OnlyEnforceIf(varBitmap[k])
+			self.model.Add(self.cellValues[row*hStep+k*vStep][col*vStep+k*hStep] == target).OnlyEnforceIf(varBitmap[k])
 	
+	def __setNonIndexCell(self,row,col,rc):
+		# This is the atomic call to set a negative constraint on an index condition. Dealing with whether it's a whole row, whether
+		# or not there's a negative
+		# constraint is dealt with higher level functions. This is not generally meant to be set outside the class.
+		# row,col is exactly what you think
+		# rc determines whether the cell is indexing its row or its column: 0 -> row, 1 -> column
+				
+		hStep = 0 if rc == sudoku.Col else 1
+		vStep = 0 if rc == sudoku.Row else 1		
+		target = row+1 if rc == sudoku.Col else col+1
+		varBitmap = self.__varBitmap('IndexRow{:d}Col{:d}'.format(row,col),self.boardWidth-1)
+		
+		varTrack = 0
+		for k in range(self.boardWidth):
+			if k+1 == target:
+				self.model.Add(self.cellValues[row*hStep+k*vStep][col*vStep+k*hStep] != target)
+			else:
+				self.model.Add(self.cellValues[row][col] == k+1).OnlyEnforceIf(varBitmap[varTrack])
+				self.model.Add(self.cellValues[row*hStep+k*vStep][col*vStep+k*hStep] != target).OnlyEnforceIf(varBitmap[varTrack])
+				varTrack = varTrack + 1
+
 	def setIndexRow(self,row1,neg=False,inlist1=[]):
 		# This sets up an indexing row. Each cell indexes the *column* so don't be surprised when we call 
 		# the cell method with rc=1.
@@ -380,9 +388,9 @@ class sudoku:
 		
 		for i in range(self.boardWidth):
 			if i in inlist0:
-				self.__setIndexCell(row0,i,sudoku.Col,1)
+				self.__setIndexCell(row0,i,sudoku.Col)
 			elif neg is True:
-				self.__setIndexCell(row0,i,sudoku.Col,-1)				
+				self.__setNonIndexCell(row0,i,sudoku.Col)
 				
 	def setIndexColumn(self,col1,neg=False,inlist1=[]):
 		# This sets up an indexing column. Each cell indexes the *row* so don't be surprised when we call 
@@ -400,9 +408,9 @@ class sudoku:
 		
 		for i in range(self.boardWidth):
 			if i in inlist0:
-				self.__setIndexCell(i,col0,sudoku.Row,1)
+				self.__setIndexCell(i,col0,sudoku.Row)
 			elif neg is True:	
-				self.__setIndexCell(i,col0,sudoku.Row,-1)
+				self.__setNonIndexCell(i,col0,sudoku.Row)
 
 	def setGlobalWhispers(self,diff=4):
 		# Every cell must have at least one neighbor which with its difference is at least diff
@@ -959,6 +967,18 @@ class sudoku:
 			self.model.Add(digitInts[i] == 0).OnlyEnforceIf(digitBools[i].Not())
 		
 		self.model.Add(sum([digitInts[i] for i in range(len(digits))]) == value)
+
+	def setVault(self,inlist):
+		# Digits in a vault cannot appear in any cell outside the vault but orthogonally adjacent ot a cell in it.
+		inlist = self.__procCellList(inlist)
+		adjCells = set()
+		for i in range(len(inlist)):
+			adjCells = adjCells.union({(inlist[i][0],inlist[i][1]-1),(inlist[i][0],inlist[i][1]+1),(inlist[i][0]+1,inlist[i][1]),(inlist[i][0]-1,inlist[i][1])})
+		adjCells = adjCells & {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth) if (i,j) not in inlist}
+
+		for x in inlist:
+			for y in adjCells:
+				self.model.Add(self.cellValues[x[0]][x[1]] != self.cellValues[y[0]][y[1]])
 
 	def setZone(self,inlist,values):
 		# A zone is an area with potentially repeating values; the clue is a list of digits that must appear in the zone
