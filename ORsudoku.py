@@ -14,6 +14,8 @@ class SolutionPrinter(cp_model.CpSolverSolutionCallback):
 		self.__solution_count = 0
 		self.__printAll = False
 		self.__debug = False
+		self.__testMode = False
+		self.__testStringArray = []
 
 	def setPrintAll(self):
 		self.__printAll = True
@@ -21,11 +23,20 @@ class SolutionPrinter(cp_model.CpSolverSolutionCallback):
 	def setDebug(self):
 		self.__debug = True
 		
+	def setTestMode(self):
+		self.__testMode = True
+		
+	def TestString(self):
+		return ''.join(sorted(self.__testStringArray))
+		
 	def OnSolutionCallback(self):
 		self.__solution_count += 1
 		cntr = 0
 				
-		if self.__printAll is True:
+		if self.__testMode is True:
+			self.__testStringArray.append(''.join(map(str,[self.Value(v) for v in self.__variables])))
+		
+		elif self.__printAll is True:
 			if self.__debug is False:
 				for v in self.__variables:
 					print('%i' % (self.Value(v)), end = ' ')
@@ -437,7 +448,7 @@ class sudoku:
 				self.model.AddBoolOr(wwwvars)
 				
 	def setGlobalEntropy(self):
-		self.setEntropyQuadArray([(i,j) for i in range(self.boardWidth-1) for j in range(self.boardWidth-1)])
+		self.setEntropyQuadArray([(i,j) for i in range(1,self.boardWidth) for j in range(1,self.boardWidth)])
 
 	def setUnicornDigit(self,value):
 		# A unicorn digit is one such that for any instance of that digit in the grid, all of the cells a knight's move away are different
@@ -925,6 +936,29 @@ class sudoku:
 		if self.isParity is False:
 			self.__setParity()
 		self.model.Add(sum([self.cellParity[inlist[i][0]][inlist[i][1]] for i in range(len(inlist))]) <= (len(inlist)-1)//2)
+
+	def setDigitCountCage(self,inlist,value):
+		# A digit count cage specifies the number of distinct digits that appear in the cage...h/t clover!
+		inlist = self.__procCellList(inlist)
+		digits = list(self.digits)
+		digitCellBools = [[self.model.NewBoolVar('DigitCellPairs') for i in range(len(digits))] for j in range(len(inlist))]
+		digitCellInts = [[self.model.NewIntVar(0,1,'DigitCellPairs') for i in range(len(digits))] for j in range(len(inlist))]
+		digitBools = [self.model.NewBoolVar('DigitCounts') for i in range(len(digits))]
+		digitInts = [self.model.NewIntVar(0,1,'DigitCounts') for i in range(len(digits))]
+		for j in range(len(inlist)):
+			for i in range(len(digits)):
+				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] == digits[i]).OnlyEnforceIf(digitCellBools[j][i])
+				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] != digits[i]).OnlyEnforceIf(digitCellBools[j][i].Not())
+				self.model.Add(digitCellInts[j][i] == 1).OnlyEnforceIf(digitCellBools[j][i])
+				self.model.Add(digitCellInts[j][i] == 0).OnlyEnforceIf(digitCellBools[j][i].Not())
+				
+		for i in range(len(digits)):
+			self.model.Add(sum([digitCellInts[j][i] for j in range(len(inlist))]) > 0).OnlyEnforceIf(digitBools[i])
+			self.model.Add(sum([digitCellInts[j][i] for j in range(len(inlist))]) == 0).OnlyEnforceIf(digitBools[i].Not())
+			self.model.Add(digitInts[i] == 1).OnlyEnforceIf(digitBools[i])
+			self.model.Add(digitInts[i] == 0).OnlyEnforceIf(digitBools[i].Not())
+		
+		self.model.Add(sum([digitInts[i] for i in range(len(digits))]) == value)
 
 	def setZone(self,inlist,values):
 		# A zone is an area with potentially repeating values; the clue is a list of digits that must appear in the zone
@@ -2077,7 +2111,7 @@ class sudoku:
 				print('Solution found!')
 				self.printCurrentSolution()
 
-	def countSolutions(self,printAll = False,debug = False):
+	def countSolutions(self,printAll = False,debug = False,test=False):
 		self.applyNegativeConstraints()
 		self.solver = cp_model.CpSolver()
 		consolidatedCellValues = []
@@ -2088,12 +2122,16 @@ class sudoku:
 			solution_printer = SolutionPrinter(consolidatedCellValues)
 		if printAll is True: solution_printer.setPrintAll()
 		if debug is True: solution_printer.setDebug()
+		if test is True: solution_printer.setTestMode()
 		self.solveStatus = self.solver.SearchForAllSolutions(self.model, solution_printer)
 		
-		print('Solutions found : %i' % solution_printer.SolutionCount())
-		if printAll is False and self.solveStatus == cp_model.OPTIMAL:
-			print('Sample solution')
-			self.printCurrentSolution()
+		if test is True:
+			return str(solution_printer.SolutionCount())+':'+solution_printer.TestString()
+		else:
+			print('Solutions found : %i' % solution_printer.SolutionCount())
+			if printAll is False and self.solveStatus == cp_model.OPTIMAL:
+				print('Sample solution')
+				self.printCurrentSolution()
 				
 	def printCurrentSolution(self):
 		dW = max([len(str(x)) for x in self.digits])

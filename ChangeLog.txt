@@ -1,3 +1,9 @@
+9/19/22
+	Added test cases
+	Added support for Digit Count Cages (thanks clover!)
+	Fixed 1-off error in setGlobalEntropy introduced when input was migrated from 0-base to 1-base
+	Added test mode to countSolutions method to run tests on partial puzzles with multiple solutions
+
 9/18/22
 	Added some debug code to try to troubleshoot weird Broken 159 error in finding all solutions. (Repeatedly reports same solution.)
 	Generalized doubler code to accomodate variants, including arbitrary affine transformations (ax+b) and double-or-nothing rules. New framework allows additional generalizations.

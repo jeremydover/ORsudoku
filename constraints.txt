@@ -17,6 +17,7 @@ Consecutive Quads
 Corner/Edge Clues
 Count the Odds Lines
 Difference Pairs - see Kropki and Kropki Pairs
+Digit Count Cages
 Disjoint Groups
 Double Arrows - see Arrows
 Double or Nothing Sudoku - see Cell Transform Sudoku
@@ -294,8 +295,14 @@ setCornerEdge(box,ce,valueList): sets a list of values that must appear in a cor
 
 Count the Odds Lines
 --------------------
-setCountTheOddsLine(list): set a count the odds line, where the digit in the first cell of the line counts the number of odd digits on the rest of the line
-	list: list of cell specifications
+setCountTheOddsLine(list): set a count the odds line, where the digit in the first cell of the line counts the number of odd digits on the rest of the line; pioneered by clover!
+  list: list of cell specifications
+
+Digit Count Cages
+-----------------
+setDigitCountCage(inlist,value): asserts that value is the number of distinct digits appearing in the cage; pioneered by clover!
+  inlist: list of cell specifications
+  value: integer counting number of distinct digits
 
 Disjoint Groups
 ---------------
@@ -924,7 +931,7 @@ setXVXVArray(list): creates multiple X/V clues
 setAntiXVXV(cellHV): asserts that a pair of cells cannot add to either 5 or 10 or 15
 	cellHV: an extended cell specification which adds the hv parameter: clue is on the right side if H, or on the bottom if V. 
   
-setAntiXVArray(list): creates multiple anti-XVXV clues
+setAntiXVXVArray(list): creates multiple anti-XVXV clues
   list: list of cellHV specifications, see setXVXVV
   
 setXVXVNegative(): implements negative constraint
