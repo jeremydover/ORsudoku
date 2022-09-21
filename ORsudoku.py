@@ -186,6 +186,8 @@ class sudoku:
 			self.model = model
 		self.cellValues = []
 		self.allVars = []
+		self.candTests = [[[None for k in range(self.boardWidth)] for j in range(self.boardWidth)] for i in range(self.boardWidth)]
+		self.candToExclude=[]
 		
 		# Create the variables containing the cell values
 		for rowIndex in range(self.boardWidth):
@@ -2168,6 +2170,66 @@ class sudoku:
 				testString = testString + '{:d}'.format(self.solver.Value(self.cellValues[rowIndex][colIndex]))
 		return testString
 		
+	def listCandidates(self):
+		if self.boardWidth != 9:
+			print('Candidate listing only implemented for 9x9 boards for now')
+			sys.exit()
+		
+		print('-'*(1+(self.boardSizeRoot+1)*self.boardWidth))
+		for i in range(self.boardWidth):
+			rowCand = [self.listCellCandidates(i,j,True) for j in range(self.boardWidth)]
+			for j in range(self.boardSizeRoot):
+				print('|',end='')
+				for k in range(self.boardWidth):
+					for m in range(self.boardSizeRoot):
+						if (3*j+m+1) in rowCand[k]:
+							print(str(3*j+m+1),end='')
+						else:
+							print(' ',end='')
+					print('|',end='')
+				print()
+			print('-'*(1+(self.boardSizeRoot+1)*self.boardWidth))
+		
+		print('To avoid retesting these cases when adding new constraints, add this code:')
+		print('addExcludedDigitArray([' + ','.join(list(map(lambda s: ''.join(s),self.candToExclude))) + '])')
+		
+	def addExcludedDigit(self,row,col=-1,value=-1):
+		# Strictly for listing candidates, sets a value that has been excluded from a cell
+		if col == -1:
+			(row,col,value) = self.__procCell(row)
+		self.candTests[row][col][value-1] = False
+		
+	def addExcludedDigitArray(self,list):
+		for x in list: self.addExcludedDigit(x)
+	
+	def listCellCandidates(self,row,col=-1,quiet=False):
+		if col == -1:
+			(row,col) = self.__procCell(row)
+			
+		good = []
+		for x in self.digits:
+			if self.candTests[row][col][x-1] is None:
+				myCon = self.model.Add(self.cellValues[row][col] == x)
+				self.applyNegativeConstraints()
+				solver = cp_model.CpSolver()
+				solveStatus = solver.Solve(self.model)
+				if solveStatus == cp_model.OPTIMAL:
+					good.append(x)
+					for i in range(self.boardWidth):
+						for j in range(self.boardWidth):
+							self.candTests[i][j][solver.Value(self.cellValues[i][j])-1] = True
+				else:
+					self.candTests[row][col][x-1] = False
+					self.candToExclude.append([str(row+1),str(col+1),str(x)])
+				myCon.Proto().Clear()
+			elif self.candTests[row][col][x-1] is True:
+				good.append(x)
+		if quiet is False:
+			print('Possible values for cell {:d},{:d}: '.format(row+1,col+1) + ''.join(list(map(str,good))))
+		else:
+			return good
+
+##### Utilities
 	def __varBitmap(self,string,num):
 		# Utility function to create a list of Boolean variable propositions that encode num possibilities exactly.
 		# string is used to label the variables

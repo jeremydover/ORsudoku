@@ -1,0 +1,24 @@
+Solver Methods
+--------------
+For a given puzzle, there are several ways the solver can interact with it to give information about solutions.
+
+findSolution(test)
+  Returns the first solution the solver can find that is consistent with all existing constraints. Fastest way to determine if your puzzle has a solution.
+  
+  test: True/False - The test parameter is to support automated testing.
+  
+countSolutions(printAll,debug,test)
+  Attempts to find all solutions for the existing constraints.
+  Note 1: There is a bug in the underlying ORTools SAT solver which causes countSolutions to error out on some constaints. There is a fix for this created, but it is not in an ORTools release as yet. 
+  Note 2: Even when it is working, use with caution. You want to have enough constraints to be sure that the solver won't run forever.
+  
+  printAll: True/False - when True, prints solutions as they are found
+  debug: True/False - not fully implemented, but provides some debugging information about solver solutions. You don't want to see this. Hell, I don't want to see this.
+  test: True/False - This parameter supports automated testing.
+  
+listCandidates()
+  Provides a graphical image of which digits remain candidates in which cells. While the SAT solver is generally much faster than inference engines, it has the downside of not really knowing which digits remain candidates for individual cells, so this run can take a bit. If one is building a puzzle by constraint, each run of listCandidates will provide a pasteable line that you can use to winnow down its search space, to make further runs of listCandidates quicker.
+  
+addExcludedDigit(cellSpec)
+addExcludedDigitArray(cellSpecList)
+  Provides a kind of "memory" for the listCandidates function. If a digit is found to be excluded from a position by solver determination, you can use this method to inform the solver not to try this digit anymore when running listCandidates. Note that this does not explicitly exclude this digit assignment; it just prevents the solver from trying to determine whether or not it is a viable candidate once we have already determined it is not.
