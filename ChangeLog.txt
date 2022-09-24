@@ -1,3 +1,7 @@
+9/23/22
+	Implemented support for Schrödinger cell puzzles. Not all constraints are supported, but many of the constraints used in puzzles to date are
+	Added test case
+	
 9/20/22bis
 	Implemented code to list candidates for a given cell, or for the entire grid, for 9x9 grids. Produces a list of excluded values which can be pasted into code as hints to speed the candidate search.
 	Added test case.

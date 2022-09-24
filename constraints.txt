@@ -83,6 +83,7 @@ Rossini Clues
 Run-On Renban Lines - see Renban Lines
 Samurai Sudoku
 Sandwich Sums
+Schrödinger Cell Sudoku
 Shift Lines
 Slow Thermometers (see Thermometers)
 Sum Dots (see Killer Cages)
@@ -802,9 +803,49 @@ setSandwichSum(row,col,rc,value,digits): sets a sandwich sum constraint
   value: The sum of the values between the 1 and 9 in the clued row/column
   digits (optional): A list of two digits to form the "bread" of the sandwich. Defaults to the minimum and maximum digit.
   
+Schrödinger Cell Sudoku
+-----------------------
+Allows creation of puzzles with Schrödinger cells. An additional digit (usually 0) is added, and one cell in each row, column and region is a Schrödinger cell, which has two values. When used in constraints, it is considered to contain both values. Not all constraints work with Schrödinger cells, and most have multiple interpretations. They are detailed below.
+
+To model a Schrödinger Cell Sudoku puzzle, you must use the class schroedingerCellSudoku, e.g.
+
+p = ORsudoku.schroedingerCellSudoku(boardSizeRoot)
+
+  Note: the conventions around how S-cells interact with constraints are not standardized, so this attempts to be flexible. Particular issues:
+  1. Constraints such as extra regions and X sudoku normally elide the difference about whether all the digits in the area are the same, or whether all digits appear; these are equivalent in normal Sudoku. Here, the default behavior is to assume all digits appear, which forces an S-cell. However, but setting the "allDigits=False" flag in some some method calls, this behavior can be suppressed, and these constraints will only enforce that all digits are different.
+  2. Constraints which use addition are fairly consistent that, when used as a summand, both digits of an S-cell should be added to the total. However, with conditions such as arrow clues, it is not obvious what to do if the target sum is an S-cell. By default, this code assumes that such a target sum CANNOT be an S-cell, since the sum assertion cannot possibly be true for both values. However, some puzzles assert that the sum of the Schrödinger cell digits should be the target sum, and this behavior is support with the "sSum=True" flag.
+
+  Implemented Constraints
+  -----------------------
+  Anti-king
+  Anti-knight
+  Arrows
+  Between lines - all digits on the line must be less than all digits on one end point and greater than all digits on the other end poit
+  Block Cages
+  Disjoint Groups - allDigits=False can be applied
+  Even/Odd
+  Given digits - setting a given digits enforces the corresponding cell is not a Schrödinger cell
+  Killer cages
+  Kropki - if either cell is Schrödinger, both digits have to have the specified relationship with the counterpart
+  Min/max cells - the less than/greater than comparisons are made against both values
+  Neighbor Sum - sSum=True can be applied
+  Nonconsecutive
+  Numbered Rooms - code assumes index cell cannot be Schrödinger
+  Parity Lines
+  Region Sum Lines
+  Renban Lines
+  Thermos/Slow Thermos
+  Unicorn Digits
+  Vaults
+  Windoku - allDigits=False can be applied
+  X/Diagonal Sudoku - allDigits=False can be applied
+  XV
+  XVXV
+  X-Sums - sSum=True can be applied to toggle whether S-cell sum is applied to indexing clue
+
 Shift Lines
 -----------
-setShiftLine(inlist): sets a shift line constraint; like a plaindrome, but one side is uniformly one larger than the other
+setShiftLine(inlist): sets a shift line constraint; like a palindrome, but one side is uniformly one larger than the other
   inlist: list of cell specifications
 
 Skyscrapers
