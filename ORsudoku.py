@@ -4,7 +4,8 @@ import math
 import colorama
 from ortools.sat.python import cp_model
 from array import *
-from colorama import Fore,Back
+from colorama import Fore,Back,init
+init()
 
 class SolutionPrinter(cp_model.CpSolverSolutionCallback):
 	"""Print intermediate solutions."""
@@ -1110,30 +1111,48 @@ class sudoku:
 		cells = [(row1+vStep*k,col1+hStep*k) for k in range(self.boardWidth) if row1+vStep*k-1 in range(self.boardWidth) and col1+hStep*k-1 in range(self.boardWidth)]
 		self.setRepeatingCage(cells,value)
 		
-	def setXSum(self,row1,col1,rc,value):
+	def setXSumBase(self,row1,col1,rc,value,pm):
 		#row,col are the coordinates of the cell containing the length, value is the sum
 		#rc: 0 -> if adding in row, 1 -> if adding in column. Needed for corner cells.
+		#pm: determines if these are normal X-sums (including the digit) or reverse X-Sums (sum on the other side)
 		
 		# Convert from 1-base to 0-base
 		row = row1 - 1
 		col = col1 - 1
+		sumRow = row if rc == sudoku.Row or pm == 1 else self.boardWidth-1-row
+		sumCol = col if rc == sudoku.Col or pm == 1 else self.boardWidth-1-col
 		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
 		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
+		hStep = pm * hStep	# Change direction in case we're doing reverse
+		vStep = pm * vStep
 		
-		if value == 0:
-			# The only way this can happen is if the index is 0, which has to be an allowable digit. We can't use the noral code, since we'll get a null sum
-			if 0 not in self.digits:
-				print('Cannot have an X-Sum 0 without a 0 digit. INFEASIBLE')
-				sys.exit()
-			else:
-				self.model.Add(self.cellValues[row][col] == 0)
-		else:		
-			allowableDigits = [x for x in self.digits if x >= 1 and x <=self.boardWidth]
-			varBitmap = self.__varBitmap('XSumRow{:d}Col{:d}RC{:d}'.format(row,col,rc),len(allowableDigits))
+		digits = list(self.digits)
+		varBitmap = self.__varBitmap('XSumRow{:d}Col{:d}RC{:d}'.format(row,col,rc),len(digits))
 			
-			for i in range(len(allowableDigits)):
-				self.model.Add(self.cellValues[row][col] == allowableDigits[i]).OnlyEnforceIf(varBitmap[i])
-				self.model.Add(sum(self.cellValues[row+j*vStep][col+j*hStep] for j in range(allowableDigits[i])) == value).OnlyEnforceIf(varBitmap[i])
+		for i in range(len(digits)):
+			if digits[i] == 0:
+				# In this case we have to have a null sum, which must be 0.
+				if value == 0:
+					self.model.Add(self.cellValues[sumRow][sumCol] == 0).OnlyEnforceIf(varBitmap[i])
+				else:
+					self.model.AddBoolAnd([varBitmap[i][0].Not()]).OnlyEnforceIf(varBitmap[i])		
+					# If value is not 0, then 0 is not a valid digit and this case cannot occur, but there's no arithmetic way to express this	
+			elif digits[i] > 0:
+				self.model.Add(self.cellValues[row][col] == digits[i]).OnlyEnforceIf(varBitmap[i])
+				self.model.Add(sum(self.cellValues[sumRow+j*vStep][sumCol+j*hStep] for j in range(digits[i])) == value).OnlyEnforceIf(varBitmap[i])
+			else: # So if a digit is negative, we reverse the intended direction
+				mySumRow = self.boardWidth-1-sumRow if rc == sudoku.Col else sumRow
+				mySumCol = self.boardWidth-1-sumCol if rc == sudoku.Row else sumCol
+				myHStep = -1 * hStep
+				myVStep = -1 * vStep
+				self.model.Add(self.cellValues[row][col] == digits[i]).OnlyEnforceIf(varBitmap[i])
+				self.model.Add(sum(self.cellValues[mySumRow+j*myVStep][mySumCol+j*myHStep] for j in range(-1*digits[i])) == value).OnlyEnforceIf(varBitmap[i])
+				
+	def setXSum(self,row1,col1,rc,value):
+		self.setXSumBase(row1,col1,rc,value,1)
+		
+	def setReverseXSum(self,row1,col1,rc,value):
+		self.setXSumBase(row1,col1,rc,value,-1)
 				
 	def setXKropki(self,row1,col1,rc,wb,neg=False):
 		# row,col are the coordinates of the cell containing the Kropki position, so no 9s allowed
@@ -2183,20 +2202,21 @@ class sudoku:
 			print('Candidate listing only implemented for 9x9 boards for now')
 			sys.exit()
 		
-		print('-'*(1+(self.boardSizeRoot+1)*self.boardWidth))
+		if len(self.digits) == 9:
+			dPerLine = 3
+			numLines = 3
+		elif len(self.digits) == 10:
+			dPerLine = 5
+			numLines = 2
+		print('-'*(1+(dPerLine+1)*self.boardWidth))
 		for i in range(self.boardWidth):
 			rowCand = [self.listCellCandidates(i,j,True) for j in range(self.boardWidth)]
-			for j in range(self.boardSizeRoot):
+			for j in range(numLines):
 				print('|',end='')
 				for k in range(self.boardWidth):
-					for m in range(self.boardSizeRoot):
-						if (3*j+m+1) in rowCand[k]:
-							print(str(3*j+m+1),end='')
-						else:
-							print(' ',end='')
-					print('|',end='')
+					print(''.join(rowCand[k][dPerLine*j:dPerLine*j+dPerLine])+'|',end='')
 				print()
-			print('-'*(1+(self.boardSizeRoot+1)*self.boardWidth))
+			print('-'*(1+(dPerLine+1)*self.boardWidth))
 		
 		print('To avoid retesting these cases when adding new constraints, add this code:')
 		print('addExcludedDigitArray([' + ','.join(list(map(lambda s: ''.join(s),self.candToExclude))) + '])')
@@ -2222,18 +2242,19 @@ class sudoku:
 				solver = cp_model.CpSolver()
 				solveStatus = solver.Solve(self.model)
 				if solveStatus == cp_model.OPTIMAL:
-					good.append(x)
+					good.append('{:d}'.format(x))
 					for i in range(self.boardWidth):
 						for j in range(self.boardWidth):
 							self.candTests[i][j][solver.Value(self.cellValues[i][j])-1] = True
 				else:
 					self.candTests[row][col][x-1] = False
 					self.candToExclude.append([str(row+1),str(col+1),str(x)])
+					good.append(' ')
 				myCon.Proto().Clear()
 			elif self.candTests[row][col][x-1] is True:
-				good.append(x)
+				good.append('{:d}'.format(x))
 		if quiet is False:
-			print('Possible values for cell {:d},{:d}: '.format(row+1,col+1) + ''.join(list(map(str,good))))
+			print('Possible values for cell {:d},{:d}: '.format(row+1,col+1) + ''.join(good))
 		else:
 			return good
 
@@ -2951,7 +2972,11 @@ class schroedingerCellSudoku(sudoku):
 																	# all cells in the grid, and denote "no Schroedinger"
 		self.maxSDigit = self.schroedingerNotSetBase+self.boardWidth*self.boardWidth
 		self.model = cp_model.CpModel()
+		self.listCandidatesVar = self.model.NewBoolVar('test')
 		self.cellValues = []
+		self.allVars = []
+		self.candTests = [[[None for k in range(self.boardWidth)] for j in range(self.boardWidth)] for i in range(self.boardWidth)]
+		self.candToExclude=[]		
 		
 		# Create the variables containing the cell values
 		for rowIndex in range(self.boardWidth):
@@ -3005,10 +3030,8 @@ class schroedingerCellSudoku(sudoku):
 				c = self.model.NewIntVar(self.minDigit,self.maxDigit,'sCellSums{:d}{:d}'.format(i,j))
 				tempSCellArray.append(c)
 			self.sCellSums.insert(i,tempSCellArray)
-
 		
-		# Schroedinger conditions
-		
+		# Schroedinger conditions	
 		# First we tie the values of the Schroedinger cells to the Booleans
 		for i in range(self.boardWidth):
 			for j in range(self.boardWidth):
@@ -3144,9 +3167,60 @@ class schroedingerCellSudoku(sudoku):
 				if self.solver.Value(self.sCellInt[i][j]) == 1: # This one is doubled!
 					testString = testString + '{:d}'.format(self.solver.Value(self.cellValues[i][j]))+'*{:d}*'.format(self.solver.Value(self.sCellValues[i][j]))
 				else:
-					testString = testString + '{:d}'.format(self.solver.Value(self.baseValues[i][j]))
+					testString = testString + '{:d}'.format(self.solver.Value(self.cellValues[i][j]))
 		return testString
 		
+	def listCellCandidates(self,row,col=-1,quiet=False):
+		if col == -1:
+			(row,col) = self.__procCell(row)
+			
+		good = []
+		sCell = False
+		nonSCell = False
+		for x in self.digits:
+			ok = False
+			# Not an S-Cell
+			myCon1 = self.model.AddBoolAnd([self.sCell[row][col].Not()])
+			myCon2 = self.model.Add(self.cellValues[row][col] == x)
+			self.applyNegativeConstraints()
+			solver = cp_model.CpSolver()
+			solveStatus = solver.Solve(self.model)
+			if solveStatus == cp_model.OPTIMAL:
+				ok = True
+				nonSCell = True
+			myCon1.Proto().Clear()
+			myCon2.Proto().Clear()
+				
+			# As an S-cell
+			myCon1 = self.model.AddBoolAnd([self.sCell[row][col]])
+			myCon2 = self.model.Add(self.cellValues[row][col] == x).OnlyEnforceIf(self.listCandidatesVar)
+			myCon3 = self.model.Add(self.sCellValues[row][col] == x).OnlyEnforceIf(self.listCandidatesVar.Not())
+			self.applyNegativeConstraints()
+			solver = cp_model.CpSolver()
+			solveStatus = solver.Solve(self.model)
+			if solveStatus == cp_model.OPTIMAL:
+				ok = True
+				sCell = True
+			myCon1.Proto().Clear()
+			myCon2.Proto().Clear()
+			myCon3.Proto().Clear()
+
+			if ok is True:
+				good.append('{:d}'.format(x))
+			else:
+				good.append(' ')
+				self.candToExclude.append([str(row+1),str(col+1),str(x)])
+				
+		if sCell is True and nonSCell is False:
+			good = list(map(lambda s: Back.BLUE + s + Back.RESET,good))
+		if sCell is False and nonSCell is True:
+			good = list(map(lambda s: Back.RED + s + Back.RESET,good))
+			
+		if quiet is False:
+			print('Possible values for cell {:d},{:d}: '.format(row+1,col+1) + ''.join(list(map(str,good))))
+		else:
+			return good
+
 	def sSubsets(self,inlist):
 		sCandidates = [[]]
 		listr = [[]]
@@ -3260,6 +3334,11 @@ class schroedingerCellSudoku(sudoku):
 		if col == -1:
 			(row,col) = self._sudoku__procCell(row)
 		self.model.AddBoolAnd([self.sCell[row][col]])
+		
+	def setNotSCell(self,row,col=-1):
+		if col == -1:
+			(row,col) = self._sudoku__procCell(row)
+		self.model.AddBoolAnd([self.sCell[row][col].Not()])
 
 	def setEvenOdd(self,row,col=-1,parity=-1):
 		if col == -1:
@@ -3567,8 +3646,15 @@ class schroedingerCellSudoku(sudoku):
 		inlist = self._sudoku__procCellList(inlist)
 		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] + self.sCellSums[inlist[0][0]][inlist[0][1]] == sum([self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(1,len(inlist))] + [self.sCellSums[inlist[j][0]][inlist[j][1]] for j in range(1,len(inlist))]))
 		if sSum is False:
-			self.model.AddBoolAnd([self.sCell[row][col].Not()])
-		
+			self.model.AddBoolAnd([self.sCell[inlist[0][0]][inlist[0][1]].Not()])
+			
+	def setDoubleArrow(self,inlist,sSum=False):
+		inlist = self._sudoku__procCellList(inlist)
+		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] + self.sCellSums[inlist[0][0]][inlist[0][1]] + self.cellValues[inlist[-1][0]][inlist[-1][1]] + self.sCellSums[inlist[-1][0]][inlist[-1][1]] == sum([self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(1,len(inlist)-1)] + [self.sCellSums[inlist[j][0]][inlist[j][1]] for j in range(1,len(inlist)-1)]))
+		if sSum is False:
+			self.model.AddBoolAnd([self.sCell[inlist[0][0]][inlist[0][1]].Not()])
+			self.model.AddBoolAnd([self.sCell[inlist[-1][0]][inlist[-1][1]].Not()])
+			
 	def setThermo(self,inlist):
 		inlist = self._sudoku__procCellList(inlist)
 		for j in range(len(inlist)-1):
@@ -3681,3 +3767,115 @@ class schroedingerCellSudoku(sudoku):
 		for i in range(1,len(sumSets)):
 			self.model.Add(sum(x for x in sumSets[i]) + sum(sVar[x] for x in sumSets[i]) == baseSum)
 			
+class superpositionSudoku(schroedingerCellSudoku):
+	'''This class is a version of Schrödinger cell sudoku, but the constraints take a harder line on the double-digit cells to 
+	   look more like classical superposition. Whenever an S-cell is used on a constraint, there must be an assignment of Schrödinger cells that makes the constraint work, for both possible values. So for example, if an S-cell is on a Renban line with 3, 4, and 5, the Schrödinger cell must be 2/6, since either assignment independently could satisfy the constraint. It could not be 1/2, for assigning it to be 1 would leave the set of digits discontiguous. Constraints that order, such as between lines or thermos, can be inherited intact, but summing constraints need to be revised.'''
+	   
+	def __setSuperpositionArrow(self,inlist,singleDouble):
+		# Single/double determines if this is a single or double arrow
+		inlist = self._sudoku__procCellList(inlist)
+		# This is really effin' complicated, so I want to write down how I plan to do it.
+		# Step 1: Break into cases based on where the Schroedinger cells are on the line. I thought I couldn't do this with
+		#         varBitmap, but I can since I'm going to be reusing my case variables.
+		# Step 2: Given a particular combination of S-cells, we need to calculate all possible sums on the line, so
+		#         there are going to be 2^#S possibilities. Normally one would think to use #S variables to encode this, BUT
+		#         these variables are not dependent...it is absolutely possible (and in fact required) that several of these
+		#		  variables will be simultaneously true. So we go with one variable per.
+		# Step 3: In each combination, for each cell/sCell pair active, we split all of the 2^#S variables into cases, whether they
+		#         indicate that the cell is used in a successful sum, or the sCell is. Ultimately, we need the "or" of these variables
+		#         to be true, i.e., there exists some assignment of values using each of the possible values which yields a true sum
+		
+		sCandidates = self.sSubsets(inlist)
+		varBitmap = self._sudoku__varBitmap('sDAS',len(sCandidates))
+		
+		# Now for the set of vars we need to case the combinations. We can reuse these across cases!
+		cVars = [self.model.NewBoolVar('sDAS{:d}'.format(i)) for i in range(2**max([len(x) for x in sCandidates]))]
+			
+		# Let's build some arrays for easy indexing...we aren't creating anything here, just organizing to make our loops go cleaner
+		summand = [[self.cellValues[inlist[j][0]][inlist[j][1]],self.sCellValues[inlist[j][0]][inlist[j][1]]] for j in range(len(inlist))]
+		fS = [1] + [-1 for i in range(1,len(inlist)-1)]			# This is a multiplication factor for each summand to distinguish
+																# the ends from the middle. Instead of casing on whether end cells
+																# are Schroedinger or not, just multiply everyting by its factor and sum to 0.
+		if singleDouble == 1:
+			fS.append(-1)										# This gives a single arrow...first is sum of the rest
+		else:
+			fS.append(1)										# Double arrow case
+			
+		for i in range(len(sCandidates)):
+			# First set up S-cell Booleans to match the candidate list
+			self.model.AddBoolAnd([self.sCell[x[0]][x[1]] for x in sCandidates[i]]).OnlyEnforceIf(varBitmap[i])
+			self.model.AddBoolAnd([self.sCell[x[0]][x[1]].Not() for x in inlist if x not in sCandidates[i]]).OnlyEnforceIf(varBitmap[i])
+			
+			# Before we forget, peg the variables we don't need
+			self.model.AddBoolAnd([cVars[j] for j in range(2**len(sCandidates[i]),len(cVars))]).OnlyEnforceIf(varBitmap[i])
+			
+			# Create a structure to store the sum equation variables associated with use of each cell/sCell value
+			cellBools = [[[],[]] for j in range(len(sCandidates[i]))]
+
+			# Non-Schroedinger sum - this is going to be the same over all of the Schroedinger possibilities, so just do it once
+			nSS = sum([fS[j]*self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(len(inlist)) if inlist[j] not in sCandidates[i]])
+
+			# Set up sub-summand and fS lists which are indexed to the sCandidates[i] list
+			myS = [summand[inlist.index(sCandidates[i][j])] for j in range(len(sCandidates[i]))]
+			myF = [fS[inlist.index(sCandidates[i][j])] for j in range(len(sCandidates[i]))]
+
+			# Alright, now the possible sums
+			for j in range(2**len(sCandidates[i])):
+				ind = list(map(int,list(format(j,'0'+str(len(sCandidates[i]))+'b'))))	# Convert to a list of binary integers
+				self.model.Add(nSS + sum(myF[k]*myS[k][ind[k]] for k in range(len(sCandidates[i]))) == 0).OnlyEnforceIf(varBitmap[i] + [cVars[j]])	# Here's the actual sum constraint that is enforced
+				self.model.Add(nSS + sum(myF[k]*myS[k][ind[k]] for k in range(len(sCandidates[i]))) != 0).OnlyEnforceIf(varBitmap[i] + [cVars[j].Not()])
+				for k in range(len(sCandidates[i])):
+					cellBools[k][ind[k]].append(cVars[j])		# Append the variable to the correct variable list
+
+			# All of the sum variables are built...now we just enforce that at least one is feasible
+			for j in range(len(sCandidates[i])):
+				for k in range(2):
+					self.model.AddBoolOr(cellBools[j][k]).OnlyEnforceIf(varBitmap[i])
+			if len(sCandidates[i]) == 0:	# Need special case, since previous loop will be null
+					self.model.AddBoolAnd([cVars[0]]).OnlyEnforceIf(varBitmap[i])
+					
+	def setArrow(self,inlist):
+		self.__setSuperpositionArrow(inlist,1)
+		
+	def setDoubleArrow(self,inlist):
+		self.__setSuperpositionArrow(inlist,2)
+		
+	def setRenbanLine(self,inlist):
+		inlist = self._sudoku__procCellList(inlist)
+		# First the easy part: ensure all of the digits are different. The unassigned S-Cells will not get in the way, and we want to ensure the assigned ones are different from the regular cell values. So this is safe regardless of which are the S-cells
+		self.model.AddAllDifferent([self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(len(inlist))] + [self.sCellValues[inlist[j][0]][inlist[j][1]] for j in range(len(inlist))])
+		
+		# Now the consecutive condition. To do this, we need to know exactly which are the S-cells
+		sCandidates = self.sSubsets(inlist)
+		varBitmap = self._sudoku__varBitmap('RenbanLine',len(sCandidates))
+		cVars = [self.model.NewBoolVar('Renban{:d}'.format(i)) for i in range(2**max([len(x) for x in sCandidates]))]
+		digitAlt = [[self.cellValues[inlist[j][0]][inlist[j][1]],self.sCellValues[inlist[j][0]][inlist[j][1]]] for j in range(len(inlist))]
+			# Digit alternatives per cell for easy indexing
+		
+		for i in range(len(sCandidates)):
+			# First set up S-cell Booleans to match the candidate list
+			self.model.AddBoolAnd([self.sCell[x[0]][x[1]] for x in sCandidates[i]]).OnlyEnforceIf(varBitmap[i])
+			self.model.AddBoolAnd([self.sCell[x[0]][x[1]].Not() for x in inlist if x not in sCandidates[i]]).OnlyEnforceIf(varBitmap[i])
+			self.model.AddBoolAnd([cVars[j] for j in range(2**len(sCandidates[i]),len(cVars))]).OnlyEnforceIf(varBitmap[i])	# Peg unneeded
+			
+			# Create a structure to store the difference equation variables associated with use of each cell/sCell value
+			cellBools = [[[],[]] for j in range(len(sCandidates[i]))]
+
+			# Set up sub-digit lists which are indexed to the sCandidates[i] list
+			myD = [digitAlt[inlist.index(sCandidates[i][j])] for j in range(len(sCandidates[i]))]
+			
+			# Now prepare the list of variables which need to be consecutive
+			for j in range(2**len(sCandidates[i])):
+				ind = list(map(int,list(format(j,'0'+str(len(sCandidates[i]))+'b'))))	# Convert to a list of binary integers
+				varList = [self.cellValues[x[0]][x[1]] for x in inlist if x not in sCandidates[i]] + [myD[k][ind[k]] for k in range(len(sCandidates[i]))]
+				for x in varList:
+					for y in varList:
+						self.model.Add(x-y < len(varList)).OnlyEnforceIf(varBitmap[i] + [cVars[j]])
+				for k in range(len(sCandidates[i])):
+					cellBools[k][ind[k]].append(cVars[j])
+					
+			for j in range(len(sCandidates[i])):
+				for k in range(2):
+					self.model.AddBoolOr(cellBools[j][k]).OnlyEnforceIf(varBitmap[i])
+			if len(sCandidates[i]) == 0:	# Need special case, since previous loop will be null
+					self.model.AddBoolAnd([cVars[0]]).OnlyEnforceIf(varBitmap[i])

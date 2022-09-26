@@ -79,6 +79,7 @@ Ratio Pairs - see Kropki and Kropki pairs
 Region Sum Lines (sum of all cells along a line in a region is fixed)
 Region Segment Sum Lines - see Region Sum Lines
 Renban Lines
+Reverse X-Sums - see X-Sums
 Rossini Clues
 Run-On Renban Lines - see Renban Lines
 Samurai Sudoku
@@ -819,7 +820,7 @@ p = ORsudoku.schroedingerCellSudoku(boardSizeRoot)
   -----------------------
   Anti-king
   Anti-knight
-  Arrows
+  Arrows (including Double Arrows)
   Between lines - all digits on the line must be less than all digits on one end point and greater than all digits on the other end poit
   Block Cages
   Disjoint Groups - allDigits=False can be applied
@@ -842,6 +843,25 @@ p = ORsudoku.schroedingerCellSudoku(boardSizeRoot)
   XV
   XVXV
   X-Sums - sSum=True can be applied to toggle whether S-cell sum is applied to indexing clue
+
+There is an alternative class for Schrödinger sudoku, called superpositionSudoku. In this instance, the constraints are defined to be more akin to classic superposition, where either value can be used, and thus the values are never added or averaged. Each independently needs to be able to satisfy the constraint, perhaps with help from other S-cells. So for example, an arrow constraint with bulb 5/7 and arrow cells 2 and 3/5 would be legal, since 5,2,3 is a valid solution, as is 7,2,5. For another example, a Renban line could be 48,5,6,7, since either the 4 or 8 could pair with the other three digits, but 45,6,7,8 is not legal, since 4,6,7,8 is not a set of consecutive digits. On the gripping hand, 38,47,5,6 IS a legal renban assignment, since 3456 is legal, and 8756 is also legal. So not every combination of S-cell values needs to be legal, just at least one legal assignment for each value in each S-cell.
+
+This class is under development, and the only safe constraints to use at this point are:
+  Anti-king
+  Anti-knight
+  Arrows (including Double Arrows)
+  Between lines
+  Block Cages
+  Disjoint Groups
+  Even/Odd
+  Given digits
+  Min/max cells
+  Parity Lines
+  Renban Lines
+  Thermos/Slow Thermos
+  Unicorn Digits
+  Vaults
+  X/Diagonal Sudoku
 
 Shift Lines
 -----------
@@ -915,12 +935,19 @@ setXSudokuMain(): assert no repeats on the main (top left to bottom right) diago
 
 setXSudokuOff(): assert no repeats on the off (top right to bottom left) diagonal
 
-X-Sum
------
+X-Sums
+------
 setXSum(row,col,rc,value): set an X sum constraint on a row or column
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: The sum of the first X cells in the row/column from the clue, where X is the value in the adjacent cell
+  Note: for negative digits, the behavior of an X-Sum is to take digits from the other side of the row/column, a la a reverse sum
+  
+setReverseXSum(row,col,rc,value): set a reverse X sum constraint on a row or column, where the sum is taken on cells starting from the end of the row/column opposite the clue
+  row,col: The coordinates of the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  value: The sum of the first X cells in the row/column from the clue, where X is the value in the adjacent cell
+  Note: for negative digits, the behavior of a Reverse X-Sum is to take digits from the other side of the row/column, a la a reverse sum
   
 XV/XV Pairs
 -----------

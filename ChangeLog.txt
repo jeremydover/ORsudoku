@@ -1,3 +1,8 @@
+9/26/22
+	Added superposition Schrödinger cell class and some constraints.
+	Added support for reverse X-sums (originated by kuraban, thanks to Qodec's recent puzzle for the inspiration!)
+	Added support for negative indexing in X-Sums (reverse the side from which sums are taken, a la Python array indexin)
+
 9/23/22
 	Implemented support for Schrödinger cell puzzles. Not all constraints are supported, but many of the constraints used in puzzles to date are
 	Added test case
