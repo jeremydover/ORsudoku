@@ -1,3 +1,5 @@
+9/29/22
+	Added support for parity count lines.
 	Added support for reverse numbered rooms, and support for negative indices in numbered room clues
 	Fixed error in digit treatment for cellTransformSudoku...digit set should be list of base + transformed digits, not just base digits.
 	Added test cases.
