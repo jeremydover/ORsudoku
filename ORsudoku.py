@@ -131,6 +131,8 @@ class sudoku:
 	Bottom = 1	# Constant to determine direction arrow on 2x2 points
 	Left = 0	# Constant to determine direction arrow on 2x2 points
 	Right = 1	# Constant to determine direction arrow on 2x2 points
+	Up = 0		# Constant for Rossini clues
+	Down = 1	# Constant for Rossini clues
 	
 	Corner = 0	# Constant to determine clue type for corner/edge clues
 	Edge = 1	# Constant to determine clue type for corner/edge clues
@@ -187,7 +189,7 @@ class sudoku:
 			self.model = model
 		self.cellValues = []
 		self.allVars = []
-		self.candTests = [[[None for k in range(self.boardWidth)] for j in range(self.boardWidth)] for i in range(self.boardWidth)]
+		self.candTests = [[[None for k in range(len(self.digits))] for j in range(self.boardWidth)] for i in range(self.boardWidth)]
 		self.candToExclude=[]
 		
 		# Create the variables containing the cell values
@@ -1137,6 +1139,9 @@ class sudoku:
 				else:
 					self.model.AddBoolAnd([varBitmap[i][0].Not()]).OnlyEnforceIf(varBitmap[i])		
 					# If value is not 0, then 0 is not a valid digit and this case cannot occur, but there's no arithmetic way to express this	
+			elif abs(digits[i]) > self.boardWidth:
+				# Digit is too big to have a reasonable sum, so disallow
+				self.model.AddBoolAnd([varBitmap[i][0].Not()]).OnlyEnforceIf(varBitmap[i])	
 			elif digits[i] > 0:
 				self.model.Add(self.cellValues[row][col] == digits[i]).OnlyEnforceIf(varBitmap[i])
 				self.model.Add(sum(self.cellValues[sumRow+j*vStep][sumCol+j*hStep] for j in range(digits[i])) == value).OnlyEnforceIf(varBitmap[i])
@@ -1144,7 +1149,7 @@ class sudoku:
 				mySumRow = self.boardWidth-1-sumRow if rc == sudoku.Col else sumRow
 				mySumCol = self.boardWidth-1-sumCol if rc == sudoku.Row else sumCol
 				myHStep = -1 * hStep
-				myVStep = -1 * vStep
+				myVStep = -1 * vStep				
 				self.model.Add(self.cellValues[row][col] == digits[i]).OnlyEnforceIf(varBitmap[i])
 				self.model.Add(sum(self.cellValues[mySumRow+j*myVStep][mySumCol+j*myHStep] for j in range(-1*digits[i])) == value).OnlyEnforceIf(varBitmap[i])
 				
@@ -1194,23 +1199,44 @@ class sudoku:
 							self.model.Add(firstCell - 2*secondCell != 0).OnlyEnforceIf(varBitmap[i] + [lgr])
 							self.model.Add(secondCell - 2*firstCell != 0).OnlyEnforceIf(varBitmap[i] + [lgr.Not()])
 							
-	def setNumberedRoom(self,row1,col1,rc,value):
+	def setNumberedRoomBase(self,row1,col1,rc,value,pm):
 		# row,col are the coordinates of the cell containing the index of the target cell
 		# rc is whether things are row/column
 		# value is the target value to place
+		# pm: determines if these are normal numbered rooms or reverse (count from the opposite side)
 		
 		# Convert from 1-base to 0-base
 		row = row1 - 1
 		col = col1 - 1
+		posRow = row if rc == sudoku.Row or pm == 1 else self.boardWidth-1-row
+		posCol = col if rc == sudoku.Col or pm == 1 else self.boardWidth-1-col
 		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
-		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)	
+		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
+		hStep = pm * hStep	# Change direction in case we're doing reverse
+		vStep = pm * vStep
 		
-		allowableDigits = [x for x in self.digits if x >= 1 and x <=self.boardWidth]
-		varBitmap = self.__varBitmap('NumRoomPosRow{:d}Col{:d}RC{:d}'.format(row,col,rc),len(allowableDigits))
+		digits = list(self.digits)
+		varBitmap = self.__varBitmap('NumRoomPosRow{:d}Col{:d}RC{:d}'.format(row,col,rc),len(digits))
 		
-		for i in range(len(allowableDigits)):
-			self.model.Add(self.cellValues[row][col] == allowableDigits[i]).OnlyEnforceIf(varBitmap[i])
-			self.model.Add(self.cellValues[row+(allowableDigits[i]-1)*vStep][col+(allowableDigits[i]-1)*hStep] == value).OnlyEnforceIf(varBitmap[i])
+		for i in range(len(digits)):
+			if digits[i] == 0 or abs(digits[i]) > self.boardWidth:	# No place to put digit...bury these cases
+				self.model.AddBoolAnd([varBitmap[i][0].Not()]).OnlyEnforceIf(varBitmap[i])
+			elif digits[i] > 0:
+				self.model.Add(self.cellValues[row][col] == digits[i]).OnlyEnforceIf(varBitmap[i])
+				self.model.Add(self.cellValues[posRow+(digits[i]-1)*vStep][posCol+(digits[i]-1)*hStep] == value).OnlyEnforceIf(varBitmap[i])
+			else: # So if a digit is negative, we reverse the intended direction
+				myPosRow = self.boardWidth-1-posRow if rc == sudoku.Col else posRow
+				myPosCol = self.boardWidth-1-posCol if rc == sudoku.Row else posCol
+				myHStep = -1 * hStep
+				myVStep = -1 * vStep				
+				self.model.Add(self.cellValues[row][col] == digits[i]).OnlyEnforceIf(varBitmap[i])
+				self.model.Add(self.cellValues[myPosRow+(-1*digits[i]-1)*myVStep][myPosCol+(-1*digits[i]-1)*myHStep] == value).OnlyEnforceIf(varBitmap[i])
+		
+	def setNumberedRoom(self,row1,col1,rc,value):
+		self.setNumberedRoomBase(row1,col1,rc,value,1)
+		
+	def setReverseNumberedRoom(self,row1,col1,rc,value):
+		self.setNumberedRoomBase(row1,col1,rc,value,-1)
 			
 	def setSandwichSum(self,row1,col1,rc,value,digits=[]):
 		# row,col are the coordinates of the cell containing the index of the target cell
@@ -2127,6 +2153,20 @@ class sudoku:
 		for i in range(len(inlist)):
 			for j in range(i+1,len(inlist)):
 				self.setMinWhispersLine([inlist[i],inlist[j]],2)
+				
+	def setParityCountLine(self,inlist):
+		if self.isParity is False:
+			self.__setParity()
+		inlist = self.__procCellList(inlist)
+		c = self.model.NewBoolVar('ParityCountLine')
+		e = self.model.NewBoolVar('ParityCountLine')	# Variable to test if endpoints are equal, in which case we prevent c from flapping.
+		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] + self.cellValues[inlist[-1][0]][inlist[-1][1]] == len(inlist))
+		self.model.Add(sum(self.cellParity[inlist[j][0]][inlist[j][1]] for j in range(len(inlist))) == self.cellValues[inlist[0][0]][inlist[0][1]]).OnlyEnforceIf(c)
+		self.model.Add(sum(self.cellParity[inlist[j][0]][inlist[j][1]] for j in range(len(inlist))) == self.cellValues[inlist[0][0]][inlist[0][1]]).OnlyEnforceIf(c.Not())
+		
+		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] == self.cellValues[inlist[-1][0]][inlist[-1][1]]).OnlyEnforceIf(e)
+		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] != self.cellValues[inlist[-1][0]][inlist[-1][1]]).OnlyEnforceIf(e.Not())
+		self.model.AddBoolAnd(c).OnlyEnforceIf(e)
 
 ####Model solving
 	def applyNegativeConstraints(self):
@@ -2201,7 +2241,6 @@ class sudoku:
 		if self.boardWidth != 9:
 			print('Candidate listing only implemented for 9x9 boards for now')
 			sys.exit()
-		
 		if len(self.digits) == 9:
 			dPerLine = 3
 			numLines = 3
@@ -2225,7 +2264,8 @@ class sudoku:
 		# Strictly for listing candidates, sets a value that has been excluded from a cell
 		if col == -1:
 			(row,col,value) = self.__procCell(row)
-		self.candTests[row][col][value-1] = False
+		digitList = list(self.digits)
+		self.candTests[row][col][digitList.index(value)] = False
 		
 	def addExcludedDigitArray(self,list):
 		for x in list: self.addExcludedDigit(x)
@@ -2235,8 +2275,10 @@ class sudoku:
 			(row,col) = self.__procCell(row)
 			
 		good = []
-		for x in self.digits:
-			if self.candTests[row][col][x-1] is None:
+		digitList = list(self.digits)
+		for k in range(len(digitList)):
+			x = digitList[k]
+			if self.candTests[row][col][k] is None:
 				myCon = self.model.Add(self.cellValues[row][col] == x)
 				self.applyNegativeConstraints()
 				solver = cp_model.CpSolver()
@@ -2245,14 +2287,16 @@ class sudoku:
 					good.append('{:d}'.format(x))
 					for i in range(self.boardWidth):
 						for j in range(self.boardWidth):
-							self.candTests[i][j][solver.Value(self.cellValues[i][j])-1] = True
+							self.candTests[i][j][digitList.index(solver.Value(self.cellValues[i][j]))] = True
 				else:
-					self.candTests[row][col][x-1] = False
+					self.candTests[row][col][k] = False
 					self.candToExclude.append([str(row+1),str(col+1),str(x)])
 					good.append(' ')
 				myCon.Proto().Clear()
-			elif self.candTests[row][col][x-1] is True:
+			elif self.candTests[row][col][k] is True:
 				good.append('{:d}'.format(x))
+			elif self.candTests[row][col][k] is False:
+				good.append(' ')
 		if quiet is False:
 			print('Possible values for cell {:d},{:d}: '.format(row+1,col+1) + ''.join(good))
 		else:
@@ -2354,26 +2398,31 @@ class cellTransformSudoku(sudoku):
 		self.isModular = False
 		
 		if digitSet is None:
-			self.digits = {x for x in range(1,self.boardWidth+1)}
+			self.baseDigits = {x for x in range(1,self.boardWidth+1)}
 		else:
-			self.digits = digitSet
-		self.maxDigit = max(self.digits)
-		self.minDigit = min(self.digits)
+			self.baseDigits = digitSet
+		self.maxDigit = max(self.baseDigits)
+		self.minDigit = min(self.baseDigits)
 		self.digitRange = self.maxDigit - self.minDigit
 
 		self.model = cp_model.CpModel()
 		self.cellValues = [] 		# Since this array is used throughout for the constraints, we'll make this the modified
 		self.baseValues = []
-		cellValueSet = set(self.digits)
-		for x in self.digits:
+		cellValueSet = set(self.baseDigits)
+		for x in self.baseDigits:
 			cellValueSet = cellValueSet.union(self.transformDoublerValue(x))
+		self.digits = cellValueSet
+
+		self.allVars = []
+		self.candTests = [[[None for k in range(len(self.baseDigits))] for j in range(self.boardWidth)] for i in range(self.boardWidth)]
+		self.candToExclude=[]
 		
 		# Create the variables containing the cell values
 		for rowIndex in range(self.boardWidth):
 			tempArrayCell = []
 			tempArrayBase = []
 			for colIndex in range(self.boardWidth):
-				tempBase = self.model.NewIntVar(self.minDigit,self.maxDigit,'cellValue{:d}{:d}'.format(rowIndex,colIndex))
+				tempBase = self.model.NewIntVar(self.minDigit,self.maxDigit,'cellBase{:d}{:d}'.format(rowIndex,colIndex))
 				tempCell = self.model.NewIntVar(min(cellValueSet),max(cellValueSet),'cellValue{:d}{:d}'.format(rowIndex,colIndex))
 				if (self.maxDigit - self.minDigit) >= self.boardWidth:	# If base digit set is not continguous, force values
 					self.model.AddAllowedAssignments([tempBase],[(x,) for x in self.digits])
@@ -2471,6 +2520,16 @@ class cellTransformSudoku(sudoku):
 		self.model.AddAllDifferent(self.regions[-1])
 		self.model.Add(sum(self.doubleInt[x[0]][x[1]] for x in inlist) == 1)	# Ensure one doubler per region
 					
+	def setTransform(self,row,col=-1):
+		if col == -1:
+			(row,col) = self._sudoku__procCell(row)
+		self.model.AddBoolAnd([self.double[row][col]])
+	
+	def setNotTransform(self,row,col=-1):
+		if col == -1:
+			(row,col) = self._sudoku__procCell(row)
+		self.model.AddBoolAnd([self.double[row][col].Not()])
+	
 	def printCurrentSolution(self):
 		dW = max([len(str(x)) for x in self.digits])
 		colorama.init()
@@ -2492,6 +2551,70 @@ class cellTransformSudoku(sudoku):
 				else:
 					testString = testString + '{:d}'.format(self.solver.Value(self.baseValues[i][j]))
 		return testString
+		
+	def listCandidates(self):
+		if self.boardWidth != 9:
+			print('Candidate listing only implemented for 9x9 boards for now')
+			sys.exit()
+		if len(self.baseDigits) == 9:
+			dPerLine = 3
+			numLines = 3
+		elif len(self.baseDigits) == 10:
+			dPerLine = 5
+			numLines = 2
+		print('-'*(1+(dPerLine+1)*self.boardWidth))
+		for i in range(self.boardWidth):
+			rowCand = [self.listCellCandidates(i,j,True) for j in range(self.boardWidth)]
+			for j in range(numLines):
+				print('|',end='')
+				for k in range(self.boardWidth):
+					print(''.join(rowCand[k][dPerLine*j:dPerLine*j+dPerLine])+'|',end='')
+				print()
+			print('-'*(1+(dPerLine+1)*self.boardWidth))
+		
+		print('To avoid retesting these cases when adding new constraints, add this code:')
+		print('addExcludedDigitArray([' + ','.join(list(map(lambda s: ''.join(s),self.candToExclude))) + '])')
+		
+	def addExcludedDigit(self,row,col=-1,value=-1):
+		# Strictly for listing candidates, sets a value that has been excluded from a cell
+		if col == -1:
+			(row,col,value) = self._sudoku__procCell(row)
+		self.candTests[row][col][value-1] = False
+		
+	def addExcludedDigitArray(self,list):
+		for x in list: self.addExcludedDigit(x)
+	
+	def listCellCandidates(self,row,col=-1,quiet=False):
+		if col == -1:
+			(row,col) = self._sudoku__procCell(row)
+			
+		good = []
+		digitList = list(self.baseDigits)
+		for k in range(len(digitList)):
+			x = digitList[k]
+			if self.candTests[row][col][k] is None:
+				myCon = self.model.Add(self.cellValues[row][col] == x)
+				self.applyNegativeConstraints()
+				solver = cp_model.CpSolver()
+				solveStatus = solver.Solve(self.model)
+				if solveStatus == cp_model.OPTIMAL:
+					good.append('{:d}'.format(x))
+					for i in range(self.boardWidth):
+						for j in range(self.boardWidth):
+							self.candTests[i][j][digitList.index(solver.Value(self.baseValues[i][j]))] = True
+				else:
+					self.candTests[row][col][k] = False
+					self.candToExclude.append([str(row+1),str(col+1),str(x)])
+					good.append(' ')
+				myCon.Proto().Clear()
+			elif self.candTests[row][col][k] is True:
+				good.append('{:d}'.format(x))
+			elif self.candTests[row][col][k] is False:
+				good.append(' ')
+		if quiet is False:
+			print('Possible values for cell {:d},{:d}: '.format(row+1,col+1) + ''.join(good))
+		else:
+			return good
 
 class doublerSudoku(cellTransformSudoku):
 

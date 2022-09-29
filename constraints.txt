@@ -66,6 +66,7 @@ Numbered Room
 Outside Clues
 Palindrome Lines
 Parindrome Lines - see Palindrome Lines
+Parity Count Lines (endpoints show the number of odd/even digits along the line)
 Parity Dots
 Parity Lines (alternating parity along line)
 Pencilmarks
@@ -79,6 +80,7 @@ Ratio Pairs - see Kropki and Kropki pairs
 Region Sum Lines (sum of all cells along a line in a region is fixed)
 Region Segment Sum Lines - see Region Sum Lines
 Renban Lines
+Reverse Numbered Rooms - see Numbered Rooms
 Reverse X-Sums - see X-Sums
 Rossini Clues
 Run-On Renban Lines - see Renban Lines
@@ -234,7 +236,7 @@ setBlockCage(list,values): creates a block cage, that is an list of cells and a 
 
 Cell Transform Sudoku
 ---------------------
-Inspired by the doubler rules invented by zetamath. Grid is as normal, but one cell in each row, column in region is doubled when used in other constraints. To model cell transform contraints requires use of a different class:
+Inspired by the doubler rules invented by zetamath. Grid is as normal, but one cell in each row, column and region is transformed when used in other constraints. To model cell transform contraints requires use of a different class:
 
 p = ORsudoku.cellTransformSudoku(boardSizeRoot,canRepeatDigits,irregular,digitSet)
   All three parameters are optional:
@@ -653,6 +655,13 @@ setNumberedRoom(row,col,rc,value): sets a numbered room constraint
   row,col: The coordinates of the cell containing the indexing clue, i.e. the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: The value (1-9) to be placed based on the indexing cell
+  Note: for negative digits, the behavior of a Numbered Room is to count cells from the other side of the row/column, a la a reverse Numbered Room
+  
+setReverseNumberedRoom(row,col,rc,value): sets a reverse numbered room constraint, i.e., If the clue is X, the value is placed in cell X counting from the *other*, non-clue end of the row/column.
+  row,col: The coordinates of the cell containing the indexing clue, i.e. the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  value: The value (1-9) to be placed based on the indexing cell
+  Note: for negative digits, the behavior of a reverse Numbered Room is to count cells from the other side of the row/column, a la regular Numbered Room
   
 Outside Clues
 -------------
@@ -667,6 +676,11 @@ setPalindromeLine(list): creates a palindrome line constraint
   list: a list of cell specifications
   
 setParindromeLine(list): creates a parindrome line constraint, where only parity has to match 
+  list: a list of cell specifications
+  
+Parity Count Lines
+------------------
+setParityLine(list): creates a parity count line constraint (inspired by Richard Stolk https://logic-masters.de/Raetselportal/Raetsel/zeigen.php?id=000B15, endpoints contain the number of odd/even digits along the line, in some order))
   list: a list of cell specifications
   
 Parity Dots
@@ -947,7 +961,7 @@ setReverseXSum(row,col,rc,value): set a reverse X sum constraint on a row or col
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: The sum of the first X cells in the row/column from the clue, where X is the value in the adjacent cell
-  Note: for negative digits, the behavior of a Reverse X-Sum is to take digits from the other side of the row/column, a la a reverse sum
+  Note: for negative digits, the behavior of a Reverse X-Sum is to take digits from the other side of the row/column, a la regular X-Sum
   
 XV/XV Pairs
 -----------

@@ -1,7 +1,11 @@
+	Added support for reverse numbered rooms, and support for negative indices in numbered room clues
+	Fixed error in digit treatment for cellTransformSudoku...digit set should be list of base + transformed digits, not just base digits.
+	Added test cases.
+
 9/26/22
 	Added superposition Schrödinger cell class and some constraints.
 	Added support for reverse X-sums (originated by kuraban, thanks to Qodec's recent puzzle for the inspiration!)
-	Added support for negative indexing in X-Sums (reverse the side from which sums are taken, a la Python array indexin)
+	Added support for negative indexing in X-Sums (reverse the side from which sums are taken, a la Python array indexing)
 
 9/23/22
 	Implemented support for Schrödinger cell puzzles. Not all constraints are supported, but many of the constraints used in puzzles to date are
