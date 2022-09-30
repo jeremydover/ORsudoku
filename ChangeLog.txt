@@ -1,3 +1,14 @@
+9/30/22
+	Added support for parity snakes
+	Added support for No-Three-In-A-Row global constraint
+	Added support for maximum triplet clues, and generalized to maximum runs of arbitrary length
+	Added support for Search Nine clues.
+	Modified setRossini method to not require row/column designation, which is clear from the arrow direction only.
+	Updated constants for Left/Right to be distinct from Up/Down. Only impacted method is Rossini clues.
+	Added support for Odd-Even Thermos (thermos where all digits are the same parity), and Slow Odd-Even Themors (same thing, but non-decreasing instead of increasing).
+	Added Schrödinger test case.
+	Thanks to Richard Stolk for the inspiration for most of the new constraints implemented in this push.
+
 9/29/22
 	Added support for parity count lines.
 	Added support for reverse numbered rooms, and support for negative indices in numbered room clues

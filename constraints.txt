@@ -53,6 +53,7 @@ Lockout Lines
 Look-and-Say Cages - see Zones
 Magic Squares
 MaxAscending
+Maximum Runs (Maximum Triplets)
 Median Cages
 Min-Max
 Modular Lines
@@ -61,14 +62,17 @@ Nabner Lines
 Negator Sudoku - see Cell Transform Sudoku
 Neighbor Sums
 Next-To-Nine
+No-Three-In-A-Row (Parity)
 Non-Consecutive
 Numbered Room
+Odd-Even Thermos - see Thermometers
 Outside Clues
 Palindrome Lines
 Parindrome Lines - see Palindrome Lines
 Parity Count Lines (endpoints show the number of odd/even digits along the line)
 Parity Dots
 Parity Lines (alternating parity along line)
+Parity Snakes
 Pencilmarks
 Pointing Arrows - see Arrows
 Position Sums
@@ -87,6 +91,7 @@ Run-On Renban Lines - see Renban Lines
 Samurai Sudoku
 Sandwich Sums
 Schrödinger Cell Sudoku
+Search Nine
 Shift Lines
 Slow Thermometers (see Thermometers)
 Sum Dots (see Killer Cages)
@@ -578,7 +583,17 @@ setMaxAscending(row,col,rc,value): sets a max ascending constraint, specifying t
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: the length of the longest run of increasing digits in the row/col
+
+Maximum Runs
+------------
+setMaximumRun(row,col,rc,value,length): asserts that in a row/column, the maximum sum of any "length" consecutive digits is value
+  row,col: The coordinates of the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  value: maximum sum achievable
+  length: number of consecutive digits to sum. Optional, default is 3.
   
+setMaximumTriplet(row,col,rc,value): original formulation, maximum Run with length 3
+
 Median Cages
 ------------
 setMedianCage(list,value): sets the median value in the region (which must appear in the region)
@@ -645,6 +660,10 @@ setNextToNine(row,col,rc,values,digit): given a set of 1/2 digits on a row/colum
   values: A list of values to go next to 9; if only one value is given it may be given as an integer
   digit (optional): defines which digit is the one the clued digits must appear next to...defaults to 9
 
+No Three in a Row (Parity)
+--------------------------
+setNoThreeInARowParity(): assert that in any row/column, there are no three consecutive odd digits nor are there three consecutive even digits
+
 Non-Consecutive
 ---------------
 setNonConsecutive(): sets the global non-consecutive cells constraint
@@ -709,6 +728,13 @@ Parity Lines
 ------------
 setParityLine(list): creates a parity line constraint (parity must alternate along the line)
   list: a list of cell specifications
+  
+Parity Snakes
+-------------
+setParitySnake(row1,col1,row2,col2,parity): asserts that there exists a path of constant parity from ro1,col1 to row2,col2
+	row1,col1: position of first cell
+	row2,col2: position of second cell
+	parity: Optional: you may assert the snake has a particular parity with the Odd and Even class variables. By default, the snake may be either parity
   
 Pencilmarks
 -----------
@@ -782,10 +808,9 @@ Rossini Clues
 -------------
 Rossini clues appear as arrows on the outside of of the grid, and indicate that the first few cells next to the clue increase in the given direction. In normal Sudoku there is no ambiguity, since the number of cells used is 3, but is that 3 because of the region, or because 3 is a nice number? We provide the option to define the length of the run applied either by using regions, or specifying a value.
 
-setRossini(row,col,rc,uldr): sets a Rossini constraint on a row or column
+setRossini(row,col,uldr): sets a Rossini constraint on a row or column
   row,col: The coordinates of the cell next to which the clue values sit
-  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
-  uldr: Determines if the arrow points Top/Bottom (for columns) or Left/Right (for rows)...use class variables Top, Bottom, Left, and Right
+  uldr: Determines if the arrow points Top/Bottom (for columns) or Left/Right (for rows)...use class variables Up, Down, Left, and Right
   By default, Rossini conditions operate on regions
   
 setRossiniLength(value): changes cluing behavior to work on a fixed number of cells from the border
@@ -877,6 +902,13 @@ This class is under development, and the only safe constraints to use at this po
   Vaults
   X/Diagonal Sudoku
 
+Search Nine
+-----------
+setSearchNine(row,col,uldr,digit): Arrow gives direction, cell value a distance to a cell with value digit.
+  row,col: The coordinates of the cell in which the clue values sit
+  uldr: Determines if the arrow points Up/Down/Left/Right...use class variables Up, Down, Left, and Right
+  digit: The value of the digit pointed to; optional, defaults to 9
+  
 Shift Lines
 -----------
 setShiftLine(inlist): sets a shift line constraint; like a palindrome, but one side is uniformly one larger than the other
@@ -901,10 +933,18 @@ setUpAndDownLine(inlist): sets an up and down line constraint; cells must latern
   
 Thermometers
 ------------
-setThermo(list): asserts that the values in cells increase from the beginning of the line to the end
+setThermo(list,slow): asserts that the values in cells increase from the beginning of the line to the end
   list: list of cell specifications, with bulb end of thermo being the first element
+  slow: set thermo to slow (i.e., nondecreasing vs. increasing), defaults to False, can also use setSlowThermo
   
 setSlowThermo(list): asserts that the values in cells do not decrease from the beginning of the line to the end
+  list: list of cell specifications, with bulb end of thermo being the first element
+  
+setOddEvenThermo(list,slow): asserts that the values in cells increase from the beginning of the line to the end, and all have the same parity
+  list: list of cell specifications, with bulb end of thermo being the first element
+  slow: set thermo to slow (i.e., nondecreasing vs. increasing), defaults to False, can also use setSlowOddEvenThermo
+  
+setSlowOddEvenThermo(list): asserts that the values in cells do not decrease from the beginning of the line to the end, and all have the same parity
   list: list of cell specifications, with bulb end of thermo being the first element
   
 Weak Palindrome Lines

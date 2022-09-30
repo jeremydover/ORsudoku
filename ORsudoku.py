@@ -129,8 +129,8 @@ class sudoku:
 	
 	Top = 0		# Constant to determine direction arrow on 2x2 points...note code assumes this value is the same as Left
 	Bottom = 1	# Constant to determine direction arrow on 2x2 points
-	Left = 0	# Constant to determine direction arrow on 2x2 points
-	Right = 1	# Constant to determine direction arrow on 2x2 points
+	Left = 2	# Constant to determine direction arrow on 2x2 points
+	Right = 3	# Constant to determine direction arrow on 2x2 points
 	Up = 0		# Constant for Rossini clues
 	Down = 1	# Constant for Rossini clues
 	
@@ -502,6 +502,16 @@ class sudoku:
 						self.model.Add(self.cellValues[i][j] != pairs[k][1]).OnlyEnforceIf([otherDigit])
 						self.model.Add(self.cellValues[self.boardWidth-1-i][self.boardWidth-1-j] != pairs[k][0]).OnlyEnforceIf([otherDigit])
 						self.model.Add(self.cellValues[self.boardWidth-1-i][self.boardWidth-1-j] != pairs[k][1]).OnlyEnforceIf([otherDigit])
+						
+	def setNoThreeInARowParity(self):
+		if self.isParity is False:
+			self.__setParity()
+		for i in range(self.boardWidth-2):
+			for j in range(self.boardWidth):
+				self.model.Add(sum(self.cellParity[i+k][j] for k in range(3)) > 0)
+				self.model.Add(sum(self.cellParity[i+k][j] for k in range(3)) < 3)
+				self.model.Add(sum(self.cellParity[j][i+k] for k in range(3)) > 0)
+				self.model.Add(sum(self.cellParity[j][i+k] for k in range(3)) < 3)
 					
 	def setIsotopic(self):
 		# Only for 9x9 puzzle. If two boxes have the same center cell, then the other cells in the box must be in the same order around the center cell, with rotations considered the same.
@@ -677,6 +687,38 @@ class sudoku:
 		
 	def setPencilmarksArray(self,list):
 		for x in list: self.setPencilmarks(x)
+
+	def setSearchNine(self,row1,col1,uldr,digit=9):
+		# A search nine clue indicates the distance and direction of a 9 from the clued cell. The distance is the cell value, the arrow clue points
+		row = row1 - 1
+		col = col1 - 1		
+		if uldr == self.Up:
+			maxD = row
+			minD = self.boardWidth-1-row
+			hStep = 0
+			vStep = -1
+		elif uldr == self.Down:
+			maxD = self.boardWidth-1-row
+			minD = row
+			hStep = 0
+			vStep = 1
+		elif uldr == self.Left:
+			maxD = col
+			minD = self.boardWidth-1-col
+			hStep = -1
+			vStep = 0
+		else:
+			maxD = self.boardWidth-1-col
+			minD = col
+			hStep = 1
+			vStep = 0
+		allowableDigits = [x for x in self.digits if 0 <= x <= maxD or 0 <= -1*x <= minD]
+		varBitmap = self.__varBitmap('SearchNineRow{:d}Col{:d}'.format(row,col),len(allowableDigits))
+		varTrack = 0
+		for x in allowableDigits:
+			self.model.Add(self.cellValues[row][col] == x).OnlyEnforceIf(varBitmap[varTrack])
+			self.model.Add(self.cellValues[row+x*vStep][col+x*hStep] == digit).OnlyEnforceIf(varBitmap[varTrack])
+			varTrack = varTrack + 1
 		
 ####Multi-cell constraints
 	def setFortress(self,inlist):
@@ -1101,7 +1143,44 @@ class sudoku:
 		
 	def setGeneticArray(self,cells):
 		for x in cells: self.setGenetic(x)
-
+		
+	def setParitySnake(self,row1,col1,row2,col2,parity=None):
+		if self.isParity is False:
+			self.__setParity()
+		r1 = row1 - 1
+		c1 = col1 - 1
+		r2 = row2 - 1
+		c2 = col2 - 1
+		if parity is None:
+			parity = self.cellParity[r1][c1]
+			
+		self.model.Add(self.cellParity[r1][c1] == parity)
+		self.model.Add(self.cellParity[r2][c2] == parity)
+		
+		pathBool = []
+		pathInt = []
+		for i in range(self.boardWidth):
+			tB = []
+			tI = []
+			for j in range(self.boardWidth):
+				cB = self.model.NewBoolVar('snake{:d}{:d}'.format(i,j))
+				cI = self.model.NewIntVar(0,1,'snake{:d}{:d}'.format(i,j))
+				self.model.Add(cI == 1).OnlyEnforceIf(cB)
+				self.model.Add(cI == 0).OnlyEnforceIf(cB.Not())
+				tB.append(cB)
+				tI.append(cI)
+			pathBool.insert(i,tB)
+			pathInt.insert(i,tI)
+			
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				if (i,j) == (r1,c1) or (i,j) == (r2,c2):
+					self.model.Add(sum(pathInt[x[0]][x[1]] for x in self.getOrthogonalNeighbors(i,j)) == 1)
+					self.model.AddBoolAnd(pathBool[i][j])
+				else:
+					self.model.Add(sum(pathInt[x[0]][x[1]] for x in self.getOrthogonalNeighbors(i,j)) == 2).OnlyEnforceIf(pathBool[i][j])
+					self.model.Add(self.cellParity[i][j] == parity).OnlyEnforceIf(pathBool[i][j])
+			
 ####Externally-clued constraints
 	def setLittleKiller(self,row1,col1,row2,col2,value):
 		# row1,col1 is the position of the first cell in the sum
@@ -1396,9 +1475,8 @@ class sudoku:
 					((ce == self.Edge) and (i % (self.boardSizeRoot-1) == 0 and j % (self.boardSizeRoot-1) == 0)):	# Middle, edge, and corner square
 						for k in valueList: self.model.Add(self.cellValues[ulRow+i][ulCol+j] != k)
 						
-	def setRossini(self,row1,col1,rc,udlr):
+	def setRossini(self,row1,col1,udlr):
 		# row,col is the cell next to the clue
-		# rc is whether things are row/column
 		# udlr determines whether the arrow points up/down or left/right
 		# value is optional. By default the increase condition holds in the first region, but if value is set it will hold
 		# only for a fixed number of cells.
@@ -1406,6 +1484,7 @@ class sudoku:
 		# Convert from 1-base to 0-base
 		row = row1 - 1
 		col = col1 - 1
+		rc = self.Row if udlr >= self.Left else self.Col
 		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
 		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
 
@@ -1429,7 +1508,7 @@ class sudoku:
 		if (rc == self.Row and col != 0) or (rc == self.Col and row != 0):
 			clueCells.reverse()
 			
-		if udlr == self.Top:		# Same value as self.Left
+		if udlr == self.Top or udlr == self.Left:		# Same value as self.Left
 			for i in range(len(clueCells)-1):
 				self.model.Add(clueCells[i] > clueCells[i+1])
 		else:
@@ -1572,6 +1651,27 @@ class sudoku:
 					# If there are two values, the %2 trick in the variable ensures they alternate, so that values are put on different sides
 					self.model.Add(self.cellValues[row+(i+1)*vStep][col+(i+1)*hStep] == values[j]).OnlyEnforceIf(varBitmap[i] + [lrA[j%2]])
 					self.model.Add(self.cellValues[row+(i-1)*vStep][col+(i-1)*hStep] == values[j]).OnlyEnforceIf(varBitmap[i] + [lrA[(j+1)%2]])
+
+	def setMaximumRun(self,row1,col1,rc,value,length=3):
+		# row,col are the coordinates of the cell containing the index of the target cell
+		# rc is whether things are row/column
+		# value is the largest sum of any contiguous set of triplets in the clued row/column
+		# length is the number of cells to add to create the sum
+		
+		row = row1 - 1
+		col = col1 - 1
+		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
+		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
+		
+		numSums = self.boardWidth - length + 1
+		runVars = [self.model.NewBoolVar('MaximumRunVar') for i in range(numSums)]
+		for i in range(numSums):
+			self.model.Add(sum(self.cellValues[row+(i+j)*vStep][col+(i+j)*hStep] for j in range(length)) == value).OnlyEnforceIf(runVars[i])
+			self.model.Add(sum(self.cellValues[row+(i+j)*vStep][col+(i+j)*hStep] for j in range(length)) < value).OnlyEnforceIf(runVars[i].Not())
+		self.model.AddBoolOr(runVars)
+		
+	def setMaximumTriplet(self,row1,col1,rc,value):
+		self.setMaximumRun(row1,col1,rc,value,length=3)
 		
 ####2x2 constraints
 	def setQuadruple(self,row,col=-1,values=-1):
@@ -1913,15 +2013,27 @@ class sudoku:
 			circle = 10*circle + self.cellValues[inlist[i][0]][inlist[i][1]]
 		self.model.Add(circle == sum(self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(n,len(inlist))))
 		
-	def setThermo(self,inlist):
+	def setThermo(self,inlist,slow=False):
 		inlist = self.__procCellList(inlist)
 		for j in range(len(inlist)-1):
-			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] < self.cellValues[inlist[j+1][0]][inlist[j+1][1]])
+			if slow is True:
+				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] <= self.cellValues[inlist[j+1][0]][inlist[j+1][1]])
+			else:
+				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] < self.cellValues[inlist[j+1][0]][inlist[j+1][1]])
 			
 	def setSlowThermo(self,inlist):
+		self.setThermo(inlist,slow=True)
+	
+	def setOddEvenThermo(self,inlist,slow=False):
+		if self.isParity is False:
+			self.__setParity()
+		self.setThermo(inlist,slow)
 		inlist = self.__procCellList(inlist)
 		for j in range(len(inlist)-1):
-			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] <= self.cellValues[inlist[j+1][0]][inlist[j+1][1]])
+			self.model.Add(self.cellParity[inlist[j][0]][inlist[j][1]] == self.cellParity[inlist[j+1][0]][inlist[j+1][1]])
+			
+	def setSlowOddEvenThermo(self,inlist):
+		self.setOddEvenThermo(inlist,slow=True)
 			
 	def setCountTheOddsLine(self,inlist):
 		if self.isParity is False:
@@ -2355,6 +2467,9 @@ class sudoku:
 		# Utility function to process a list from one of several input formats into the tuple format
 		# required by our functions
 		return list(map(lambda x: self.__procCell(x),inlist))
+		
+	def getOrthogonalNeighbors(self,i,j):
+		return [(i+k,j+m) for k in [-1,0,1] for m in [-1,0,1] if i+k >= 0 and i+k < self.boardWidth and j+m >= 0 and j+m < self.boardWidth and abs(k) != abs(m)]
 		
 class cellTransformSudoku(sudoku):
 	"""A class used to implement doubler puzzles. A doubler puzzle has a doubler in each row, column and region. Moreover, each digit is doubled exactly one time. The digit entered is used to determine normal Sudoku contraints, i.e., one of each digit per row, column and region. But for each other constraint, its value needs to be doubled. There are optional parameters to modify the operation from doubling to an arbitrary ratio and/or shift."""	
