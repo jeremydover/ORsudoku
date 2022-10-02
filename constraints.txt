@@ -4,23 +4,30 @@ Supported Constraint List
 Alternate Digits
 Anti-King
 Anti-Knight
+Anti-Queen
 Arrows
 Average Lines
 Battenburg
 Battlefield
+Before Nine - see Sandwich Sums
+Bent Diagonals - see XSudoku
 Between Lines
 Block Cages
+Capsules
 Cell Transform Sudoku
 Chinese Whispers Lines - see Whispers Lines
 Clone Regions
 Consecutive Quads
 Corner/Edge Clues
 Count the Odds Lines
+Descriptive Pairs
 Difference Pairs - see Kropki and Kropki Pairs
 Digit Count Cages
 Disjoint Groups
+Dominant Clone Regions - see Clone Regions
 Double Arrows - see Arrows
 Double or Nothing Sudoku - see Cell Transform Sudoku
+DoubleDoku
 Doubler Sudoku - see Cell Transform Sudoku
 Doubling Lines
 Dutch Whispers Lines - see Whispers Lines
@@ -29,6 +36,7 @@ Entropki Dots (same/different entropy classes)
 Entropy (see Global Entropy)
 Entropy Battenburg (on a 2x2, no pair of same entropic cells are adjacent)
 Entropy Quads (partial Entropy, asserts Entropy on an individual 2x2)
+Even Max Quads - see Quad Max Values
 Even-Odd
 Extra Regions - see irregular Sudoku
 Fortress
@@ -56,6 +64,8 @@ MaxAscending
 Maximum Runs (Maximum Triplets)
 Median Cages
 Min-Max
+Missing Arrow - see Arrows
+Missing Bulb Thermos - see Thermometers
 Modular Lines
 More-Odd-Than-Even/More-Even-Than-Odd Cages
 Nabner Lines
@@ -66,6 +76,8 @@ No-Three-In-A-Row (Parity)
 Non-Consecutive
 Numbered Room
 Odd-Even Thermos - see Thermometers
+Odd Max Quad - see Odd Max Values
+Openfaced Sandwich Sums - see Sandwich Sums
 Outside Clues
 Palindrome Lines
 Parindrome Lines - see Palindrome Lines
@@ -78,6 +90,7 @@ Pointing Arrows - see Arrows
 Position Sums
 Quadruple
 Quad Max Arrows
+Quad Max Parity Values - see Odd Max Values
 Quad Max Values
 Quad Sums (one digit on a quad is the sum of the three others)
 Ratio Pairs - see Kropki and Kropki pairs
@@ -184,6 +197,18 @@ setAntiKing(): applies the anti-king constraint to the whole puzzle
 Anti-Knight
 -----------
 setAntiKnight(): applies the anti-knight constraint to the whole puzzle
+
+Anti-Queen
+----------
+A strictly anti-queen sudoku does not exist, but there are several more limited constraints which do not allow certain repeats on diagonals
+
+setAntiQueenDigit(values): asserts that no instances of a digit in the list values can repeat on any diagonal
+	values: a single digit, or a list of digits
+	
+setAntiQueenCell(cell[cell2]): asserts that digit in this cell does not repeat on diagonals, or does not repeat on some diagonal
+  cell: typical cell specification
+  cell2: optional cell specification: if omitted, digit in first cell does not repeat on any diagonal. If present, cell does not repeat on diagonal in direction of r2,c2...most common usage is to have r2,c2 diagonally adjacent to original cell
+  Can use shorthand, e.g. 5566 to indicate no repeats from 55 down the main diagonal
   
 Arrows
 ------
@@ -199,6 +224,9 @@ setPointingArrow(list): creates a pointing arrow, which is both a regular arrow,
 setMultiDigitSumArrow(list,n): creates an arrow where the sum is multi-digit, interpreted base 10
   list: a list of cells along the arrow where the first n elements are in the circle, listed from most-significant to least significant
   n: the number of digits in the circle
+  
+setMissingArrow(list): an arrow where either end cell of the arrow may be the sum of the rest of the elements on the arrow
+  list: a list of cells along arrow, where either the first or last element of list is the sum of the rest
   
 Average Lines
 -------------
@@ -239,6 +267,11 @@ setBlockCage(list,values): creates a block cage, that is an list of cells and a 
   list: list of cell specifications
   values: a list of values...if unambiguous the punctuation can be omitted, so that [1,2,3,9] and 1239 can both be entered as a value list
 
+Capsules
+--------
+setCapsule(inlist): creates a capsule, i.e., a region with the same number of even and odd digits. See also More-Odd-Than-Even cages
+  list: list of cell specifications
+
 Cell Transform Sudoku
 ---------------------
 Inspired by the doubler rules invented by zetamath. Grid is as normal, but one cell in each row, column and region is transformed when used in other constraints. To model cell transform contraints requires use of a different class:
@@ -268,6 +301,10 @@ Clone Regions
 -------------
 setCloneRegion(list): creates a set of regions that are clones of each other, i.e., the same digit appears in the ith position for each i
   list: a list OF LISTS of cell specifications
+  
+setDominantCloneRegion(list,strict): creates a set of regions such that in every position, the first region has a digit larger than the corresonding digit in all other regions
+  list: a list OF LISTS of cell specifications
+  strict: OPTIONAL, defaults to True. If strict, dominant clone contains strictly greater than digits. If strict is False, this is relaxed to greater than or equal to.
   
 Consecutive Quads
 -----------------
@@ -307,6 +344,13 @@ Count the Odds Lines
 --------------------
 setCountTheOddsLine(list): set a count the odds line, where the digit in the first cell of the line counts the number of odd digits on the rest of the line; pioneered by clover!
   list: list of cell specifications
+  
+Descriptive Pairs
+-----------------
+setDescriptivePair(row,col,rc,values): clue on a row or column with two digits XY; either X is in Yth position, or Y is in Xth
+  row,col: The coordinates of the cell containing the indexing clue, i.e. the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  values: A list or tuple of digits defining the pair. A 2-digit integer (e.g. 45) can also be given. Negative digits are allowed, and index from the oppostie end of the row/column
 
 Digit Count Cages
 -----------------
@@ -317,6 +361,24 @@ setDigitCountCage(inlist,value): asserts that value is the number of distinct di
 Disjoint Groups
 ---------------
 setDisjointGroups(): sets the global disjoint groups constraint
+
+DoubleDoku
+----------
+To model a DoubleDoku puzzle, you must use the class doubleDoku, e.g.
+
+p = ORsudoku.doubleDoku(boardSizeRoot)
+
+The sub-Sudoku puzzles are labelled:
+1
+ 2
+ 
+The puzzles overlap with one box of fringe, so a 9x9 shares 4 boxes, and 16x16 shares 9 boxes, etc.
+
+In this class, you can use the following method:
+setDoubleDokuConstraint(puzzle,constraint,argsd): sets a DoubleDoku constraint
+	puzzle: the puzzle number (1-2) to which the constraint should apply
+	constraint: a string containing the name of the constraint (e.g. 'GivenArray')..do not include the 'set' used in the method name
+	args: the arguments that you wish to pass to the constraint, just as if you were passing them with the normal 'set' method
 
 Doubling Lines
 --------------
@@ -666,7 +728,8 @@ setNoThreeInARowParity(): assert that in any row/column, there are no three cons
 
 Non-Consecutive
 ---------------
-setNonConsecutive(): sets the global non-consecutive cells constraint
+setNonConsecutive(n): sets the global non-consecutive cells constraint
+	n: Optional. By default, n=2 and there are no pairs of adjacent cells with consecutive digits. If n>2, then no set of n contiguous cells in a row or column can consists of a set of n consecutive digits.
 
 Numbered Rooms
 --------------
@@ -777,6 +840,12 @@ setQuadMaxValue(cellValue): constraint on a 2x2 indicating the maximum value in 
   
 setQuadMaxValueArray(list): set multiple Quad Max value constraints
   list: list of extended cell specifications per setQuadMaxValue method
+  
+setQuadMaxParityValue(row,col,values,unique): 2x2 constraint indicating the largest value *of its parity* appearing in the quad
+  row,col: the coordinates of the quad being clued
+  values: a list of up to two values (one of each parity) which are specified as the maximum
+  unique: Optional, if True, forces the maximum parity value to be unique. Default is True.
+  Note: If using the default unique=True, the argument can be specified in shorthand without punctuation, e.g., 1234, meaning quad 1,2 has max odd 3 and max even 4.
 
 Quad Sums
 ---------
@@ -803,7 +872,10 @@ setRenbanLine(list): set a Renban line constraint
 setRunOnRenbanLine(list,n): set a run-on Renban line, i.e. a line where each contiguous subsegment of length n is a Renban line
   list: list of cell specifications
   n: length of subsegment that is a Renban. If not present, defaults to 5
-
+  
+setNotRenbanLine(list): asserts that a set of digits does NOT form a Renban line
+  list: list of cell specifications
+  
 Rossini Clues
 -------------
 Rossini clues appear as arrows on the outside of of the grid, and indicate that the first few cells next to the clue increase in the given direction. In normal Sudoku there is no ambiguity, since the number of cells used is 3, but is that 3 because of the region, or because 3 is a nice number? We provide the option to define the length of the run applied either by using regions, or specifying a value.
@@ -842,6 +914,14 @@ setSandwichSum(row,col,rc,value,digits): sets a sandwich sum constraint
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: The sum of the values between the 1 and 9 in the clued row/column
   digits (optional): A list of two digits to form the "bread" of the sandwich. Defaults to the minimum and maximum digit.
+  
+setOpenfacedSandwichSum(row,col,rc,value,digit): set an open-face sandwich sum clue, i.e. the sum of all digits in the row/col up to a bread digit
+  row,col: The coordinates of the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  value: The sum of the values before the sandwich digit in the clued row/column
+  digit (optional): The sandwich digit. Optional, defaults to 9.
+  
+setBeforeNine(row,col,rc,value): an alias for Openfaced sandwich sums, with sandwich digit 9
   
 Schrödinger Cell Sudoku
 -----------------------
@@ -882,6 +962,22 @@ p = ORsudoku.schroedingerCellSudoku(boardSizeRoot)
   XV
   XVXV
   X-Sums - sSum=True can be applied to toggle whether S-cell sum is applied to indexing clue
+
+  Schrödinger Specific Concerns
+  ----------------------------
+  When specifying given digits with setGiven and setGivenArray, the syntax to indicate the definition is extended. If specified with 3 digits only, e.g. 145, setGiven will set the indicated cell (14) equal to the given value (5), and asserts it is NOT a Schrödinger cell. If specified with 4 digits, the behaviors depends on whether the two given digits are equal or not. If they are not equal, then setGiven will set both values in the cell, and designate it a Schrödinger cell. If these two given digits are equal, setGiven does assert that value is in the cell, but leaves it ambiguous whether or not that cell is a Schrödinger cell.
+  
+  There are some additional methods with Schrödinger cells:
+  
+  setIsSCell(cell): asserts that the indicated cell is a Schrödinger cell
+    cell: rowcol or (row,col) cell specification
+	
+  setIsSCellArray(list): set a list of cell specifications to be Schrödinger cells
+  
+  setIsNotSCell(cell): asserts the indicated cell is not a Schrödinger cell
+    cell: rowcol or (row,col) cell specification
+	
+  setIsNotSCellArray(list): set a list of cell specifications to not be Schrödinger cells
 
 There is an alternative class for Schrödinger sudoku, called superpositionSudoku. In this instance, the constraints are defined to be more akin to classic superposition, where either value can be used, and thus the values are never added or averaged. Each independently needs to be able to satisfy the constraint, perhaps with help from other S-cells. So for example, an arrow constraint with bulb 5/7 and arrow cells 2 and 3/5 would be legal, since 5,2,3 is a valid solution, as is 7,2,5. For another example, a Renban line could be 48,5,6,7, since either the 4 or 8 could pair with the other three digits, but 45,6,7,8 is not legal, since 4,6,7,8 is not a set of consecutive digits. On the gripping hand, 38,47,5,6 IS a legal renban assignment, since 3456 is legal, and 8756 is also legal. So not every combination of S-cell values needs to be legal, just at least one legal assignment for each value in each S-cell.
 
@@ -933,19 +1029,26 @@ setUpAndDownLine(inlist): sets an up and down line constraint; cells must latern
   
 Thermometers
 ------------
-setThermo(list,slow): asserts that the values in cells increase from the beginning of the line to the end
+setThermo(list,slow,missing): asserts that the values in cells increase from the beginning of the line to the end
   list: list of cell specifications, with bulb end of thermo being the first element
-  slow: set thermo to slow (i.e., nondecreasing vs. increasing), defaults to False, can also use setSlowThermo
+  slow: set thermo to slow (i.e., nondecreasing vs. increasing); Optional: defaults to False, can also use setSlowThermo
+  missing: set thermo to have missing bulb, so increase may start from either end; Optional: defaults to False, can also use setMissingThermo.
   
-setSlowThermo(list): asserts that the values in cells do not decrease from the beginning of the line to the end
+setSlowThermo(list,missing): asserts that the values in cells do not decrease from the beginning of the line to the end
   list: list of cell specifications, with bulb end of thermo being the first element
+  missing: Optional, defaults to false. See setThermo
   
-setOddEvenThermo(list,slow): asserts that the values in cells increase from the beginning of the line to the end, and all have the same parity
+setOddEvenThermo(list,slow,missing): asserts that the values in cells increase from the beginning of the line to the end, and all have the same parity
   list: list of cell specifications, with bulb end of thermo being the first element
   slow: set thermo to slow (i.e., nondecreasing vs. increasing), defaults to False, can also use setSlowOddEvenThermo
+  missing: set thermo to have missing bulb, so increase may start from either end; Optional: defaults to False.
   
 setSlowOddEvenThermo(list): asserts that the values in cells do not decrease from the beginning of the line to the end, and all have the same parity
   list: list of cell specifications, with bulb end of thermo being the first element
+  
+setMissingThermo(list,slow): asserts that the values increase from one end of the thermo to the other, but which end is which is not determined
+  list: list of cell specifications, with bulb end of thermo being the first element
+  slow: set thermo to slow (i.e., nondecreasing vs. increasing); Optional: defaults to False
   
 Weak Palindrome Lines
 ---------------------
@@ -988,6 +1091,8 @@ XSudoku
 setXSudokuMain(): assert no repeats on the main (top left to bottom right) diagonal
 
 setXSudokuOff(): assert no repeats on the off (top right to bottom left) diagonal
+
+setBentDiagonals(): assert no repeats on the bent diagonals between adjacent corners through the center box
 
 X-Sums
 ------

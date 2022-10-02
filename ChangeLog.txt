@@ -1,3 +1,18 @@
+10/2/22
+	Most of the constraint additions here were inspired by Richard Stolk's Sudoku Variants Series on LMD. Thanks!
+	Added support for not-RenbanLines, which supports an upgrade to the global non-consecutive functionality, allowing non-consecutive to be applied to longer strings of contiguous digits.
+	Added support for anti-queen digits and cells, including partial anti-queen cells with no repeats on a single diagonal
+	Updated Schrödinger cell functions and documentation.
+	Added support for dominant clone regions, sets of regions where the digits in the first clone are greater than the corresponding digits in other clones.
+	Added support for DoubleDoku
+	Added support for capsules
+	Added support for Missing Bulb Thermos, implemented for normal, slow, and OddEven thermos
+	Added support for Descriptive Pairs
+	Added support for Open-faced Sandwich Sums, aka Before Nine
+	Added support for Missing Arrows
+	Added support for Bent Diagonals
+	Added support for Quad Maximum Parity Values, like Quad Max but only operating on digits of one parity. Two values, one of each parity, may be given.
+
 9/30/22
 	Added support for parity snakes
 	Added support for No-Three-In-A-Row global constraint
@@ -23,6 +38,7 @@
 9/23/22
 	Implemented support for Schrödinger cell puzzles. Not all constraints are supported, but many of the constraints used in puzzles to date are
 	Added test case
+	
 	
 9/20/22bis
 	Implemented code to list candidates for a given cell, or for the entire grid, for 9x9 grids. Produces a list of excluded values which can be pasted into code as hints to speed the candidate search.

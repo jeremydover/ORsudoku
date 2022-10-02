@@ -299,6 +299,19 @@ class sudoku:
 		
 	def setXSudokuOff(self):
 		self.model.AddAllDifferent([self.cellValues[i][self.boardWidth-1-i] for i in range(self.boardWidth)])
+
+	def setBentDiagonals(self):
+		ul = [self.cellValues[i][i] for i in range(self.boardWidth//2)]
+		ur = [self.cellValues[i][self.boardWidth-1-i] for i in range(self.boardWidth//2)]
+		bl = [self.cellValues[self.boardWidth-1-i][i] for i in range(self.boardWidth//2)]
+		br = [self.cellValues[self.boardWidth-1-i][self.boardWidth-1-i] for i in range(self.boardWidth//2)]
+		c = []
+		if self.boardWidth % 2 == 1:
+			c.append(self.cellValues[self.boardWidth//2][self.boardWidth//2])
+		self.model.AddAllDifferent(ul + bl + c)
+		self.model.AddAllDifferent(ul + ur + c)
+		self.model.AddAllDifferent(br + bl + c)
+		self.model.AddAllDifferent(ur + br + c)
 		
 	def setAntiKing(self):
 		for i in range(self.boardWidth-1):
@@ -324,13 +337,19 @@ class sudoku:
 			for j in range(self.boardSizeRoot):
 				self.model.AddAllDifferent([self.cellValues[self.boardSizeRoot*k+i][self.boardSizeRoot*l+j] for k in range(self.boardSizeRoot) for l in range(self.boardSizeRoot)])
 				
-	def setNonConsecutive(self):
-		for i in range(self.boardWidth):
-			for j in range(self.boardWidth-1):
-				self.model.Add(self.cellValues[i][j] - self.cellValues[i][j+1] != 1)
-				self.model.Add(self.cellValues[i][j+1] - self.cellValues[i][j] != 1)
-				self.model.Add(self.cellValues[j][i] - self.cellValues[j+1][i] != 1)
-				self.model.Add(self.cellValues[j+1][i] - self.cellValues[j][i] != 1)
+	def setNonConsecutive(self,n=2):
+		if n == 2:
+			for i in range(self.boardWidth):
+				for j in range(self.boardWidth-1):
+					self.model.Add(self.cellValues[i][j] - self.cellValues[i][j+1] != 1)
+					self.model.Add(self.cellValues[i][j+1] - self.cellValues[i][j] != 1)
+					self.model.Add(self.cellValues[j][i] - self.cellValues[j+1][i] != 1)
+					self.model.Add(self.cellValues[j+1][i] - self.cellValues[j][i] != 1)
+		else:
+			for i in range(self.boardWidth):
+				for j in range(self.boardWidth-n):
+					self.setNotRenbanLine([(i+1,j+k+1) for k in range(n)])
+					self.setNotRenbanLine([(j+k+1,i+1) for k in range(n)])
 				
 	def setWindoku(self):
 		if (self.boardWidth != 9):
@@ -476,8 +495,23 @@ class sudoku:
 					for m in range(k+1,len(kCells)):
 						self.model.Add(kCells[k] != kCells[m]).OnlyEnforceIf(c)
 
-				self.model.Add(self.cellValues[i][j] != value).OnlyEnforceIf(c.Not())		
+				self.model.Add(self.cellValues[i][j] != value).OnlyEnforceIf(c.Not())
 
+	def setAntiQueenDigit(self,values):
+		# An anti-queen digit cannot repeat on diagonals
+		if type(values) is int:
+			values = [values]
+		
+		for value in values:
+			for i in range(self.boardWidth):
+				for j in range(self.boardWidth):
+					c = self.model.NewBoolVar('AntiQueenDigitD{:d}R{:d}C{:d}'.format(value,i,j))
+					self.model.Add(self.cellValues[i][j] == value).OnlyEnforceIf(c)
+					dCells = {(i+m*k,j+n*k) for k in range(1,self.boardWidth) for m in [-1,1] for n in [-1,1]} & {(k,m) for k in range(self.boardWidth) for m in range(self.boardWidth)}
+					for x in dCells:
+						self.model.Add(self.cellValues[x[0]][x[1]] != value).OnlyEnforceIf(c)
+					self.model.Add(self.cellValues[i][j] != value).OnlyEnforceIf(c.Not())
+					
 	def setGSP(self,pairs=[]):
 		# Adds a global constraint asserting a symmetry where cells are transformed by pairs under 180 degree rotation
 		
@@ -609,11 +643,17 @@ class sudoku:
 			(row,col) = self.__procCell(row)
 		sCells = [self.cellValues[row+k][col+m] for k in [-1,0,1] for m in [-1,0,1] if abs(k) != abs(m) and row+k >= 0 and row+k < self.boardWidth and col+m >= 0 and col+m < self.boardWidth]
 		self.model.Add(sum(sCells) == self.cellValues[row][col])
-	setNeighbourSum	= setNeighborSum
 	
+	def	setNeighbourSum(self,row,col=-1):
+		if col == -1:
+			(row,col) = self.__procCell(row)
+		self.setNeighborSum(row,col)
+		
 	def setNeighborSumArray(self,cells):
 		for x in cells: self.setNeighborSum(x)
-	setNeighbourSumArray = setNeighborSumArray
+		
+	def	setNeighbourSumArray(self,cells):
+		self.setNeighborSum(cells)
 	
 	def setFriendly(self,row,col=-1):
 		if col == -1:
@@ -939,6 +979,16 @@ class sudoku:
 			for k in range(len(inlist[0])):
 				self.model.Add(self.cellValues[inlist[0][k][0]][inlist[0][k][1]] == self.cellValues[inlist[j][k][0]][inlist[j][k][1]])
 				
+	def setDominantCloneRegion(self,inlist,strict=True):
+		# Cloned regions where digits in one clone are greater than (by position) all other clones
+		inlist = list(map(self.__procCellList,inlist))
+		for j in range(1,len(inlist)):
+			for k in range(len(inlist[0])):
+				if strict is True:
+					self.model.Add(self.cellValues[inlist[0][k][0]][inlist[0][k][1]] > self.cellValues[inlist[j][k][0]][inlist[j][k][1]])
+				else:
+					self.model.Add(self.cellValues[inlist[0][k][0]][inlist[0][k][1]] >= self.cellValues[inlist[j][k][0]][inlist[j][k][1]])
+				
 	def setCage(self,inlist,value = None):
 		inlist = self.__procCellList(inlist)
 		self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in inlist])
@@ -991,6 +1041,17 @@ class sudoku:
 		if self.isParity is False:
 			self.__setParity()
 		self.model.Add(sum([self.cellParity[inlist[i][0]][inlist[i][1]] for i in range(len(inlist))]) <= (len(inlist)-1)//2)
+		
+	def setCapsule(self,inlist):
+		# A capsule has the same number of even and odd digits
+		inlist = self.__procCellList(inlist)
+		if self.isParity is False:
+			self.__setParity()
+		if len(inlist) % 2 == 1:
+			print("Odd length capsule cannot be satisfied")
+			sys.exit()
+		else:
+			self.model.Add(sum([self.cellParity[inlist[i][0]][inlist[i][1]] for i in range(len(inlist))]) == len(inlist)//2)
 
 	def setDigitCountCage(self,inlist,value):
 		# A digit count cage specifies the number of distinct digits that appear in the cage...h/t clover!
@@ -1180,6 +1241,30 @@ class sudoku:
 				else:
 					self.model.Add(sum(pathInt[x[0]][x[1]] for x in self.getOrthogonalNeighbors(i,j)) == 2).OnlyEnforceIf(pathBool[i][j])
 					self.model.Add(self.cellParity[i][j] == parity).OnlyEnforceIf(pathBool[i][j])
+					
+	def setAntiQueenCell(self,row,col=-1,r2=-1,c2=-1):
+		# The digit in an anti-queen cell cannot repeat on any diagonal. If a second cell is given, only repeats in the direction of the given cell are forbidden
+		if col == -1:
+			T = self.__procCell(row)
+			row = T[0]
+			col = T[1]
+			values = [T[i] for i in range(2,len(T))]
+			if len(values) == 2:
+				r2 = values[0] - 1
+				c2 = values[1] - 1
+			else:
+				r2 = -1
+		
+		if r2 == -1:
+			# No repeats on any diagonals
+			dCells = {(row+m*k,col+n*k) for k in range(1,self.boardWidth) for m in [-1,1] for n in [-1,1]} & {(k,m) for k in range(self.boardWidth) for m in range(self.boardWidth)}
+		else:
+			m = r2 - row
+			n = c2 - col
+			dCells = {(row+m*k,col+n*k) for k in range(1,self.boardWidth)} & {(k,j) for k in range(self.boardWidth) for j in range(self.boardWidth)}
+
+		for x in dCells:
+			self.model.Add(self.cellValues[x[0]][x[1]] != self.cellValues[row][col])
 			
 ####Externally-clued constraints
 	def setLittleKiller(self,row1,col1,row2,col2,value):
@@ -1373,6 +1458,28 @@ class sudoku:
 				self.model.Add(sum(self.cellValues[row+m*vStep][col+m*hStep] for m in range(j+1,k)) == value).OnlyEnforceIf(varBitmap[varTrack] + [adj.Not()])
 				varTrack = varTrack + 1
 					
+	def setOpenfacedSandwichSum(self,row1,col1,rc,value,digit=9):
+		# Also known as before 9, like a sandwich sum, but clue is the sum of all digits prior to the stopper digit, usually 9.
+		
+		# Convert from 1-base to 0-base
+		row = row1 - 1
+		col = col1 - 1
+		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
+		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
+		
+		varBitmap = self.__varBitmap('OFSandwichPosRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth)
+		
+		for i in range(self.boardWidth):
+			self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] == digit).OnlyEnforceIf(varBitmap[i])
+			if i == 0:
+				if value != 0:
+					self.model.AddBoolAnd([varBitmap[i][0].Not()]).OnlyEnforceIf(varBitmap[i])	# Bury it, cannot be this case.
+			else:
+				self.model.Add(sum(self.cellValues[row+j*vStep][col+j*hStep] for j in range(i)) == value).OnlyEnforceIf(varBitmap[i])
+	
+	def setBeforeNine(self,row1,col1,rc,value):
+		self.setOpenfacedSandwichSum(row1,col1,rc,value,digit=9)
+
 	def setBattlefield(self,row1,col1,rc,value):
 		# row,col are the coordinates of the cell next to the clue
 		# rc is whether things are row/column
@@ -1673,6 +1780,29 @@ class sudoku:
 	def setMaximumTriplet(self,row1,col1,rc,value):
 		self.setMaximumRun(row1,col1,rc,value,length=3)
 		
+	def setDescriptivePair(self,row1,col1,rc,values):
+		# Value is a list of two digits XY: either X appears in the Yth place, or Y ppears in the Xth place in the row/column
+		if type(values) is int:
+			values = tuple(map(int,list(str(values))))
+		row = row1 - 1
+		col = col1 - 1
+		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
+		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
+		
+		c = self.model.NewBoolVar('DescriptivePair')
+		
+		myRow = row if values[0] > 0 or rc == sudoku.Row else self.boardWidth-1-row
+		myCol = col if values[0] > 0 or rc == sudoku.Col else self.boardWidth-1-col
+		myHStep = hStep if values[0] > 0 else -1*hStep
+		myVStep = vStep if values[0] > 0 else -1*vStep
+		self.model.Add(self.cellValues[myRow+(abs(values[0])-1)*myVStep][myCol+(abs(values[0])-1)*myHStep] == values[1]).OnlyEnforceIf(c)
+		
+		myRow = row if values[1] > 0 or rc == sudoku.Row else self.boardWidth-1-row
+		myCol = col if values[1] > 0 or rc == sudoku.Col else self.boardWidth-1-col
+		myHStep = hStep if values[1] > 0 else -1*hStep
+		myVStep = vStep if values[1] > 0 else -1*vStep
+		self.model.Add(self.cellValues[myRow+(abs(values[1])-1)*myVStep][myCol+(abs(values[1])-1)*myHStep] == values[0]).OnlyEnforceIf(c.Not())
+		
 ####2x2 constraints
 	def setQuadruple(self,row,col=-1,values=-1):
 		if col == -1:
@@ -1910,6 +2040,40 @@ class sudoku:
 	def setQuadMaxValueArray(self,cells):
 		for x in cells: self.setQuadMaxValue(x)
 		
+	def setQuadMaxParityValue(self,row,col=-1,values=-1,unique=True):
+		# row,col defines the 2x2 to which the clue applies
+		# value is the largest value *of its parity* which occurs in the quad
+		if self.isParity is False:
+			self.__setParity()
+			
+		if col == -1:
+			T = self.__procCell(row)
+			row = T[0]
+			col = T[1]
+			values = [T[i] for i in range(2,len(T))]
+		else:
+			row = row - 1
+			col = col - 1
+		pBits = [self.model.NewBoolVar('QuadMaxParityValue') for i in range(4)]
+		pBitPairs = [[pBits[i],pBits[i].Not()] for i in range(4)]
+		for i in range(4):
+			self.model.Add(self.cellParity[row+(i//2)][col+(i%2)] == 1).OnlyEnforceIf(pBits[i].Not())
+			self.model.Add(self.cellParity[row+(i//2)][col+(i%2)] == 0).OnlyEnforceIf(pBits[i])
+		for x in values:
+			vBits = [self.model.NewBoolVar('QuadMaxParityValue') for i in range(4)]
+			for i in range(4):
+				self.model.Add(self.cellValues[row+(i//2)][col+(i%2)] == x).OnlyEnforceIf(vBits[i])
+				self.model.Add(self.cellValues[row+(i//2)][col+(i%2)] < x).OnlyEnforceIf([vBits[i].Not(),pBitPairs[i][x%2]])
+				self.model.Add(self.cellValues[row+(i//2)][col+(i%2)] != x).OnlyEnforceIf([vBits[i].Not(),pBitPairs[i][x%2].Not()])
+			self.model.AddBoolOr(vBits)	# Ensures the max value appears
+		
+			if unique is True:
+				vInts = [self.model.NewIntVar(0,1,'QuadMaxParityValue') for i in range(4)]
+				for i in range(4):
+					self.model.Add(vInts[i] == 1).OnlyEnforceIf(vBits[i])
+					self.model.Add(vInts[i] == 0).OnlyEnforceIf(vBits[i].Not())
+				self.model.Add(sum(vInts) == 1)
+		
 	def setConsecutiveQuad(self,row,col=-1,value=-1):
 		# Of the SIX pairs of cells, if value is 0 (white), exactly one pair is consecutive. If value is 1 (black), at least two pairs are consecutive. If value is 2 (anti), no pairs are consecutive
 		
@@ -2012,28 +2176,48 @@ class sudoku:
 		for i in range(1,n):
 			circle = 10*circle + self.cellValues[inlist[i][0]][inlist[i][1]]
 		self.model.Add(circle == sum(self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(n,len(inlist))))
-		
-	def setThermo(self,inlist,slow=False):
-		inlist = self.__procCellList(inlist)
-		for j in range(len(inlist)-1):
-			if slow is True:
-				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] <= self.cellValues[inlist[j+1][0]][inlist[j+1][1]])
-			else:
-				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] < self.cellValues[inlist[j+1][0]][inlist[j+1][1]])
-			
-	def setSlowThermo(self,inlist):
-		self.setThermo(inlist,slow=True)
 	
-	def setOddEvenThermo(self,inlist,slow=False):
+	def setMissingArrow(self,inlist):
+		# Arrow where one end or the other is the sum of the other cells along the arrow
+		inlist = self.__procCellList(inlist)
+		c = self.model.NewBoolVar('MissingArrow')
+		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] == sum(self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(1,len(inlist)))).OnlyEnforceIf(c)
+		self.model.Add(self.cellValues[inlist[-1][0]][inlist[-1][1]] == sum(self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(len(inlist)-1))).OnlyEnforceIf(c.Not())
+		
+	def setThermo(self,inlist,slow=False,missing=False):
+		inlist = self.__procCellList(inlist)
+		if missing is False:
+			for j in range(len(inlist)-1):
+				if slow is True:
+					self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] <= self.cellValues[inlist[j+1][0]][inlist[j+1][1]])
+				else:
+					self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] < self.cellValues[inlist[j+1][0]][inlist[j+1][1]])
+		else:
+			c = self.model.NewBoolVar('MissingThermo')
+			for j in range(len(inlist)-1):
+				if slow is True:
+					self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] <= self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(c)
+					self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] >= self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(c.Not())
+				else:
+					self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] < self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(c)
+					self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] > self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(c.Not())
+			
+	def setSlowThermo(self,inlist,missing=False):
+		self.setThermo(inlist,True,missing)
+	
+	def setOddEvenThermo(self,inlist,slow=False,missing=False):
 		if self.isParity is False:
 			self.__setParity()
-		self.setThermo(inlist,slow)
+		self.setThermo(inlist,slow,missing)
 		inlist = self.__procCellList(inlist)
 		for j in range(len(inlist)-1):
 			self.model.Add(self.cellParity[inlist[j][0]][inlist[j][1]] == self.cellParity[inlist[j+1][0]][inlist[j+1][1]])
 			
-	def setSlowOddEvenThermo(self,inlist):
-		self.setOddEvenThermo(inlist,slow=True)
+	def setSlowOddEvenThermo(self,inlist,missing=False):
+		self.setOddEvenThermo(inlist,True,missing)
+		
+	def setMissingThermo(self,inlist,slow=False):
+		self.setThermo(inlist,slow,True)
 			
 	def setCountTheOddsLine(self,inlist):
 		if self.isParity is False:
@@ -2091,6 +2275,26 @@ class sudoku:
 		for x in range(len(inlist)):
 			for y in range(len(inlist)):
 				self.model.Add(self.cellValues[inlist[x][0]][inlist[x][1]]-self.cellValues[inlist[y][0]][inlist[y][1]] < len(inlist))
+				
+	def setNotRenbanLine(self,inlist):
+		inlist = self.__procCellList(inlist)
+		
+		distBools = [self.model.NewBoolVar('NotRenbanDistinct') for i in range(len(inlist)) for j in range(len(inlist)) if i < j]
+		varTrack = 0
+		for i in range(len(inlist)):
+			for j in range(i+1,len(inlist)):
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] == self.cellValues[inlist[j][0]][inlist[j][1]]).OnlyEnforceIf(distBools[varTrack])
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] != self.cellValues[inlist[j][0]][inlist[j][1]]).OnlyEnforceIf(distBools[varTrack].Not())
+				varTrack = varTrack + 1
+		
+		diffBools = [self.model.NewBoolVar('NotRenbanDistinct') for i in range(len(inlist)) for j in range(len(inlist))]
+		varTrack = 0
+		for i in range(len(inlist)):
+			for j in range(len(inlist)):
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] - self.cellValues[inlist[j][0]][inlist[j][1]] >= len(inlist)).OnlyEnforceIf(diffBools[varTrack])
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] - self.cellValues[inlist[j][0]][inlist[j][1]] < len(inlist)).OnlyEnforceIf(diffBools[varTrack].Not())
+				varTrack = varTrack + 1
+		self.model.AddBoolOr(distBools + diffBools)
 				
 	def setRunOnRenbanLine(self,inlist,n=5):
 		# Each contiguous subsegment of length n is a Renban of length n
@@ -3033,6 +3237,87 @@ class japaneseSumSudoku(sudoku):
 			print()
 		print()
 
+class doubleDoku(sudoku):
+	"""A class used to implement DoubleDoku puzzles, where boxes 5/6/8/9 of puzzle 1 are boxes 1/2/4/5 of puzzle 2"""
+
+	def __init__(self,boardSizeRoot,irregular=None,digitSet=None):
+		self.boardSizeRoot = boardSizeRoot
+		self.boardWidth = boardSizeRoot*boardSizeRoot
+
+		if digitSet is None:
+			self.digits = {x for x in range(1,self.boardWidth+1)}
+		else:
+			self.digits = digitSet
+		self.maxDigit = max(self.digits)
+		self.minDigit = min(self.digits)
+		self.digitRange = self.maxDigit - self.minDigit
+
+		self.model = cp_model.CpModel()
+		
+		self.p1 = sudoku(boardSizeRoot,irregular=irregular,digitSet=self.digits,model=self.model)
+		self.p2 = sudoku(boardSizeRoot,irregular=irregular,digitSet=self.digits,model=self.model)
+		
+		overlap = self.boardSizeRoot
+		for i in range((self.boardSizeRoot-1)*self.boardSizeRoot):
+			for j in range((self.boardSizeRoot-1)*self.boardSizeRoot):
+				self.model.Add(self.p1.getCellVar(overlap+i,overlap+j) == self.p2.getCellVar(i,j))
+		
+	def setDoubleDokuConstraint(self,puzz,constraint,args):
+		# Unified interface to apply constraints to sub-puzzles
+		getattr(getattr(self,'p'+str(puzz)),'set'+constraint)(args)
+	
+	def findSolution(self):
+		self.p1.applyNegativeConstraints()
+		self.p2.applyNegativeConstraints()
+
+		self.solver = cp_model.CpSolver()
+		self.solveStatus = self.solver.Solve(self.model)
+				
+		print('Solver status = %s' % self.solver.StatusName(self.solveStatus))
+		if self.solveStatus == cp_model.OPTIMAL:
+			print('Solution found!')
+			self.printCurrentSolution()
+				
+	def countSolutions(self):
+		self.p1.applyNegativeConstraints()
+		self.p2.applyNegativeConstraints()
+		
+		self.solver = cp_model.CpSolver()
+		consolidatedCellValues = []
+		solution_printer = SolutionPrinter([])
+		self.solveStatus = self.solver.SearchForAllSolutions(self.model, solution_printer)
+		
+		print('Solutions found : %i' % solution_printer.SolutionCount())
+		if self.solveStatus == cp_model.OPTIMAL:
+			print('Sample solution')
+			self.printCurrentSolution()
+
+	def printCurrentSolution(self):
+		colorama.init()
+		dW = max([len(str(x)) for x in self.digits])
+		overlap = self.boardSizeRoot
+		# First print board 1 rows, trailing board 2 as appropriate
+		for i in range(self.boardWidth):
+			# p1
+			for j in range(self.boardWidth):
+				if i < overlap or j < overlap:
+					print('{:d}'.format(self.solver.Value(self.p1.getCellVar(i,j))).rjust(dW),end = " ")
+				else:
+					print(Fore.CYAN+'{:d}'.format(self.solver.Value(self.p1.getCellVar(i,j))).rjust(dW)+Fore.RESET,end = " ")
+			
+			# If there is p2 stuff after this
+			if i >= overlap:
+				for j in range((self.boardSizeRoot-1)*self.boardSizeRoot,self.boardWidth):
+					print('{:d}'.format(self.solver.Value(self.p2.getCellVar(i-overlap,j))).rjust(dW),end = " ")
+			print()
+			
+		# Remainder of p2
+		for i in range((self.boardSizeRoot-1)*self.boardSizeRoot,self.boardWidth):
+			print (' '*((1+dW)*overlap), end = "")
+			for j in range(self.boardWidth):
+				print('{:d}'.format(self.solver.Value(self.p2.getCellVar(i,j))).rjust(dW),end = " ")
+			print()
+
 class samuraiSudoku(sudoku):
 	"""A class used to implement Samurai Sudoku puzzles."""
 
@@ -3562,21 +3847,40 @@ class schroedingerCellSudoku(sudoku):
 				self.model.Add(self.sCellValues[i][j] != value).OnlyEnforceIf(c.Not())
 				self.model.AddBoolAnd([cs]).OnlyEnforceIf(c.Not())
 				
-	def setGiven(self,row,col=-1,value=-1):
-		if col == -1:
-			(row,col,value) = self._sudoku__procCell(row)
-		self.model.Add(self.cellValues[row][col] == value)
-		self.model.AddBoolAnd([self.sCell[row][col].Not()])
-		
-	def setSCell(self,row,col=-1):
+	def setGiven(self,spec):
+		T = self._sudoku__procCell(spec)
+		row = T[0]
+		col = T[1]
+		values = [T[i] for i in range(2,len(T))]
+		if len(values) == 1:
+			self.model.Add(self.cellValues[row][col] == values[0])
+			self.model.AddBoolAnd([self.sCell[row][col].Not()])
+		elif values[0] == values[1]:
+			c = self.model.NewBoolVar('SCell')
+			self.model.Add(self.cellValues[row][col] == values[0]).OnlyEnforceIf(c)
+			self.model.Add(self.sCellValues[row][col] == values[0]).OnlyEnforceIf(c.Not())
+		else:
+			l = min(values)
+			h = max(values)
+			self.model.AddBoolAnd([self.sCell[row][col]])
+			self.model.Add(self.cellValues[row][col] == l)
+			self.model.Add(self.sCellValues[row][col] == h)
+	
+	def setIsSCell(self,row,col=-1):
 		if col == -1:
 			(row,col) = self._sudoku__procCell(row)
 		self.model.AddBoolAnd([self.sCell[row][col]])
+	
+	def setIsSCellArray(self,list):
+		for x in list: self.setIsSCell(x)
 		
-	def setNotSCell(self,row,col=-1):
+	def setIsNotSCell(self,row,col=-1):
 		if col == -1:
 			(row,col) = self._sudoku__procCell(row)
 		self.model.AddBoolAnd([self.sCell[row][col].Not()])
+		
+	def setIsNotSCellArray(self,list):
+		for x in list: self.setIsNotSCell(x)
 
 	def setEvenOdd(self,row,col=-1,parity=-1):
 		if col == -1:
@@ -3586,7 +3890,8 @@ class schroedingerCellSudoku(sudoku):
 		self.model.Add(self.cellParity[row][col] == parity)
 		self.model.Add(self.sCellParity[row][col] == parity)
 		
-	setOddEven = setEvenOdd	
+	def setOddEven(self,row,col=-1,parity=-1):
+		self.setEvenOdd(row,col,parity)
 
 	def setMinMaxCell(self,row,col=-1,minmax=-1):
 		if col == -1:
@@ -3737,7 +4042,11 @@ class schroedingerCellSudoku(sudoku):
 			# In this case, since two digits can't be the same sum, we forbid there being an sCell here.
 			# There's no need to change the sum condition, since this Boolean will ulltimately force sCellSums[row][col] == 0
 			self.model.AddBoolAnd([self.sCell[row][col].Not()])
-	setNeighbourSum = setNeighborSum
+	
+	def setNeighbourSum(self,row,col=-1,sSum=False):
+		if col == -1:
+			(row,col) = self._sudoku__procCell(row)
+		self.setNeighborSum(row,col,sSum)
 			
 	def setFriendly(self,row,col=-1):
 		if col == -1:
