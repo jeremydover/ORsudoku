@@ -1,3 +1,8 @@
+10/6/22
+	Added support for scary cells
+	Added support for Order Sums Cages
+	Added support for parity quads (like entropic quads but for parity) and Quadro (like global entropy, but for parities)
+	Added test cases
 10/2/22
 	Most of the constraint additions here were inspired by Richard Stolk's Sudoku Variants Series on LMD. Thanks!
 	Added support for not-RenbanLines, which supports an upgrade to the global non-consecutive functionality, allowing non-consecutive to be applied to longer strings of contiguous digits.
@@ -38,7 +43,6 @@
 9/23/22
 	Implemented support for Schrödinger cell puzzles. Not all constraints are supported, but many of the constraints used in puzzles to date are
 	Added test case
-	
 	
 9/20/22bis
 	Implemented code to list candidates for a given cell, or for the entire grid, for 9x9 grids. Produces a list of excluded values which can be pasted into code as hints to speed the candidate search.

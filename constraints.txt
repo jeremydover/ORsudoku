@@ -78,12 +78,14 @@ Numbered Room
 Odd-Even Thermos - see Thermometers
 Odd Max Quad - see Odd Max Values
 Openfaced Sandwich Sums - see Sandwich Sums
+Order Sum Cages
 Outside Clues
 Palindrome Lines
 Parindrome Lines - see Palindrome Lines
 Parity Count Lines (endpoints show the number of odd/even digits along the line)
 Parity Dots
 Parity Lines (alternating parity along line)
+Parity Quads (2x2 regions which contain both parities)
 Parity Snakes
 Pencilmarks
 Pointing Arrows - see Arrows
@@ -93,6 +95,7 @@ Quad Max Arrows
 Quad Max Parity Values - see Odd Max Values
 Quad Max Values
 Quad Sums (one digit on a quad is the sum of the three others)
+Quadro (no 2x2 in grid has all even or all odd digits)
 Ratio Pairs - see Kropki and Kropki pairs
 Region Sum Lines (sum of all cells along a line in a region is fixed)
 Region Segment Sum Lines - see Region Sum Lines
@@ -103,6 +106,7 @@ Rossini Clues
 Run-On Renban Lines - see Renban Lines
 Samurai Sudoku
 Sandwich Sums
+Scary Cells
 Schrödinger Cell Sudoku
 Search Nine
 Shift Lines
@@ -744,6 +748,13 @@ setReverseNumberedRoom(row,col,rc,value): sets a reverse numbered room constrain
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: The value (1-9) to be placed based on the indexing cell
   Note: for negative digits, the behavior of a reverse Numbered Room is to count cells from the other side of the row/column, a la regular Numbered Room
+
+Order Sum Cages
+---------------
+setOrderSumCages(list,slow,repeat): a set of cages with indeterminate sums, but whose sum order increases directly with order in the list
+  list: a list OF LISTS of cell specifications
+  slow: Optional, default is False. If False, each cage sum must be strictly less than its successor. If True, relationship is less than or equal.
+  repeat: Optional, default is False. If False, digits may not repeat in cages. If True, digits may repeat.
   
 Outside Clues
 -------------
@@ -792,6 +803,22 @@ Parity Lines
 setParityLine(list): creates a parity line constraint (parity must alternate along the line)
   list: a list of cell specifications
   
+Parity Quads
+-------------
+setParityQuad(cell): creates an parity constraint (both parities must appear) for an individual quad
+  cell: a single cell specification, e.g., 13,'05',(4,7)
+  
+setParityQuadArray(list): creates multiple parity quad constraints
+  list: a list of cell specifications
+  
+setAntiParityQuad(cell): creates an anti-parity quad constraint (quad is all even or all odd) for an individual quad
+  cell: a single cell specification, e.g., 13,'05',(4,7)
+  
+setAntiParityQuadArray(list): creates multiple anti-parity quad constraints
+  list: a list of cell specifications
+  
+setParityQuadNegative(): specify that all cells not specifically designated with parity quads do NOT satisfy the parity quad constraint, i.e., all cells must be either odd or even
+
 Parity Snakes
 -------------
 setParitySnake(row1,col1,row2,col2,parity): asserts that there exists a path of constant parity from ro1,col1 to row2,col2
@@ -855,6 +882,10 @@ setQuadSum(cell): assert that one of the digits in a quad is the sum of the othe
 setQuadSumArray(list): set multiple quad sum constraints
   list: list of cell specifications
   
+Quadro
+------
+setQuadro(): assert that no 2x2 quad has all even or all odd digits (see Parity Quads)
+
 Region Sum Lines
 ----------------
 See Irregular Sudoku's setRegion method to set regions that affect Region Sum Lines. By default regions are the boxes in normal Sudoku rules.
@@ -923,6 +954,19 @@ setOpenfacedSandwichSum(row,col,rc,value,digit): set an open-face sandwich sum c
   
 setBeforeNine(row,col,rc,value): an alias for Openfaced sandwich sums, with sandwich digit 9
   
+Scary Cells
+-----------
+setScary(row,col,diff): set a scary cell, i.e. a cell all of whose neighbors (orthogonal and diagonal) differ from it by at least diff
+  row,col: the coordinates of the cell
+  diff: Optional, default = 3...sets the difference required for neighboring cells of a scary cell
+  
+There is a grid-wide version of scary cells that asserts there is a scary cell in each row, column and region. Use:
+p = ORsudoku.scarySudoku
+The arguments to this constructor are the same as for sudoku, except for the additional parameters:
+  diff: Optional, default = 3, sets the difference between scary cells and their neighbors
+  noDiag: Optional, default is False, asserts there are no scary cells on the same diagonal (anti-queen)
+  allDifferent: Optional, default is Fase, asserts that the digits in scary cells are all different
+
 Schrödinger Cell Sudoku
 -----------------------
 Allows creation of puzzles with Schrödinger cells. An additional digit (usually 0) is added, and one cell in each row, column and region is a Schrödinger cell, which has two values. When used in constraints, it is considered to contain both values. Not all constraints work with Schrödinger cells, and most have multiple interpretations. They are detailed below.

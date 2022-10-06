@@ -171,6 +171,9 @@ class sudoku:
 		self.isConsecutiveQuadInitialized = False
 		self.isConsecutiveQuadNegative = False
 		
+		self.isParityQuadInitialized = False
+		self.isParityQuadNegative = False
+		
 		self.isParity = False
 		self.isEntropy = False
 		self.isModular = False
@@ -482,6 +485,9 @@ class sudoku:
 	def setGlobalEntropy(self):
 		self.setEntropyQuadArray([(i,j) for i in range(1,self.boardWidth) for j in range(1,self.boardWidth)])
 
+	def setQuadro(self):
+		self.setParityQuadArray([(i,j) for i in range(1,self.boardWidth) for j in range(1,self.boardWidth)])
+
 	def setUnicornDigit(self,value):
 		# A unicorn digit is one such that for any instance of that digit in the grid, all of the cells a knight's move away are different
 		for i in range(self.boardWidth):
@@ -711,6 +717,15 @@ class sudoku:
 			for j in range(self.boardWidth):
 				if (i,j) not in self.friendlyCells:
 					self.setUnfriendly(i,j)
+					
+	def setScary(self,row,col=-1,diff=3):
+		if col == -1:
+			(row,col) = self.__procCell(row)
+		nCells = {(row+i,col+j) for i in [-1,0,1] for j in [-1,0,1] if (i,j) != (0,0)} & {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)}
+		for x in nCells:
+			c = self.model.NewBoolVar('ScaryCell')
+			self.model.Add(self.cellValues[row][col] - self.cellValues[x[0]][x[1]] >= diff).OnlyEnforceIf(c)
+			self.model.Add(self.cellValues[x[0]][x[1]] - self.cellValues[row][col] >= diff).OnlyEnforceIf(c.Not())
 
 	def setPencilmarks(self,row1,col1=-1,values=-1):
 		# A list of allowed values in the cell
@@ -1105,6 +1120,18 @@ class sudoku:
 				
 			self.model.Add(sum(xVars) == values.count(x))
 			
+	def setOrderSumCages(self,inlist,slow=False,repeat=False):
+		# A list of cages whose sum increases based on the order in the list
+		inlist = list(map(self.__procCellList,inlist))
+		for j in range(len(inlist)):
+			if repeat is False:
+				self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in inlist[j]])
+			if j < len(inlist)-1:
+				if slow is True:
+					self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in inlist[j]) <= sum(self.cellValues[x[0]][x[1]] for x in inlist[j]))
+				else:
+					self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in inlist[j]) < sum(self.cellValues[x[0]][x[1]] for x in inlist[j]))
+
 	def setMagicSquare(self,row,col=-1):
 		if col == -1:
 			(row,col) = self.__procCell(row)
@@ -1942,6 +1969,10 @@ class sudoku:
 	def setAntiEntropyQuad(self,row,col=-1):
 		if col == -1:
 			(row,col) = self.__procCell(row)
+			
+		if self.isEntropy is False:
+			self.__setEntropy()
+		
 		self.model.AddAllowedAssignments([self.cellEntropy[row][col],self.cellEntropy[row][col+1],self.cellEntropy[row+1][col],self.cellEntropy[row+1][col+1]],[(0,0,0,0),(1,1,1,1),(2,2,2,2),(0,0,0,1),(0,0,1,0),(0,1,0,0),(1,0,0,0),(0,0,0,2),(0,0,2,0),(0,2,0,0),(2,0,0,0),(1,1,1,0),(1,1,0,1),(1,0,1,1),(0,1,1,1),(1,1,1,2),(1,1,2,1),(1,2,1,1),(2,1,1,1),(2,2,2,0),(2,2,0,2),(2,0,2,2),(0,2,2,2),(2,2,2,1),(2,2,1,2),(2,1,2,2),(1,2,2,2),(0,0,1,1),(0,0,2,2),(1,1,0,0),(1,1,2,2),(2,2,0,0),(2,2,1,1),(0,1,0,1),(0,2,0,2),(1,0,1,0),(1,2,1,2),(2,0,2,0),(2,1,2,1),(0,1,1,0),(0,2,2,0),(1,0,0,1),(1,2,2,1),(2,0,0,2),(2,1,1,2)])
 		
 	def setAntiEntropyQuadArray(self,inlist):
@@ -1952,6 +1983,54 @@ class sudoku:
 			for j in range(self.boardWidth-1):
 				if (i,j) not in self.entropyQuadCells:
 					self.setAntiEntropyQuad(i,j)
+					
+	def setParityQuad(self,row,col=-1):
+		if col == -1:
+			(row,col) = self.__procCell(row)
+		# A 2x2 square of cells is entropic if it includes a low, middle, and high digit
+		if self.isParityQuadInitialized is not True:
+			self.parityQuadCells = [(row,col)]
+			self.isParityQuadInitialized = True
+		else:
+			self.parityQuadCells.append((row,col))
+			
+		if self.isParity is False:
+			self.__setParity()
+		
+		self.model.Add(sum(self.cellParity[row+i][col+j] for i in range(2) for j in range(2)) > 0)
+		self.model.Add(sum(self.cellParity[row+i][col+j] for i in range(2) for j in range(2)) < 4)
+
+	def setParityQuadArray(self,inlist):
+		for x in inlist: self.setParityQuad(x)
+		
+	def setParityQuadNegative(self):
+		if self.isParityQuadInitialized is not True:
+			self.parityQuadCells = []
+			self.isParityQuadInitialized = True
+		
+		if self.isParity is False:
+			self.__setParity()
+			
+		self.isParityQuadNegative = True
+
+	def setAntiParityQuad(self,row,col=-1):
+		if col == -1:
+			(row,col) = self.__procCell(row)
+		if self.isParity is False:
+			self.__setParity()
+			
+		c = self.model.NewBoolVar('AntiParityQuad')
+		self.model.Add(sum(self.cellParity[row+i][col+j] for i in range(2) for j in range(2)) == 0).OnlyEnforceIf(c)
+		self.model.Add(sum(self.cellParity[row+i][col+j] for i in range(2) for j in range(2)) == 4).OnlyEnforceIf(c.Not())
+				
+	def setAntiParityQuadArray(self,inlist):
+		for x in inlist: self.setAntiParityQuad(x)
+
+	def __applyParityQuadNegative(self):
+		for i in range(self.boardWidth-1):
+			for j in range(self.boardWidth-1):
+				if (i,j) not in self.parityQuadCells:
+					self.setAntiParityQuad(i,j)
 					
 	def setEntropyBattenburg(self,row,col=-1):
 		if col == -1:
@@ -2499,6 +2578,7 @@ class sudoku:
 		if self.isFriendlyNegative is True: self.__applyFriendlyNegative()
 		if self.isRossiniNegative is True: self.__applyRossiniNegative()
 		if self.isConsecutiveQuadNegative is True: self.__applyConsecutiveQuadNegative()
+		if self.isParityQuadNegative is True: self.__applyParityQuadNegative()
 
 	def findSolution(self,test=False):
 		self.applyNegativeConstraints()
@@ -2712,6 +2792,9 @@ class cellTransformSudoku(sudoku):
 		self.isConsecutiveQuadInitialized = False
 		self.isConsecutiveQuadNegative = False
 		
+		self.isParityQuadInitialized = False
+		self.isParityQuadNegative = False
+		
 		self.isParity = False
 		self.isEntropy = False
 		self.isModular = False
@@ -2808,6 +2891,7 @@ class cellTransformSudoku(sudoku):
 						for l in range(self.boardWidth):
 							if k>i or l>j:
 								self.model.Add(self.baseValues[i][j] != self.baseValues[k][l]).OnlyEnforceIf([self.double[i][j],self.double[k][l]]) 
+
 	def transformDoublerCell(self,i,j):
 		# We default to the original doubler rules
 		self.model.Add(self.cellValues[i][j] == 2*self.baseValues[i][j]).OnlyEnforceIf([self.double[i][j]])
@@ -3014,6 +3098,9 @@ class japaneseSumSudoku(sudoku):
 		
 		self.isConsecutiveQuadInitialized = False
 		self.isConsecutiveQuadNegative = False
+		
+		self.isParityQuadInitialized = False
+		self.isParityQuadNegative = False
 		
 		self.isParity = False
 		self.isEntropy = False
@@ -3479,6 +3566,9 @@ class schroedingerCellSudoku(sudoku):
 		
 		self.isConsecutiveQuadInitialized = False
 		self.isConsecutiveQuadNegative = False
+		
+		self.isParityQuadInitialized = False
+		self.isParityQuadNegative = False
 		
 		self.isParity = False
 		self.isEntropy = False
@@ -4426,3 +4516,150 @@ class superpositionSudoku(schroedingerCellSudoku):
 					self.model.AddBoolOr(cellBools[j][k]).OnlyEnforceIf(varBitmap[i])
 			if len(sCandidates[i]) == 0:	# Need special case, since previous loop will be null
 					self.model.AddBoolAnd([cVars[0]]).OnlyEnforceIf(varBitmap[i])
+					
+class scarySudoku(sudoku):
+	"""A class used to implement scary puzzles."""	
+	
+	def __init__(self,boardSizeRoot,irregular=None,digitSet=None,diff=3,noDiag=False,allDifferent=False):
+		self.boardSizeRoot = boardSizeRoot
+		self.boardWidth = boardSizeRoot*boardSizeRoot
+		self.diff = diff
+
+		self.isBattenburgInitialized = False
+		self.isBattenburgNegative = False
+		
+		self.isKropkiInitialized = False
+		self.isKropkiNegative = False
+		self.kropkiDiff = 1
+		self.kropkiRatio = 2
+		
+		self.isFriendlyInitialized = False
+		self.isFriendlyNegative = False
+		
+		self.isRossiniInitialized = False
+		self.isRossiniNegative = False
+		self.rossiniLength = -1
+		
+		self.isXVInitialized = False
+		self.isXVNegative = False
+		
+		self.isXVXVInitialized = False
+		self.isXVXVNegative = False
+		
+		self.isEntropyQuadInitialized = False
+		self.isEntropyQuadNegative = False
+		
+		self.isEntropyBattenburgInitialized = False
+		self.isEntropyBattenburgNegative = False
+		
+		self.isConsecutiveQuadInitialized = False
+		self.isConsecutiveQuadNegative = False
+		
+		self.isParityQuadInitialized = False
+		self.isParityQuadNegative = False
+		
+		self.isParity = False
+		self.isEntropy = False
+		self.isModular = False
+		
+		if digitSet is None:
+			self.digits = {x for x in range(1,self.boardWidth+1)}
+		else:
+			self.digits = digitSet
+		self.maxDigit = max(self.digits)
+		self.minDigit = min(self.digits)
+		self.digitRange = self.maxDigit - self.minDigit
+
+		self.model = cp_model.CpModel()
+		self.cellValues = [] 		# Since this array is used throughout for the constraints, we'll make this the modified
+		
+		# Create the variables containing the cell values
+		for rowIndex in range(self.boardWidth):
+			tempArrayCell = []
+			for colIndex in range(self.boardWidth):
+				tempCell = self.model.NewIntVar(self.minDigit,self.maxDigit,'cellBase{:d}{:d}'.format(rowIndex,colIndex))
+				if (self.maxDigit - self.minDigit) >= self.boardWidth:	# If base digit set is not continguous, force values
+					self.model.AddAllowedAssignments([tempCell],[(x,) for x in self.digits])
+					# Note: no need to force values on cellValues, because they will be tied to base
+				tempArrayCell.append(tempCell)
+			self.cellValues.insert(rowIndex,tempArrayCell)
+						
+		# Create rules to ensure rows and columns have no repeats for the digits
+		for rcIndex in range(self.boardWidth):
+			self.model.AddAllDifferent([self.cellValues[rcIndex][crIndex] for crIndex in range(self.boardWidth)]) 	# Rows
+			self.model.AddAllDifferent([self.cellValues[crIndex][rcIndex] for crIndex in range(self.boardWidth)]) 	# Columns
+
+		self.regions = []
+		if irregular is None:
+			self._sudoku__setBoxes()
+
+		# Create variables to track which cells are scary
+		self.scary = []
+		self.scaryInt = []	
+		
+		for i in range(self.boardWidth):
+			tempScaryArray = []
+			tempScaryIntArray = []
+			for j in range(self.boardWidth):
+				c = self.model.NewBoolVar('scary{:d}{:d}'.format(i,j))
+				cI = self.model.NewIntVar(0,1,'scaryInt{:d}{:d}'.format(i,j))
+				self.model.Add(cI == 1).OnlyEnforceIf(c)
+				self.model.Add(cI == 0).OnlyEnforceIf(c.Not())
+				tempScaryArray.append(c)
+				tempScaryIntArray.append(cI)
+			self.scary.insert(i,tempScaryArray)
+			self.scaryInt.insert(i,tempScaryIntArray)
+
+		# Now we ensure there is only one scary cell per row, column, and box
+		for i in range(self.boardWidth):
+			self.model.Add(sum(self.scaryInt[i][j] for j in range(self.boardWidth)) == 1)
+			self.model.Add(sum(self.scaryInt[j][i] for j in range(self.boardWidth)) == 1)
+		
+		for i in range(self.boardSizeRoot):
+			for j in range(self.boardSizeRoot):
+				self.model.Add(sum(self.scaryInt[3*i+k][3*j+m] for k in range(self.boardSizeRoot) for m in range(self.boardSizeRoot)) == 1)
+				
+		if noDiag is True:
+			for j in range(self.boardWidth):
+				# Top row, down left
+				cells = {(k,j-k) for k in range(self.boardWidth)} & {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)}
+				self.model.Add(sum(self.scaryInt[x[0]][x[1]] for x in cells) <= 1)
+				# Top row, down right
+				cells = {(k,j+k) for k in range(self.boardWidth)} & {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)}
+				self.model.Add(sum(self.scaryInt[x[0]][x[1]] for x in cells) <= 1)
+				# Bottom row, up left
+				cells = {(self.boardWidth-1-k,j-k) for k in range(self.boardWidth)} & {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)}
+				self.model.Add(sum(self.scaryInt[x[0]][x[1]] for x in cells) <= 1)
+				# Bottom row, up right
+				cells = {(self.boardWidth-1-k,j+k) for k in range(self.boardWidth)} & {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)}
+				self.model.Add(sum(self.scaryInt[x[0]][x[1]] for x in cells) <= 1)
+				
+		if allDifferent is True:
+			for i in range(self.boardWidth):
+				for j in range(self.boardWidth):
+					for k in range(self.boardWidth):
+						for l in range(self.boardWidth):
+							if k>i or l>j:
+								self.model.Add(self.cellValues[i][j] != self.cellValues[k][l]).OnlyEnforceIf([self.scary[i][j],self.scary[k][l]])
+					
+		# Now the actual scary condition
+		for row in range(self.boardWidth):
+			for col in range(self.boardWidth):
+				nCells = {(row+i,col+j) for i in [-1,0,1] for j in [-1,0,1] if (i,j) != (0,0)} & {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)}
+				for x in nCells:
+					c = self.model.NewBoolVar('ScaryCell')
+					self.model.Add(self.cellValues[row][col] - self.cellValues[x[0]][x[1]] >= self.diff).OnlyEnforceIf([self.scary[row][col],c])
+					self.model.Add(self.cellValues[x[0]][x[1]] - self.cellValues[row][col] >= self.diff).OnlyEnforceIf([self.scary[row][col],c.Not()])
+					self.model.AddBoolAnd([c]).OnlyEnforceIf(self.scary[row][col].Not())
+
+	def printCurrentSolution(self):
+		dW = max([len(str(x)) for x in self.digits])
+		colorama.init()
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				if self.solver.Value(self.scaryInt[i][j]) == 1: # This one is doubled!
+					print(Fore.RED + '{:d}'.format(self.solver.Value(self.cellValues[i][j])).rjust(dW) + Fore.RESET,end = " ")
+				else:
+					print('{:d}'.format(self.solver.Value(self.cellValues[i][j])).rjust(dW),end = " ")
+			print()
+		print()
