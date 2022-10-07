@@ -1,8 +1,10 @@
+10/6/22bis
+	Refactored for issue #28, so now regions are stored as (i,j) (0-base) pairs, instead of as the cellValues variables. Updated all functions that required region-based calculations (Rossini, Outside, Region Sum Lines). Specifcally greatly improved implementation of Schrödinger cell region sum lines, which required building a variable index for each line. That was a poor design choice.
 10/6/22
 	Added support for scary cells
 	Added support for Order Sums Cages
 	Added support for parity quads (like entropic quads but for parity) and Quadro (like global entropy, but for parities)
-	Added test cases
+	Added test case
 10/2/22
 	Most of the constraint additions here were inspired by Richard Stolk's Sudoku Variants Series on LMD. Thanks!
 	Added support for not-RenbanLines, which supports an upgrade to the global non-consecutive functionality, allowing non-consecutive to be applied to longer strings of contiguous digits.

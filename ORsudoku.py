@@ -221,17 +221,19 @@ class sudoku:
 		for rowBox in range(self.boardSizeRoot):
 			for colBox in range(self.boardSizeRoot):
 				tempCellArray = []
+				tempCellIndexArray = []
 				for rowIndex in range(self.boardSizeRoot):
 					for colIndex in range(self.boardSizeRoot):
 						tempCellArray.append(self.cellValues[self.boardSizeRoot*rowBox+rowIndex][self.boardSizeRoot*colBox+colIndex])
+						tempCellIndexArray.append((self.boardSizeRoot*rowBox+rowIndex,self.boardSizeRoot*colBox+colIndex))
 				self.model.AddAllDifferent(tempCellArray)					# Squares
-				self.regions.append(tempCellArray)
+				self.regions.append(tempCellIndexArray)
 
 	def setRegion(self,inlist):
 		# Allow setting of irregular regions
 		inlist = self.__procCellList(inlist)
-		self.regions.append([self.cellValues[x[0]][x[1]] for x in inlist])
-		self.model.AddAllDifferent(self.regions[-1])
+		self.regions.append(inlist)
+		self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in self.regions[-1]])
 		
 	def setRegions(self,inlist):
 		# Allow setting of multiple regions
@@ -1578,17 +1580,17 @@ class sudoku:
 		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
 		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
 		
-		# List of cell variables in the row/column we're looking at
-		candCells = {self.cellValues[row+i*vStep][col+i*hStep] for i in range(self.boardWidth)}
+		# List of cell indices in the row/column we're looking at
+		candCells = {(row+i*vStep,col+i*hStep) for i in range(self.boardWidth)}
 		for i in range(len(self.regions)):
-			if len({self.cellValues[row][col]} & set(self.regions[i])) > 0: currentRegion = i
+			if len({(row,col)} & set(self.regions[i])) > 0: currentRegion = i
 			
 		clueCells = list(candCells & set(self.regions[currentRegion]))
 		vars = [[self.model.NewBoolVar('OutsideClue') for i in range(len(clueCells))] for j in range(len(valueList))]
 		for j in range(len(valueList)):
 			for i in range(len(clueCells)):
-				self.model.Add(clueCells[i] == valueList[j]).OnlyEnforceIf(vars[j][i])
-				self.model.Add(clueCells[i] != valueList[j]).OnlyEnforceIf(vars[j][i].Not())
+				self.model.Add(self.cellValues[clueCells[i][0]][clueCells[i][1]] == valueList[j]).OnlyEnforceIf(vars[j][i])
+				self.model.Add(self.cellValues[clueCells[i][0]][clueCells[i][1]] != valueList[j]).OnlyEnforceIf(vars[j][i].Not())
 			self.model.AddBoolOr(vars[j])
 
 	def setCornerEdge(self,box1,ce,valueList):
@@ -1627,11 +1629,11 @@ class sudoku:
 			self.isRossiniInitialized = True
 		else:
 			self.rossiniCells.append((row,col,rc))
-			
+		
 		if self.rossiniLength == -1:	# We are using the default region-based cluing
 			for i in range(len(self.regions)):
-				if len({self.cellValues[row][col]} & set(self.regions[i])) > 0: region = i
-			clueCells = [self.cellValues[row+i*vStep][col+i*hStep] for i in range(self.boardWidth) if len({self.cellValues[row+i*vStep][col+i*hStep]} & set(self.regions[region])) > 0]
+				if len({(row,col)} & set(self.regions[i])) > 0: region = i
+			clueCells = [self.cellValues[row+i*vStep][col+i*hStep] for i in range(self.boardWidth) if len({(row+i*vStep,col+i*hStep)} & set(self.regions[region])) > 0]
 		else:
 			clueCells = [self.cellValues[row+i*vStep][col+i*hStep] for i in range(self.rossiniLength)]
 			
@@ -1669,8 +1671,8 @@ class sudoku:
 						vStep = 0 if k == sudoku.Row else (1 if row == 0 else -1)
 						if self.rossiniLength == -1:	# We are using the default region-based cluing
 							for m in range(len(self.regions)):
-								if len({self.cellValues[row][col]} & set(self.regions[m])) > 0: region = m
-							clueCells = [self.cellValues[row+m*vStep][col+m*hStep] for m in range(self.boardWidth) if len({self.cellValues[row+m*vStep][col+m*hStep]} & set(self.regions[region])) > 0]
+								if len({(row,col)} & set(self.regions[m])) > 0: region = m
+							clueCells = [self.cellValues[row+m*vStep][col+m*hStep] for m in range(self.boardWidth) if len({(row+m*vStep,col+m*hStep)} & set(self.regions[region])) > 0]
 						else:
 							clueCells = [self.cellValues[row+m*vStep][col+m*hStep] for m in range(self.rossiniLength)]
 						# Note: no need to reverse since we're going to exclude a run in either direction
@@ -2466,10 +2468,9 @@ class sudoku:
 			
 	def setRegionSumLine(self,inlist):
 		inlist = self.__procCellList(inlist)
-		varlist = set(map(lambda s:self.cellValues[s[0]][s[1]],inlist))
 		sumSets = []
 		for region in self.regions:
-			tempSum = set(region) & set(varlist)
+			tempSum = [self.cellValues[x[0]][x[1]] for x in set(region) & set(inlist)]
 			if len(tempSum) != 0: sumSets.append(tempSum)
 
 		baseSum = sum(x for x in sumSets[0])
@@ -2481,25 +2482,25 @@ class sudoku:
 		# in each region. If a line enters a region twice, each segment must have the same sum as all
 		# other segments...the visits do not aggregate
 		inlist = self.__procCellList(inlist)
-		varlist = list(map(lambda s:self.cellValues[s[0]][s[1]],inlist))
 		
 		sumSets = []
 		currentRegionStart = 0
 		for i in range(len(self.regions)):
-			if len({varlist[0]} & set(self.regions[i])) > 0: currentRegion = i
-		for j in range(1,len(varlist)):
+			if len({inlist[0]} & set(self.regions[i])) > 0: currentRegion = i
+		print(str(currentRegion))
+		for j in range(1,len(inlist)):
 			for i in range(len(self.regions)):
-				if len({varlist[j]} & set(self.regions[i])) > 0: thisRegion = i
+				if len({inlist[j]} & set(self.regions[i])) > 0: thisRegion = i
 			if thisRegion != currentRegion:
-				sumSets.append(varlist[currentRegionStart:j])
+				sumSets.append([self.cellValues[x[0]][x[1]] for x in inlist[currentRegionStart:j]])
 				currentRegionStart = j
 				currentRegion = thisRegion
 		# Need to do it again since the last segment is left in the queue.	
-		sumSets.append(varlist[currentRegionStart:])
+		sumSets.append([self.cellValues[x[0]][x[1]] for x in inlist[currentRegionStart:]])
 
-		baseSum = sum(x for x in sumSets[0])
+		baseSum = sum(sumSets[0])
 		for i in range(1,len(sumSets)):
-			self.model.Add(sum(x for x in sumSets[i]) == baseSum)
+			self.model.Add(sum(sumSets[i]) == baseSum)
 
 	def setDoublingLine(self,inlist):
 		# Every digit that appears on a doubling line appears exactly twice
@@ -2906,23 +2907,25 @@ class cellTransformSudoku(sudoku):
 			for colBox in range(self.boardSizeRoot):
 				tempBaseArray = []
 				tempCellArray = []
+				tempCellIndexArray = []
 				tempDoubleArray = []
 				for rowIndex in range(self.boardSizeRoot):
 					for colIndex in range(self.boardSizeRoot):
 						tempBaseArray.append(self.baseValues[self.boardSizeRoot*rowBox+rowIndex][self.boardSizeRoot*colBox+colIndex])
 						tempCellArray.append(self.cellValues[self.boardSizeRoot*rowBox+rowIndex][self.boardSizeRoot*colBox+colIndex])
+						tempCellIndexArray.append((self.boardSizeRoot*rowBox+rowIndex,self.boardSizeRoot*colBox+colIndex))
 						tempDoubleArray.append(self.doubleInt[self.boardSizeRoot*rowBox+rowIndex][self.boardSizeRoot*colBox+colIndex])
 				self.model.AddAllDifferent(tempBaseArray)	# Ensures square regions have all different values
-				self.regions.append(tempCellArray)			# Set squares up as regions for region sum rules
+				self.regions.append(tempIndexArray)			# Set squares up as regions for region sum rules
 				self.model.Add(sum(tempDoubleArray) == 1)	# Ensure there is only one doubler per square
 				
 	def setRegion(self,inlist):
 		# Allow setting of irregular regions
 		inlist = self.__procCellList(inlist)
-		self.regions.append([self.baseValues[x[0]][x[1]] for x in inlist])
-		self.model.AddAllDifferent(self.regions[-1])
+		self.regions.append(inlist)
+		self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in self.regions[-1]])
 		self.model.Add(sum(self.doubleInt[x[0]][x[1]] for x in inlist) == 1)	# Ensure one doubler per region
-					
+				
 	def setTransform(self,row,col=-1):
 		if col == -1:
 			(row,col) = self._sudoku__procCell(row)
@@ -3691,22 +3694,24 @@ class schroedingerCellSudoku(sudoku):
 		for rowBox in range(self.boardSizeRoot):
 			for colBox in range(self.boardSizeRoot):
 				tempCellArray = []
+				tempCellIndexArray = []
 				tempSCellIntArray = []
 				tempSCellValueArray = []
 				for rowIndex in range(self.boardSizeRoot):
 					for colIndex in range(self.boardSizeRoot):
 						tempCellArray.append(self.cellValues[self.boardSizeRoot*rowBox+rowIndex][self.boardSizeRoot*colBox+colIndex])
+						tempCellIndexArray.append((self.boardSizeRoot*rowBox+rowIndex,self.boardSizeRoot*colBox+colIndex))
 						tempSCellIntArray.append(self.sCellInt[self.boardSizeRoot*rowBox+rowIndex][self.boardSizeRoot*colBox+colIndex])
 						tempSCellValueArray.append(self.sCellValues[self.boardSizeRoot*rowBox+rowIndex][self.boardSizeRoot*colBox+colIndex])
 				self.model.AddAllDifferent(tempCellArray+tempSCellValueArray)	# Ensures square regions have all different values
-				self.regions.append(tempCellArray)			# Set squares up as regions for region sum rules
+				self.regions.append(tempCellIndexArray)			# Set squares up as regions for region sum rules
 				self.model.Add(sum(tempSCellIntArray) == 1)	# Ensure there is only one Schroedinger cell per square
 				
 	def setRegion(self,inlist):
 		# Allow setting of irregular regions
 		inlist = self.__procCellList(inlist)
-		self.regions.append([self.cellValues[x[0]][x[1]] for x in inlist])
-		self.model.AddAllDifferent(self.regions[-1])
+		self.regions.append(inlist)
+		self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in inlist])
 		self.model.Add(sum(self.sCellInt[x[0]][x[1]] for x in inlist) == 1)	# Ensure one S-cell per region
 
 	def __setParity(self):
@@ -4359,50 +4364,40 @@ class schroedingerCellSudoku(sudoku):
 		
 		for j in range(len(inlist)-1):
 			self.model.Add(self.cellParity[inlist[j][0]][inlist[j][1]] != self.cellParity[inlist[j+1][0]][inlist[j+1][1]])
-			
+
 	def setRegionSumLine(self,inlist):
 		inlist = self._sudoku__procCellList(inlist)
-		sVar = {}
-		for j in range(len(inlist)):
-			sVar[self.cellValues[inlist[j][0]][inlist[j][1]]] = self.sCellSums[inlist[j][0]][inlist[j][1]]
-		varlist = set(map(lambda s:self.cellValues[s[0]][s[1]],inlist))
-
 		sumSets = []
 		for region in self.regions:
-			tempSum = set(region) & set(varlist)
+			tempSum = [self.cellValues[x[0]][x[1]] + self.sCellSums[x[0]][x[1]] for x in set(region) & set(inlist)]
 			if len(tempSum) != 0: sumSets.append(tempSum)
 
-		baseSum = sum(x for x in sumSets[0]) + sum(sVar[x] for x in sumSets[0])
+		baseSum = sum(sumSets[0])
 		for i in range(1,len(sumSets)):
-			self.model.Add(sum(x for x in sumSets[i]) + sum(sVar[x] for x in sumSets[i]) == baseSum)
+			self.model.Add(sum(sumSets[i]) == baseSum)
 			
 	def setRegionSegmentSumLine(self,inlist):
 		# This is used for variants where the sums for each segment of the line have the same sum
 		# in each region. If a line enters a region twice, each segment must have the same sum as all
 		# other segments...the visits do not aggregate
 		inlist = self._sudoku__procCellList(inlist)
-		sVar = {}
-		for j in range(len(inlist)):
-			sVar[self.cellValues[inlist[j][0]][inlist[j][1]]] = self.sCellSums[inlist[j][0]][inlist[j][1]]
-		varlist = list(map(lambda s:self.cellValues[s[0]][s[1]],inlist))
-		
 		sumSets = []
 		currentRegionStart = 0
 		for i in range(len(self.regions)):
-			if len({varlist[0]} & set(self.regions[i])) > 0: currentRegion = i
-		for j in range(1,len(varlist)):
+			if len({inlist[0]} & set(self.regions[i])) > 0: currentRegion = i
+		for j in range(1,len(inlist)):
 			for i in range(len(self.regions)):
-				if len({varlist[j]} & set(self.regions[i])) > 0: thisRegion = i
+				if len({inlist[j]} & set(self.regions[i])) > 0: thisRegion = i
 			if thisRegion != currentRegion:
-				sumSets.append(varlist[currentRegionStart:j])
+				sumSets.append([self.cellValues[x[0]][x[1]] + self.sCellSums[x[0]][x[1]] for x in inlist[currentRegionStart:j]])
 				currentRegionStart = j
 				currentRegion = thisRegion
 		# Need to do it again since the last segment is left in the queue.	
-		sumSets.append(varlist[currentRegionStart:])
+		sumSets.append([self.cellValues[x[0]][x[1]] + self.sCellSums[x[0]][x[1]] for x in inlist[currentRegionStart:]])
 
-		baseSum = sum(x for x in sumSets[0]) + sum(sVar[x] for x in sumSets[0])
+		baseSum = sum(sumSets[0])
 		for i in range(1,len(sumSets)):
-			self.model.Add(sum(x for x in sumSets[i]) + sum(sVar[x] for x in sumSets[i]) == baseSum)
+			self.model.Add(sum(sumSets[i]) == baseSum)
 			
 class superpositionSudoku(schroedingerCellSudoku):
 	'''This class is a version of Schrödinger cell sudoku, but the constraints take a harder line on the double-digit cells to 
@@ -4615,9 +4610,8 @@ class scarySudoku(sudoku):
 			self.model.Add(sum(self.scaryInt[i][j] for j in range(self.boardWidth)) == 1)
 			self.model.Add(sum(self.scaryInt[j][i] for j in range(self.boardWidth)) == 1)
 		
-		for i in range(self.boardSizeRoot):
-			for j in range(self.boardSizeRoot):
-				self.model.Add(sum(self.scaryInt[3*i+k][3*j+m] for k in range(self.boardSizeRoot) for m in range(self.boardSizeRoot)) == 1)
+		for i in range(len(self.regions)):
+			self.model.Add(sum(self.scaryInt[x[0]][x[1]] for x in self.regions[i]) == 1)
 				
 		if noDiag is True:
 			for j in range(self.boardWidth):
