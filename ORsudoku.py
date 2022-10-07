@@ -2916,7 +2916,7 @@ class cellTransformSudoku(sudoku):
 						tempCellIndexArray.append((self.boardSizeRoot*rowBox+rowIndex,self.boardSizeRoot*colBox+colIndex))
 						tempDoubleArray.append(self.doubleInt[self.boardSizeRoot*rowBox+rowIndex][self.boardSizeRoot*colBox+colIndex])
 				self.model.AddAllDifferent(tempBaseArray)	# Ensures square regions have all different values
-				self.regions.append(tempIndexArray)			# Set squares up as regions for region sum rules
+				self.regions.append(tempCellIndexArray)			# Set squares up as regions for region sum rules
 				self.model.Add(sum(tempDoubleArray) == 1)	# Ensure there is only one doubler per square
 				
 	def setRegion(self,inlist):
