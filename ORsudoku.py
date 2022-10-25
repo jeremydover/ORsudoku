@@ -990,6 +990,16 @@ class sudoku:
 				if j < 8 and (i,j,0) not in self.xvxvCells:
 					self.setAntiXVXV(i,j,0)
 
+	def setEitherOr(self,row,col=-1,hv=-1,value=-1):
+		if col == -1:
+			(row,col,hv,value) = self.__procCell(row)
+		c = self.model.NewBoolVar('EitherOr')
+		self.model.Add(self.cellValues[row][col] == value).OnlyEnforceIf(c)
+		self.model.Add(self.cellValues[row+hv][col+(1-hv)] == value).OnlyEnforceIf(c.Not())
+		
+	def setEitherOrArray(self,cells):
+		for x in cells: self.setEitherOr(x)
+	
 	def setCloneRegion(self,inlist):
 		inlist = list(map(self.__procCellList,inlist))
 		for j in range(1,len(inlist)):
@@ -2231,13 +2241,17 @@ class sudoku:
 		inlist = self.__procCellList(inlist)
 		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] == sum(self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(1,len(inlist))))
 		
+	def setHeavyArrow(self,inlist,mult=2):
+		inlist = self.__procCellList(inlist)
+		self.model.Add(mult*self.cellValues[inlist[0][0]][inlist[0][1]] == sum(self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(1,len(inlist))))
+		
 	def setDoubleArrow(self,inlist):
 		inlist = self.__procCellList(inlist)
 		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] + self.cellValues[inlist[-1][0]][inlist[-1][1]]== sum(self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(1,len(inlist)-1)))
 
 	def setPointingArrow(self,inlist):
 		inlist = self.__procCellList(inlist)
-		# Pointing arrow is an arrow, but it also pointsm extending in last direction, to its total sum
+		# Pointing arrow is an arrow, but it also points, extending in last direction, to its total sum
 		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] == sum(self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(1,len(inlist))))
 	
 		vert = inlist[-1][0]-inlist[-2][0] # Vertical delta to compute extension direction
@@ -2563,6 +2577,30 @@ class sudoku:
 		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] == self.cellValues[inlist[-1][0]][inlist[-1][1]]).OnlyEnforceIf(e)
 		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] != self.cellValues[inlist[-1][0]][inlist[-1][1]]).OnlyEnforceIf(e.Not())
 		self.model.AddBoolAnd(c).OnlyEnforceIf(e)
+		
+	def set10Line(self,inlist,value=10):
+		inlist = self.__procCellList(inlist)
+		varBitmap = self.__varBitmap('10Line',2**(len(inlist)-1))
+		varTrack = 0
+		for i in range(len(inlist)):
+			cI = CombinationIterator(len(inlist)-2,i)
+			comb = cI.getNext()
+			while comb is not None:
+				ind = [-1] + comb + [len(inlist)-1]
+				for j in range(len(ind)-1):
+					self.model.Add(sum(self.cellValues[inlist[k][0]][inlist[k][1]] for k in range(ind[j]+1,ind[j+1]+1)) == value).OnlyEnforceIf(varBitmap[varTrack])
+				comb = cI.getNext()
+				varTrack = varTrack + 1
+				
+	def setClockLine(self,inlist):
+		inlist = self.__procCellList(inlist)
+		for i in range(len(inlist)-1):
+			c = self.model.NewBoolVar('ClockLineDiff')
+			g = self.model.NewBoolVar('ClockLineGT')
+			self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] - self.cellValues[inlist[i+1][0]][inlist[i+1][1]] == 2).OnlyEnforceIf([c,g])
+			self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] - self.cellValues[inlist[i+1][0]][inlist[i+1][1]] == 7).OnlyEnforceIf([c.Not(),g])
+			self.model.Add(self.cellValues[inlist[i+1][0]][inlist[i+1][1]] - self.cellValues[inlist[i][0]][inlist[i][1]] == 2).OnlyEnforceIf([c,g.Not()])
+			self.model.Add(self.cellValues[inlist[i+1][0]][inlist[i+1][1]] - self.cellValues[inlist[i][0]][inlist[i][1]] == 7).OnlyEnforceIf([c.Not(),g.Not()])
 
 ####Model solving
 	def applyNegativeConstraints(self):
@@ -3052,6 +3090,20 @@ class doubleOrNothingSudoku(cellTransformSudoku):
 	def transformDoublerValue(self,value):
 		return {0,2*value}
 		
+class doubleOrNegativeSudoku(cellTransformSudoku):
+	
+	def __init__(self,boardSizeRoot,canRepeatDigits=False,irregular=None,digitSet=None):
+		cellTransformSudoku.__init__(self,boardSizeRoot,canRepeatDigits=canRepeatDigits,irregular=irregular,digitSet=digitSet)
+		
+	def transformDoublerCell(self,i,j):
+		c = self.model.NewBoolVar('doublerCellDoubledorNegative')
+		self.model.Add(self.cellValues[i][j] == 2*self.baseValues[i][j]).OnlyEnforceIf([self.double[i][j],c])
+		self.model.Add(self.cellValues[i][j] == -1*self.baseValues[i][j]).OnlyEnforceIf([self.double[i][j],c.Not()])
+		self.model.AddBoolAnd([c]).OnlyEnforceIf([self.double[i][j].Not()])
+		
+	def transformDoublerValue(self,value):
+		return {-1*value,2*value}
+		
 class affineTransformSudoku(cellTransformSudoku):
 	
 	def __init__(self,boardSizeRoot,ratio,shift,canRepeatDigits=False,irregular=None,digitSet=None):
@@ -3356,17 +3408,20 @@ class doubleDoku(sudoku):
 		# Unified interface to apply constraints to sub-puzzles
 		getattr(getattr(self,'p'+str(puzz)),'set'+constraint)(args)
 	
-	def findSolution(self):
+	def findSolution(self,test=False):
 		self.p1.applyNegativeConstraints()
 		self.p2.applyNegativeConstraints()
 
 		self.solver = cp_model.CpSolver()
 		self.solveStatus = self.solver.Solve(self.model)
 				
-		print('Solver status = %s' % self.solver.StatusName(self.solveStatus))
-		if self.solveStatus == cp_model.OPTIMAL:
-			print('Solution found!')
-			self.printCurrentSolution()
+		if test is True:
+			return self.testStringSolution()
+		else:
+			print('Solver status = %s' % self.solver.StatusName(self.solveStatus))
+			if self.solveStatus == cp_model.OPTIMAL:
+				print('Solution found!')
+				self.printCurrentSolution()
 				
 	def countSolutions(self):
 		self.p1.applyNegativeConstraints()
@@ -3407,6 +3462,16 @@ class doubleDoku(sudoku):
 			for j in range(self.boardWidth):
 				print('{:d}'.format(self.solver.Value(self.p2.getCellVar(i,j))).rjust(dW),end = " ")
 			print()
+			
+	def testStringSolution(self):
+		testString = ''
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				testString = testString + '{:d}'.format(self.solver.Value(self.p1.getCellVar(i,j)))
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				testString = testString + '{:d}'.format(self.solver.Value(self.p2.getCellVar(i,j)))
+		return testString
 
 class samuraiSudoku(sudoku):
 	"""A class used to implement Samurai Sudoku puzzles."""
@@ -4515,7 +4580,7 @@ class superpositionSudoku(schroedingerCellSudoku):
 class scarySudoku(sudoku):
 	"""A class used to implement scary puzzles."""	
 	
-	def __init__(self,boardSizeRoot,irregular=None,digitSet=None,diff=3,noDiag=False,allDifferent=False):
+	def __init__(self,boardSizeRoot,irregular=None,digitSet=None,diff=3,noDiag=False,allDifferent=False,antiKing=False):
 		self.boardSizeRoot = boardSizeRoot
 		self.boardWidth = boardSizeRoot*boardSizeRoot
 		self.diff = diff
@@ -4587,6 +4652,8 @@ class scarySudoku(sudoku):
 		self.regions = []
 		if irregular is None:
 			self._sudoku__setBoxes()
+			for i in range(len(self.regions)):
+				self.model.Add(sum(self.scaryInt[x[0]][x[1]] for x in self.regions[i]) == 1)
 
 		# Create variables to track which cells are scary
 		self.scary = []
@@ -4609,9 +4676,6 @@ class scarySudoku(sudoku):
 		for i in range(self.boardWidth):
 			self.model.Add(sum(self.scaryInt[i][j] for j in range(self.boardWidth)) == 1)
 			self.model.Add(sum(self.scaryInt[j][i] for j in range(self.boardWidth)) == 1)
-		
-		for i in range(len(self.regions)):
-			self.model.Add(sum(self.scaryInt[x[0]][x[1]] for x in self.regions[i]) == 1)
 				
 		if noDiag is True:
 			for j in range(self.boardWidth):
@@ -4627,6 +4691,12 @@ class scarySudoku(sudoku):
 				# Bottom row, up right
 				cells = {(self.boardWidth-1-k,j+k) for k in range(self.boardWidth)} & {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)}
 				self.model.Add(sum(self.scaryInt[x[0]][x[1]] for x in cells) <= 1)
+				
+		if antiKing is True:
+			for i in range(self.boardWidth):
+				for j in range(self.boardWidth):
+					cells = {(i+k,j+m) for k in {-1,1} for m in {-1,1}} & {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)}
+					self.model.AddBoolAnd([self.scary[x[0]][x[1]].Not() for x in cells]).OnlyEnforceIf(self.scary[i][j])
 				
 		if allDifferent is True:
 			for i in range(self.boardWidth):
@@ -4645,6 +4715,13 @@ class scarySudoku(sudoku):
 					self.model.Add(self.cellValues[row][col] - self.cellValues[x[0]][x[1]] >= self.diff).OnlyEnforceIf([self.scary[row][col],c])
 					self.model.Add(self.cellValues[x[0]][x[1]] - self.cellValues[row][col] >= self.diff).OnlyEnforceIf([self.scary[row][col],c.Not()])
 					self.model.AddBoolAnd([c]).OnlyEnforceIf(self.scary[row][col].Not())
+
+	def setRegion(self,inlist):
+		# Allow setting of irregular regions
+		inlist = self._sudoku__procCellList(inlist)
+		self.regions.append(inlist)
+		self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in self.regions[-1]])
+		self.model.Add(sum(self.scaryInt[x[0]][x[1]] for x in inlist) == 1)	# Ensure one scary cell per region
 
 	def printCurrentSolution(self):
 		dW = max([len(str(x)) for x in self.digits])

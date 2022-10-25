@@ -1,5 +1,6 @@
 Supported Constraint List
 =========================
+10 Lines
 159 (see Indexing)
 Alternate Digits
 Anti-King
@@ -16,6 +17,7 @@ Block Cages
 Capsules
 Cell Transform Sudoku
 Chinese Whispers Lines - see Whispers Lines
+Clock Lines
 Clone Regions
 Consecutive Quads
 Corner/Edge Clues
@@ -31,6 +33,7 @@ DoubleDoku
 Doubler Sudoku - see Cell Transform Sudoku
 Doubling Lines
 Dutch Whispers Lines - see Whispers Lines
+Either-Or
 Entropic Lines
 Entropki Dots (same/different entropy classes)
 Entropy (see Global Entropy)
@@ -189,6 +192,12 @@ Quadruples are indexed similarly, from 11 to 88:
 
 Edge constraints are indexed by the top- or left-most cell in the pair of adjacent cells. An additional parameter hv is provided to determine whether the pair is horizontal or vertical. The class variables Horz and Vert can be used for this designation. 
 
+10 Lines
+--------
+set10Line(inlist,value): asserts a line that can be partitioned into non-overlapping segments, each of whose cells sum to the given value
+  inlist: list of cell specifications
+  value: Optional, default is 10. Value to which chunks on the line need to sum to
+
 Alternate Digits
 ----------------
 If a puzzle does not have a 1-9 digit set (0-8 being the most common alternative), then an alternate digit set can be added by including the digitSet parameter when instantiating the puzzle, e.g.,
@@ -221,6 +230,10 @@ setArrow(inlist): creates an arrow constraint
   
 setDoubleArrow(inlist): creates a double arrow constraint - sum of cells between the endpoint equals the sum of the endpoints
   inlist: a list of cells along arrow, where the first element of list is the circle
+  
+setHeavyArrow(inlist,mult): creates a heavy arrow, where the sum of the cells along the arrow is a multiple of the first cell
+  inlist: a list of cells along arrow, where the first element of list is the circle
+  mult: Optional, default is 2. The factor by which the first cell is multiplied. By default, the cells on the arrow add up to twice the value in the bulb
   
 setPointingArrow(list): creates a pointing arrow, which is both a regular arrow, and whose other end points (as determined by the last two cells) at another copy of the sum
   list: a list of cells along arrow, where the first element of list is the circle
@@ -301,6 +314,11 @@ affineTransformSudoku(boardSizeRoot,ratio,shift,canRepeatDigits,irregular,digitS
   Doubler Sudoku is the same as affineTransformSudoku(3,2,0)
   Negator Sudoku is the same as affineTransformSudoku(3,-1,0)
 
+Clock Lines
+-----------
+setClockLine(list): ceates a clock line, where adjacent cells on the line differ by either 2 or 7
+  list: list of cell specifications
+
 Clone Regions
 -------------
 setCloneRegion(list): creates a set of regions that are clones of each other, i.e., the same digit appears in the ith position for each i
@@ -354,7 +372,7 @@ Descriptive Pairs
 setDescriptivePair(row,col,rc,values): clue on a row or column with two digits XY; either X is in Yth position, or Y is in Xth
   row,col: The coordinates of the cell containing the indexing clue, i.e. the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
-  values: A list or tuple of digits defining the pair. A 2-digit integer (e.g. 45) can also be given. Negative digits are allowed, and index from the oppostie end of the row/column
+  values: A list or tuple of digits defining the pair. A 2-digit integer (e.g. 45) can also be given. Negative digits are allowed, and index from the opposite end of the row/column
 
 Digit Count Cages
 -----------------
@@ -388,6 +406,15 @@ Doubling Lines
 --------------
 setDoublingLine(list): creates a doubling line constraint: every digit appears exactly twice on the line
   list: a list of cell specifications
+
+Either-Or
+---------
+setEitherOr(cellHVV): Given an extended cell specification with a row, column, a Horz/Vert, and a value, assert the given value appears in one of the two cells defined by the cellHV specification
+  cellHVV: an extended cell specification which adds the hv parameter: circle is on the right side if H, or on the bottom if V. All parameters can be given in a tuple, and these can use the Horz and Vert variables for the HV specification. Shorthand is possible, appending 0 to a cell spec to indicate horizontal and 1 to indicate vertical. A value is also given, defining the value to appear in either cell
+  Example: 2518, '2518' and (2,5,p.Vert,8) all specify a circle on the bottom edge of cell 2,5, asserting either cell 25 or cell 35 is an 8
+  
+setEitherOrArray(list): assert multiple Either-Or constraints
+  list: list of extended cell specifications, see setEitherOr
 
 Entropic Lines
 --------------
@@ -1061,16 +1088,6 @@ setSkyscraper(row,col,rc,value): sets a skyscraper constraint, specifying the nu
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: the number of digits that can be seen
   
-Unicorn Digits
---------------
-setUnicornDigit(value): set a unicorn digit, i.e. for any instance of that digit in the grid, all of the cells a knight's move away have distinct values
-	value: value of the digit to be a unicorn
-
-Up and Down Lines
------------------
-setUpAndDownLine(inlist): sets an up and down line constraint; cells must laternately increase and decrease
-  inlist: list of cell specifications
-  
 Thermometers
 ------------
 setThermo(list,slow,missing): asserts that the values in cells increase from the beginning of the line to the end
@@ -1093,6 +1110,17 @@ setSlowOddEvenThermo(list): asserts that the values in cells do not decrease fro
 setMissingThermo(list,slow): asserts that the values increase from one end of the thermo to the other, but which end is which is not determined
   list: list of cell specifications, with bulb end of thermo being the first element
   slow: set thermo to slow (i.e., nondecreasing vs. increasing); Optional: defaults to False
+  
+Unicorn Digits
+--------------
+setUnicornDigit(value): set a unicorn digit, i.e. for any instance of that digit in the grid, all of the cells a knight's move away have distinct values
+	value: value of the digit to be a unicorn
+
+Up and Down Lines
+-----------------
+setUpAndDownLine(inlist): sets an up and down line constraint; cells must laternately increase and decrease
+  inlist: list of cell specifications
+  
   
 Weak Palindrome Lines
 ---------------------

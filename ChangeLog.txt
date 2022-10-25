@@ -1,8 +1,16 @@
+10/25/22
+	Added support for 10 lines
+	Added support for heavy arrows
+	Added support for clock lines
+	Added support for Either-Or clues
+	Added test harness support to doubleDoku puzzles
+	Added multiple test cases
+	
 10/6/22ter
 	Added additional test cases
 
 10/6/22bis
-	Refactored for issue #28, so now regions are stored as (i,j) (0-base) pairs, instead of as the cellValues variables. Updated all functions that required region-based calculations (Rossini, Outside, Region Sum Lines). Specifcally greatly improved implementation of Schrödinger cell region sum lines, which required building a variable index for each line. That was a poor design choice.
+	Refactored for issue #28, so now regions are stored as (i,j) (0-base) pairs, instead of as the cellValues variables. Updated all functions that required region-based calculations (Rossini, Outside, Region Sum Lines). Specifically greatly improved implementation of Schrödinger cell region sum lines, which required building a variable index for each line. That was a poor design choice.
 	
 10/6/22
 	Added support for scary cells
