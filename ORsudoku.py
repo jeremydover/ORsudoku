@@ -1820,7 +1820,7 @@ class sudoku:
 		self.setMaximumRun(row1,col1,rc,value,length=3)
 		
 	def setDescriptivePair(self,row1,col1,rc,values):
-		# Value is a list of two digits XY: either X appears in the Yth place, or Y ppears in the Xth place in the row/column
+		# Value is a list of two digits XY: either X appears in the Yth place, or Y appears in the Xth place in the row/column
 		if type(values) is int:
 			values = tuple(map(int,list(str(values))))
 		row = row1 - 1
@@ -1841,7 +1841,77 @@ class sudoku:
 		myHStep = hStep if values[1] > 0 else -1*hStep
 		myVStep = vStep if values[1] > 0 else -1*vStep
 		self.model.Add(self.cellValues[myRow+(abs(values[1])-1)*myVStep][myCol+(abs(values[1])-1)*myHStep] == values[0]).OnlyEnforceIf(c.Not())
+
+	def setMinimax(self,row1,col1,rc,value,length=-1):
+		# row,col is the cell next to the clue
+		# rc is whether things are row/column
+		# value is the value of the sum of the largest and smallest digits in the range
+		# length: if not present, range over which to find min/max is defined by the region the clue is next to
+		# If given, the clue will instead work on a fixed number of cells from the edge
 		
+		# Convert from 1-base to 0-base
+		row = row1 - 1
+		col = col1 - 1
+		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
+		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
+
+		if length == -1:	# We are using the default region-based cluing
+			for i in range(len(self.regions)):
+				if len({(row,col)} & set(self.regions[i])) > 0: region = i
+			clueCells = [self.cellValues[row+i*vStep][col+i*hStep] for i in range(self.boardWidth) if len({(row+i*vStep,col+i*hStep)} & set(self.regions[region])) > 0]
+		else:
+			clueCells = [self.cellValues[row+i*vStep][col+i*hStep] for i in range(length)]
+			
+		# OK, we copied that from Rossini, now the hard part: min/max. Best just to do it, since that's
+		# usually the best for these LP problems.
+		minVars = [self.model.NewBoolVar('minimax') for i in range(len(clueCells))]
+		maxVars = [self.model.NewBoolVar('minimax') for i in range(len(clueCells))]
+		for i in range(len(clueCells)):
+			for j in range(i,len(clueCells)):
+				self.model.Add(clueCells[i] >= clueCells[j]).OnlyEnforceIf(maxVars[i])
+				self.model.Add(clueCells[i] >= clueCells[j]).OnlyEnforceIf(minVars[j])
+				self.model.Add(clueCells[i] <= clueCells[j]).OnlyEnforceIf(minVars[i])
+				self.model.Add(clueCells[i] <= clueCells[j]).OnlyEnforceIf(maxVars[j])
+				self.model.Add(clueCells[i]+clueCells[j] == value).OnlyEnforceIf([maxVars[j],minVars[i]])
+				self.model.Add(clueCells[i]+clueCells[j] == value).OnlyEnforceIf([maxVars[i],minVars[j]])
+		self.model.AddBoolOr(minVars)
+		self.model.AddBoolOr(maxVars)
+		
+	def setMaximin(self,row1,col1,rc,value,length=-1):
+		# row,col is the cell next to the clue
+		# rc is whether things are row/column
+		# value is the value of the difference of the largest and smallest digits in the range
+		# length: if not present, range over which to find min/max is defined by the region the clue is next to
+		# If given, the clue will instead work on a fixed number of cells from the edge
+		
+		# Convert from 1-base to 0-base
+		row = row1 - 1
+		col = col1 - 1
+		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
+		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
+
+		if length == -1:	# We are using the default region-based cluing
+			for i in range(len(self.regions)):
+				if len({(row,col)} & set(self.regions[i])) > 0: region = i
+			clueCells = [self.cellValues[row+i*vStep][col+i*hStep] for i in range(self.boardWidth) if len({(row+i*vStep,col+i*hStep)} & set(self.regions[region])) > 0]
+		else:
+			clueCells = [self.cellValues[row+i*vStep][col+i*hStep] for i in range(length)]
+			
+		# OK, we copied that from Rossini, now the hard part: min/max. Best just to do it, since that's
+		# usually the best for these LP problems.
+		minVars = [self.model.NewBoolVar('maximin') for i in range(len(clueCells))]
+		maxVars = [self.model.NewBoolVar('maximin') for i in range(len(clueCells))]
+		for i in range(len(clueCells)):
+			for j in range(i,len(clueCells)):
+				self.model.Add(clueCells[i] >= clueCells[j]).OnlyEnforceIf(maxVars[i])
+				self.model.Add(clueCells[i] >= clueCells[j]).OnlyEnforceIf(minVars[j])
+				self.model.Add(clueCells[i] <= clueCells[j]).OnlyEnforceIf(minVars[i])
+				self.model.Add(clueCells[i] <= clueCells[j]).OnlyEnforceIf(maxVars[j])
+				self.model.Add(clueCells[j]-clueCells[i] == value).OnlyEnforceIf([maxVars[j],minVars[i]])
+				self.model.Add(clueCells[i]-clueCells[j] == value).OnlyEnforceIf([maxVars[i],minVars[j]])
+		self.model.AddBoolOr(minVars)
+		self.model.AddBoolOr(maxVars)
+
 ####2x2 constraints
 	def setQuadruple(self,row,col=-1,values=-1):
 		if col == -1:
@@ -2279,6 +2349,22 @@ class sudoku:
 		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] == sum(self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(1,len(inlist)))).OnlyEnforceIf(c)
 		self.model.Add(self.cellValues[inlist[-1][0]][inlist[-1][1]] == sum(self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(len(inlist)-1))).OnlyEnforceIf(c.Not())
 		
+	def setRepeatingArrow(self,inlist,repeat=2):
+		inlist = self.__procCellList(inlist)
+		bulb = inlist.pop(0)
+		varBitmap = self.__varBitmap('RepeatingArrow',math.comb(len(inlist),repeat-1))
+		varTrack = 0
+		bulbVar = self.cellValues[bulb[0]][bulb[1]]
+		
+		cI = CombinationIterator(len(inlist)-1,repeat-1)
+		comb = cI.getNext()
+		while comb is not None:
+			ind = [-1] + comb + [len(inlist)-1]
+			for j in range(len(ind)-1):
+				self.model.Add(sum(self.cellValues[inlist[k][0]][inlist[k][1]] for k in range(ind[j]+1,ind[j+1]+1)) == bulbVar).OnlyEnforceIf(varBitmap[varTrack])
+			comb = cI.getNext()
+			varTrack = varTrack + 1
+	
 	def setThermo(self,inlist,slow=False,missing=False):
 		inlist = self.__procCellList(inlist)
 		if missing is False:

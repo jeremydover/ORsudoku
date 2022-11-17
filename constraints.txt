@@ -64,9 +64,11 @@ Lockout Lines
 Look-and-Say Cages - see Zones
 Magic Squares
 MaxAscending
+Maximin - see Minimax
 Maximum Runs (Maximum Triplets)
 Median Cages
 Min-Max
+Minimax
 Missing Arrow - see Arrows
 Missing Bulb Thermos - see Thermometers
 Modular Lines
@@ -103,6 +105,7 @@ Ratio Pairs - see Kropki and Kropki pairs
 Region Sum Lines (sum of all cells along a line in a region is fixed)
 Region Segment Sum Lines - see Region Sum Lines
 Renban Lines
+Repeating Arrows - see Arrows
 Reverse Numbered Rooms - see Numbered Rooms
 Reverse X-Sums - see X-Sums
 Rossini Clues
@@ -244,6 +247,10 @@ setMultiDigitSumArrow(list,n): creates an arrow where the sum is multi-digit, in
   
 setMissingArrow(list): an arrow where either end cell of the arrow may be the sum of the rest of the elements on the arrow
   list: a list of cells along arrow, where either the first or last element of list is the sum of the rest
+  
+setRepeatingArrow(list,repeat): an arrow where the arrow portion can be paritioned into contiguous cells whose sum is the value in the bulb
+  list: a list of cells along arrow, where the first element of list is the circle
+  repeat (optional): the number of times the circle sum will repeat, default is 2
   
 Average Lines
 -------------
@@ -715,6 +722,18 @@ setMinMaxCellArray(list): set multiple min/max constraints
 setMaxMinCellArray(list): set multiple min/max constraints
   list: list of cellMM specifications; see setMinMaxCell
   
+Minimax
+-------
+setMinimax(row,col,rc,value,length): asserts the sum of the largest and smallest digits in the target range is value
+  row,col: The coordinates of the cell containing the clue, i.e. the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  value: The value that is the minimax sum
+  length (optional): by default, the target range is the cells in the region including the cell next to the clue.
+                     If length is given, the target range is the first length cells from the cell next to the clue, regardless of regions.
+					 
+setMaximin(row,col,rc,value,length): asserts the difference of the largest and smallest digits in the target range is value
+  Options same as setMinimax
+
 Modular Lines
 -------------
 setModularLine(list): creates a modular line constraint

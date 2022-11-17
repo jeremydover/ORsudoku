@@ -1,3 +1,8 @@
+11/17/22
+	Added support for minimax clues (Inspired by clover!...thanks!)
+	Added support for maximin clues (Inspired by clover!...thanks!)
+	Added support for repeating arrows (Inspired by Richard Stolk...thanks!)
+
 10/25/22
 	Added support for 10 lines
 	Added support for heavy arrows
