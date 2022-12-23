@@ -1,3 +1,10 @@
+12/22/22
+	Added support for full rank clues
+	Added support for David and Goliath pairs (Inspired by Bill Murphy...thanks!)
+	Added support for All Odd or Even clues (Inspired by clover!...thanks!)
+	Added support for Parity Party clues
+	Added support for Double X-Sums
+
 11/17/22
 	Added support for minimax clues (Inspired by clover!...thanks!)
 	Added support for maximin clues (Inspired by clover!...thanks!)

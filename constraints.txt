@@ -2,6 +2,7 @@ Supported Constraint List
 =========================
 10 Lines
 159 (see Indexing)
+All Odd or Even
 Alternate Digits
 Anti-King
 Anti-Knight
@@ -22,6 +23,7 @@ Clone Regions
 Consecutive Quads
 Corner/Edge Clues
 Count the Odds Lines
+David and Goliath Pairs
 Descriptive Pairs
 Difference Pairs - see Kropki and Kropki Pairs
 Digit Count Cages
@@ -31,6 +33,7 @@ Double Arrows - see Arrows
 Double or Nothing Sudoku - see Cell Transform Sudoku
 DoubleDoku
 Doubler Sudoku - see Cell Transform Sudoku
+Double X Sums - see X Sums
 Doubling Lines
 Dutch Whispers Lines - see Whispers Lines
 Either-Or
@@ -44,6 +47,7 @@ Even-Odd
 Extra Regions - see irregular Sudoku
 Fortress
 Friendly Cells
+Full Rank
 Genetics
 German Whispers Lines - see Whispers Lines
 Given Digits
@@ -90,6 +94,7 @@ Parindrome Lines - see Palindrome Lines
 Parity Count Lines (endpoints show the number of odd/even digits along the line)
 Parity Dots
 Parity Lines (alternating parity along line)
+Parity Party
 Parity Quads (2x2 regions which contain both parities)
 Parity Snakes
 Pencilmarks
@@ -200,6 +205,11 @@ Edge constraints are indexed by the top- or left-most cell in the pair of adjace
 set10Line(inlist,value): asserts a line that can be partitioned into non-overlapping segments, each of whose cells sum to the given value
   inlist: list of cell specifications
   value: Optional, default is 10. Value to which chunks on the line need to sum to
+
+All Odd or Even
+---------------
+setAllOddOrEven(list): given a list of "shaded" cells defined by list, all shaded cells in each region have the same parity
+  list: list of cell specifications
 
 Alternate Digits
 ----------------
@@ -374,6 +384,13 @@ Count the Odds Lines
 setCountTheOddsLine(list): set a count the odds line, where the digit in the first cell of the line counts the number of odd digits on the rest of the line; pioneered by clover!
   list: list of cell specifications
   
+David and Goliath Pairs
+-----------------------
+setDavidAndGoliath(list,borderDigit,borderType): sets a David and Goliath pair, where at least one cell must have a "David" (small) digit and at least one must have a "Goliath" (large) digit
+  list: list of two cell specifications
+  borderDigit: (Optional) digit that defines the border between small and large, defaults to 5
+  borderType: (Optional) if -1, border digit is David and not Goliath; if 1, border digit is Goliath and not David; if 0, border digit is both David and Goliath (default is 0)
+
 Descriptive Pairs
 -----------------
 setDescriptivePair(row,col,rc,values): clue on a row or column with two digits XY; either X is in Yth position, or Y is in Xth
@@ -524,6 +541,15 @@ setUnfriendlyArray(list): set multiple unfriendly cells
 	list: list of cell specifications
 
 setFriendlyNegative(): assert a negative constraint, namely that cells not marked friendly are NOT friendly
+
+Full Rank
+---------
+setFullRank(row,col,rc,value): treating all 36 rows and columns (in both directions) as 9-digit integers, with most significant closest to the clue, and placing these values in numerical order, clue asserts that the associated row/column is the value_th smallest in the ordering, so 1 is the smallest, and 36 is the largest
+  row,col: The coordinates of the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  value: rank of this row/column in the ordering
+  
+NOTE: full rank clues are only implemented for 9x9 boards or smaller, with digit set a subset of {0..9}. There are several differing but reasonable interpretations of how to deal with multi-digit numbers and full rank, sufficiently incompatible to prevent a unified attempt to implement here.
 
 Genetics
 --------
@@ -849,8 +875,15 @@ Parity Lines
 setParityLine(list): creates a parity line constraint (parity must alternate along the line)
   list: a list of cell specifications
   
+Parity Party
+------------
+setParityParty(row,col,rc,value): sets a parity party constraint, where either the digit next to the clue equals the value, or the sum of all of the values up to and including the first digit that varies in parity from all prior cells
+  row,col: The coordinates of the cell containing the indexing clue, i.e. the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  value: The value (1-9) to be placed based on the indexing cell
+
 Parity Quads
--------------
+------------
 setParityQuad(cell): creates an parity constraint (both parities must appear) for an individual quad
   cell: a single cell specification, e.g., 13,'05',(4,7)
   
@@ -1196,8 +1229,14 @@ setXSum(row,col,rc,value): set an X sum constraint on a row or column
 setReverseXSum(row,col,rc,value): set a reverse X sum constraint on a row or column, where the sum is taken on cells starting from the end of the row/column opposite the clue
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
-  value: The sum of the first X cells in the row/column from the clue, where X is the value in the adjacent cell
+  value: The sum of the first X cells on the other side of the row/column from the clue, where X is the value in the adjacent cell
   Note: for negative digits, the behavior of a Reverse X-Sum is to take digits from the other side of the row/column, a la regular X-Sum
+  
+setDoubleXSum(row,col,rc,value): set a double X sum constraint on a row or column, where the clue is the sum of the X sums taken from both sides of the row/column
+  row,col: The coordinates of the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  value: The sum of the first X cells in the row/column from the clue, where X is the value in the adjacent cell, plus the sum of the first Y cells in the row/column on the other side of the row/column from the clue, where Y is the value in the cell furthest from the clue.
+  Note: for negative digits, the behavior of either of the sums in a double sum is exactly as in X-sums, to take the sum from the other side
   
 XV/XV Pairs
 -----------

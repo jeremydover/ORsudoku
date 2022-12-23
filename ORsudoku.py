@@ -177,6 +177,7 @@ class sudoku:
 		self.isParity = False
 		self.isEntropy = False
 		self.isModular = False
+		self.isFullRank = False
 		
 		if digitSet is None:
 			self.digits = {x for x in range(1,self.boardWidth+1)}
@@ -292,6 +293,37 @@ class sudoku:
 			self.cellModular.insert(i,t)
 		
 		self.isModular = True
+		
+	def __setFullRank(self):
+		if self.boardWidth != 9 or self.minDigit < 0 or self.maxDigit > 9:
+			print("Full rank constraints only supported for digits {0..9} on 9x9 boards or smaller.")
+			sys.exit()
+			
+		# Set up variables to track full rank constraints
+		self.rcRank = [self.model.NewIntVar(1,4*self.boardWidth,'fullRankRank') for i in range(4*self.boardWidth)]
+		self.rcSum = [self.model.NewIntVar(0,10**self.boardWidth,'fullRankSum') for i in range(4*self.boardWidth)]
+		# Set up tie between rank sums and cell values
+		for k in range(2):	# Top/left or bottom/right
+			for j in range(2):	# Row or column
+				for i in range(self.boardWidth):
+					# Note: these sums seems backwards because the closest digit to the clue is the MOST significant
+					sumRow = i if j == sudoku.Row else (self.boardWidth-1 if k == 0 else 0)
+					sumCol = i if j == sudoku.Col else (self.boardWidth-1 if k == 0 else 0)
+					hStep = 0 if j == sudoku.Col else (-1 if k == 0 else 1) 
+					vStep = 0 if j == sudoku.Row else (-1 if k == 0 else 1)
+					#print (sum(self.cellValue[sumRow+m*vStep][sumCol+m*hStep]*10**m for m in range(self.boardWidth)))
+					self.model.Add(self.rcSum[4*i+2*j+k] == sum(self.cellValues[sumRow+m*vStep][sumCol+m*hStep]*10**m for m in range(self.boardWidth)))
+		
+		# Set up Booleans to force rank ordering
+		for i in range(4*self.boardWidth):
+			for j in range(i+1,4*self.boardWidth):
+				c = self.model.NewBoolVar('rankOrder{:d}{:d}'.format(i,j))
+				self.model.Add(self.rcSum[i] > self.rcSum[j]).OnlyEnforceIf(c)
+				self.model.Add(self.rcRank[i] > self.rcRank[j]).OnlyEnforceIf(c)
+				self.model.Add(self.rcSum[i] < self.rcSum[j]).OnlyEnforceIf(c.Not())
+				self.model.Add(self.rcRank[i] < self.rcRank[j]).OnlyEnforceIf(c.Not())
+				
+		self.isFullRank = True
 
 	def getCellVar(self,i,j):
 		# Returns the model variable associated with a cell value. Useful when tying several puzzles together, e.g. Samurai
@@ -776,7 +808,18 @@ class sudoku:
 			self.model.Add(self.cellValues[row][col] == x).OnlyEnforceIf(varBitmap[varTrack])
 			self.model.Add(self.cellValues[row+x*vStep][col+x*hStep] == digit).OnlyEnforceIf(varBitmap[varTrack])
 			varTrack = varTrack + 1
+
+	def setAllOddOrEven(self,inlist):
+		if self.isParity is False:
+			self.__setParity()
+		inlist = set(self.__procCellList(inlist))
 		
+		for i in range(len(self.regions)):
+			rList = list(inlist & set(self.regions[i]))
+			if len(rList) > 1:
+				for j in range(1,len(rList)):
+					self.model.Add(self.cellParity[rList[0][0]][rList[0][1]] == self.cellParity[rList[j][0]][rList[j][1]])
+			
 ####Multi-cell constraints
 	def setFortress(self,inlist):
 		inlist = self.__procCellList(inlist)
@@ -1079,6 +1122,27 @@ class sudoku:
 			sys.exit()
 		else:
 			self.model.Add(sum([self.cellParity[inlist[i][0]][inlist[i][1]] for i in range(len(inlist))]) == len(inlist)//2)
+			
+	def setDavidAndGoliath(self,inlist,borderDigit=5,borderType=0):
+		# The pair contains at least one David digit and at least one Goliath digit, where any overlapping digit itself meets both conditions
+		inlist = self.__procCellList(inlist)
+		d = [self.model.NewBoolVar('david') for i in range(2)]
+		g = [self.model.NewBoolVar('goliath') for i in range(2)]
+		for i in range(2):
+			if borderType <= 0: # borderDigit is a David digit
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] <= borderDigit).OnlyEnforceIf(d[i])
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] > borderDigit).OnlyEnforceIf(d[i].Not())
+			else:
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] < borderDigit).OnlyEnforceIf(d[i])
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] >= borderDigit).OnlyEnforceIf(d[i].Not())
+			if borderType >= 0: # borderDigit is a Goliath digit
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] >= borderDigit).OnlyEnforceIf(g[i])
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] < borderDigit).OnlyEnforceIf(g[i].Not())
+			else:
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] > borderDigit).OnlyEnforceIf(d[i])
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] <= borderDigit).OnlyEnforceIf(g[i].Not())
+		self.model.AddBoolOr(d)
+		self.model.AddBoolOr(g)
 
 	def setDigitCountCage(self,inlist,value):
 		# A digit count cage specifies the number of distinct digits that appear in the cage...h/t clover!
@@ -1362,6 +1426,45 @@ class sudoku:
 	def setReverseXSum(self,row1,col1,rc,value):
 		self.setXSumBase(row1,col1,rc,value,-1)
 				
+	def setDoubleXSum(self,row1,col1,rc,value):
+		# A double X sum clue gives the sum of the X sums from each direction (top/bottom or left/right) in the clued row or column.
+		row = row1 - 1 if rc == sudoku.Row else 0
+		col = col1 - 1 if rc == sudoku.Col else 0
+		hStep = 0 if rc == sudoku.Col else 1
+		vStep = 0 if rc == sudoku.Row else 1
+		
+		digits = [x for x in self.digits if abs(x) <= self.boardWidth]
+		varBitmap = self.__varBitmap('doubleXSumRow{:d}Col{:d}RC{:d}'.format(row,col,rc),len(digits)*len(digits))
+			
+		varTrack = 0
+		for i in range(len(digits)):
+			myRow = self.boardWidth-1 if rc == sudoku.Col and digits[i] < 0 else row
+			myCol = self.boardWidth-1 if rc == sudoku.Row and digits[i] < 0 else col
+			myVStep = vStep if digits[i] > 0 else -1 * vStep
+			myHStep = hStep if digits[i] > 0 else -1 * hStep
+			sumIVars = [self.cellValues[myRow+k*myVStep][myCol+k*myHStep] for k in range(abs(digits[i]))]
+			for j in range(len(digits)):
+				otherRow = self.boardWidth-1 if rc == sudoku.Col else row
+				otherCol = self.boardWidth-1 if rc == sudoku.Row else col
+				self.model.Add(self.cellValues[row][col] == digits[i]).OnlyEnforceIf(varBitmap[varTrack])
+				self.model.Add(self.cellValues[otherRow][otherCol] == digits[j]).OnlyEnforceIf(varBitmap[varTrack])
+				myRow = 0 if rc == sudoku.Col and digits[j] < 0 else otherRow
+				myCol = 0 if rc == sudoku.Row and digits[j] < 0 else otherCol
+				myVStep = -1*vStep if digits[j] > 0 else vStep
+				myHStep = -1*hStep if digits[j] > 0 else hStep
+				sumJVars = [self.cellValues[myRow+k*myVStep][myCol+k*myHStep] for k in range(abs(digits[j]))]
+				
+				myVars = sumIVars + sumJVars
+				if len(myVars) == 0:
+					# In this case both digits are zero, could happen in a weird 0-8, double or nothing scenario
+					if value == 0: # This is always true
+						self.model.AddBoolAnd([varBitmap[varTrack][0]]).OnlyEnforceIf(varBitmap[varTrack])
+					else: # This is never true
+						self.model.AddBoolAnd([varBitmap[varTrack][0].Not()]).OnlyEnforceIf(varBitmap[varTrack])
+				else:
+					self.model.Add(sum(myVars) == value).OnlyEnforceIf(varBitmap[varTrack])
+				varTrack = varTrack + 1
+	
 	def setXKropki(self,row1,col1,rc,wb,neg=False):
 		# row,col are the coordinates of the cell containing the Kropki position, so no 9s allowed
 		# rc is whether the cell is poiting to the row or column 0->row, 1->column
@@ -1911,6 +2014,35 @@ class sudoku:
 				self.model.Add(clueCells[i]-clueCells[j] == value).OnlyEnforceIf([maxVars[i],minVars[j]])
 		self.model.AddBoolOr(minVars)
 		self.model.AddBoolOr(maxVars)
+
+	def setFullRank(self,row1,col1,rc,value):
+		if self.isFullRank is False:
+			self.__setFullRank()
+			
+		# Convert from 1-base to 0-base
+		row = row1 - 1
+		col = col1 - 1
+		i = row if rc==sudoku.Row else col
+		j = rc
+		k = (0 if col == 0 else 1) if rc==sudoku.Row else (0 if row == 0 else 1)
+		self.model.Add(self.rcRank[4*i+2*j+k] == value)
+
+	def setParityParty(self,row1,col1,rc,value):
+		if self.isParity is False:
+			self.__setParity()
+			
+		row = row1 - 1
+		col = col1 - 1
+		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
+		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
+		
+		varBitmap = self.__varBitmap('ParityParty{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth)
+		for i in range(self.boardWidth):
+			self.model.Add(sum(self.cellValues[row+j*vStep][col+j*hStep] for j in range(i)) == value).OnlyEnforceIf(varBitmap[i])
+			if i > 1:
+				for j in range(1,i-1):
+					self.model.Add(self.cellParity[row][col] == self.cellParity[row+j*vStep][col+j*hStep]).OnlyEnforceIf(varBitmap[i])
+				self.model.Add(self.cellParity[row][col] != self.cellParity[row+(i-1)*vStep][col+(i-1)*hStep]).OnlyEnforceIf(varBitmap[i])
 
 ####2x2 constraints
 	def setQuadruple(self,row,col=-1,values=-1):
@@ -2923,6 +3055,7 @@ class cellTransformSudoku(sudoku):
 		self.isParity = False
 		self.isEntropy = False
 		self.isModular = False
+		self.isFullRank = False
 		
 		if digitSet is None:
 			self.baseDigits = {x for x in range(1,self.boardWidth+1)}
@@ -3060,6 +3193,11 @@ class cellTransformSudoku(sudoku):
 			(row,col) = self._sudoku__procCell(row)
 		self.model.AddBoolAnd([self.double[row][col].Not()])
 	
+	def setGiven(self,row,col=-1,value=-1):
+		if col == -1:
+			(row,col,value) = self._sudoku__procCell(row)
+		self.model.Add(self.baseValues[row][col] == value)
+		
 	def printCurrentSolution(self):
 		dW = max([len(str(x)) for x in self.digits])
 		colorama.init()
@@ -3246,6 +3384,7 @@ class japaneseSumSudoku(sudoku):
 		self.isParity = False
 		self.isEntropy = False
 		self.isModular = False
+		self.isFullRank = False
 		
 		if digitSet is None:
 			self.digits = {x for x in range(1,self.boardWidth+1)}
@@ -3727,6 +3866,7 @@ class schroedingerCellSudoku(sudoku):
 		self.isParity = False
 		self.isEntropy = False
 		self.isModular = False
+		self.isFullRank = False
 		
 		if digitSet is None:
 			self.digits = {x for x in range(self.boardWidth+1)}		# Add additional digit from Schroedinger
@@ -4707,6 +4847,7 @@ class scarySudoku(sudoku):
 		self.isParity = False
 		self.isEntropy = False
 		self.isModular = False
+		self.isFullRank = False
 		
 		if digitSet is None:
 			self.digits = {x for x in range(1,self.boardWidth+1)}
