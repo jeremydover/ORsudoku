@@ -1,3 +1,10 @@
+1/15/2023
+	Added support for magic lines...thanks Raumplaner!
+	Added support for psycho killer cages, including a test case
+	Added support for global Modular squares, similar to Entropy but using the modular grouping of digits
+	Added support for knightmare constraint, including test case
+	Added support for logic bombs
+
 12/22/22
 	Added support for full rank clues
 	Added support for David and Goliath pairs (Inspired by Bill Murphy...thanks!)

@@ -1,4 +1,5 @@
 from __future__ import print_function
+from __future__ import print_function
 import sys
 import math
 import colorama
@@ -164,6 +165,9 @@ class sudoku:
 		
 		self.isEntropyQuadInitialized = False
 		self.isEntropyQuadNegative = False
+		
+		self.isModularQuadInitialized = False
+		self.isModularQuadNegative = False
 		
 		self.isEntropyBattenburgInitialized = False
 		self.isEntropyBattenburgNegative = False
@@ -369,6 +373,15 @@ class sudoku:
 				if j < self.boardWidth-2:
 					self.model.AddAllDifferent([self.cellValues[i][j],self.cellValues[i+1][j+2]])
 					
+	def setKnightMare(self):
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				ij = self.cellValues[i][j]
+				kCells = [self.cellValues[i+k][j+m] for k in [1,2] for m in [-2,-1,1,2] if abs(k) != abs(m) and i+k >= 0 and i+k < self.boardWidth and j+m >= 0 and j+m < self.boardWidth]
+				for k in kCells:
+					self.model.Add(ij + k != 5)
+					self.model.Add(ij + k != 15)
+
 	def setDisjointGroups(self):
 		for i in range(self.boardSizeRoot):
 			for j in range(self.boardSizeRoot):
@@ -518,7 +531,10 @@ class sudoku:
 				
 	def setGlobalEntropy(self):
 		self.setEntropyQuadArray([(i,j) for i in range(1,self.boardWidth) for j in range(1,self.boardWidth)])
-
+		
+	def setGlobalModular(self):
+		self.setModularQuadArray([(i,j) for i in range(1,self.boardWidth) for j in range(1,self.boardWidth)])
+		
 	def setQuadro(self):
 		self.setParityQuadArray([(i,j) for i in range(1,self.boardWidth) for j in range(1,self.boardWidth)])
 
@@ -820,6 +836,30 @@ class sudoku:
 				for j in range(1,len(rList)):
 					self.model.Add(self.cellParity[rList[0][0]][rList[0][1]] == self.cellParity[rList[j][0]][rList[j][1]])
 			
+	def setLogicBomb(self,row,col=-1):
+		if col == -1:
+			(row,col) = self.__procCell(row)
+		if (row < 2) or (row >= self.boardWidth-2) or (col < 2) or (col >= self.boardWidth-2):
+			print("Logic bomb clues must be at least 2 cells away from every border")
+			sys.exit()
+		kCells = [self.cellValues[row+k][col+m] for k in [-2,-1,1,2] for m in [-2,-1,1,2] if abs(k) != abs(m)] + [self.cellValues[row][col]]
+		self.model.AddAllDifferent(kCells)
+		
+	def assertNumberOfLogicBombs(self,num):
+		self.logicCounts = []
+		for i in range(2,self.boardWidth-2):
+			for j in range(2,self.boardWidth-2):
+				b = self.model.NewBoolVar('LB')
+				c = self.model.NewIntVar(0,1,'LB')
+				self.model.Add(c == 0).OnlyEnforceIf(b.Not())
+				self.model.Add(c == 1).OnlyEnforceIf(b)
+				kCells = [self.cellValues[i+k][j+m] for k in [-2,-1,1,2] for m in [-2,-1,1,2] if abs(k) != abs(m)] + [self.cellValues[i][j]]
+				for k in range(9):
+					for m in range(k+1,9):
+						self.model.Add(kCells[k] != kCells[m]).OnlyEnforceIf(b)
+				self.logicCounts.append(c)
+		self.model.Add(sum(self.logicCounts) == num)
+			
 ####Multi-cell constraints
 	def setFortress(self,inlist):
 		inlist = self.__procCellList(inlist)
@@ -1111,7 +1151,23 @@ class sudoku:
 		if self.isParity is False:
 			self.__setParity()
 		self.model.Add(sum([self.cellParity[inlist[i][0]][inlist[i][1]] for i in range(len(inlist))]) <= (len(inlist)-1)//2)
-		
+
+	def setPsychoKillerCage(self,inlist,value):
+		inlist = self.__procCellList(inlist)
+		refDigits = []
+		for i in range(len(inlist)):
+			relRow = inlist[i][0] % 3
+			relCol = inlist[i][1] % 3
+			varBitmap = self.__varBitmap('PsychoKillerRow{:d}Col{:d}'.format(inlist[i][0],inlist[i][1]),self.boardWidth)
+			c = self.model.NewIntVar(1,self.boardWidth,'PKRefDigit')
+			for j in range(self.boardWidth):
+				refRow = 3*(j//3) + relRow
+				refCol = 3*(j%3) + relCol
+				self.model.Add(c == self.cellValues[refRow][refCol]).OnlyEnforceIf(varBitmap[j])
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] == j+1).OnlyEnforceIf(varBitmap[j])
+			refDigits.append(c)
+		self.model.Add(sum(refDigits) == value)
+
 	def setCapsule(self,inlist):
 		# A capsule has the same number of even and odd digits
 		inlist = self.__procCellList(inlist)
@@ -2198,6 +2254,52 @@ class sudoku:
 				if (i,j) not in self.entropyQuadCells:
 					self.setAntiEntropyQuad(i,j)
 					
+	def setModularQuad(self,row,col=-1):
+		if col == -1:
+			(row,col) = self.__procCell(row)
+		# A 2x2 square of cells is entropic if it includes a low, middle, and high digit
+		if self.isModularQuadInitialized is not True:
+			self.modularQuadCells = [(row,col)]
+			self.isModularQuadInitialized = True
+		else:
+			self.modularQuadCells.append((row,col))
+			
+		if self.isModular is False:
+			self.__setModular()
+		
+		self.model.AddForbiddenAssignments([self.cellModular[row][col],self.cellModular[row][col+1],self.cellModular[row+1][col],self.cellModular[row+1][col+1]],[(3,3,3,3),(1,1,1,1),(2,2,2,2),(3,3,3,1),(3,3,1,3),(3,1,3,3),(1,3,3,3),(3,3,3,2),(3,3,2,3),(3,2,3,3),(2,3,3,3),(1,1,1,3),(1,1,3,1),(1,3,1,1),(3,1,1,1),(1,1,1,2),(1,1,2,1),(1,2,1,1),(2,1,1,1),(2,2,2,3),(2,2,3,2),(2,3,2,2),(3,2,2,2),(2,2,2,1),(2,2,1,2),(2,1,2,2),(1,2,2,2),(3,3,1,1),(3,3,2,2),(1,1,3,3),(1,1,2,2),(2,2,3,3),(2,2,1,1),(3,1,3,1),(3,2,3,2),(1,3,1,3),(1,2,1,2),(2,3,2,3),(2,1,2,1),(3,1,1,3),(3,2,2,3),(1,3,3,1),(1,2,2,1),(2,3,3,2),(2,1,1,2)])
+		
+	def setModularQuadArray(self,inlist):
+		for x in inlist: self.setModularQuad(x)
+		
+	def setModularQuadNegative(self):
+		if self.isModularQuadInitialized is not True:
+			self.modularQuadCells = []
+			self.isModularQuadInitialized = True
+		
+		if self.isModular is False:
+			self.__setModular()
+			
+		self.isModularQuadNegative = True
+
+	def setAntiModularQuad(self,row,col=-1):
+		if col == -1:
+			(row,col) = self.__procCell(row)
+			
+		if self.isModular is False:
+			self.__setModular()
+		
+		self.model.AddAllowedAssignments([self.cellModular[row][col],self.cellModular[row][col+1],self.cellModular[row+1][col],self.cellModular[row+1][col+1]],[(3,3,3,3),(1,1,1,1),(2,2,2,2),(3,3,3,1),(3,3,1,3),(3,1,3,3),(1,3,3,3),(3,3,3,2),(3,3,2,3),(3,2,3,3),(2,3,3,3),(1,1,1,3),(1,1,3,1),(1,3,1,1),(3,1,1,1),(1,1,1,2),(1,1,2,1),(1,2,1,1),(2,1,1,1),(2,2,2,3),(2,2,3,2),(2,3,2,2),(3,2,2,2),(2,2,2,1),(2,2,1,2),(2,1,2,2),(1,2,2,2),(3,3,1,1),(3,3,2,2),(1,1,3,3),(1,1,2,2),(2,2,3,3),(2,2,1,1),(3,1,3,1),(3,2,3,2),(1,3,1,3),(1,2,1,2),(2,3,2,3),(2,1,2,1),(3,1,1,3),(3,2,2,3),(1,3,3,1),(1,2,2,1),(2,3,3,2),(2,1,1,2)])
+		
+	def setAntiModularQuadArray(self,inlist):
+		for x in inlist: self.setAntiEntropyQuad(x)
+
+	def __applyModularQuadNegative(self):
+		for i in range(self.boardWidth-1):
+			for j in range(self.boardWidth-1):
+				if (i,j) not in self.modularQuadCells:
+					self.setAntiModularQuad(i,j)
+
 	def setParityQuad(self,row,col=-1):
 		if col == -1:
 			(row,col) = self.__procCell(row)
@@ -2819,7 +2921,20 @@ class sudoku:
 			self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] - self.cellValues[inlist[i+1][0]][inlist[i+1][1]] == 7).OnlyEnforceIf([c.Not(),g])
 			self.model.Add(self.cellValues[inlist[i+1][0]][inlist[i+1][1]] - self.cellValues[inlist[i][0]][inlist[i][1]] == 2).OnlyEnforceIf([c,g.Not()])
 			self.model.Add(self.cellValues[inlist[i+1][0]][inlist[i+1][1]] - self.cellValues[inlist[i][0]][inlist[i][1]] == 7).OnlyEnforceIf([c.Not(),g.Not()])
-
+			
+	def setMagicLine(self,inlist):
+		inlist = self.__procCellList(inlist)
+		for i in range(len(inlist)-3):
+			sum1 = sum(self.cellValues[inlist[i+j][0]][inlist[i+j][1]] for j in range(3))
+			sum2 = sum(self.cellValues[inlist[i+j+1][0]][inlist[i+j+1][1]] for j in range(3))
+			varBitmap = self.__varBitmap('magicLine',3)
+			self.model.Add(sum1 == 15).OnlyEnforceIf(varBitmap[0])
+			self.model.Add(sum2 != 15).OnlyEnforceIf(varBitmap[0])
+			self.model.Add(sum1 != 15).OnlyEnforceIf(varBitmap[1])
+			self.model.Add(sum2 == 15).OnlyEnforceIf(varBitmap[1])
+			self.model.Add(sum1 == 15).OnlyEnforceIf(varBitmap[2])
+			self.model.Add(sum2 == 15).OnlyEnforceIf(varBitmap[2])
+			
 ####Model solving
 	def applyNegativeConstraints(self):
 		# This method is used to prepare the model for solution. If negative constraints have been set, i.e. all items not marked
@@ -3042,7 +3157,10 @@ class cellTransformSudoku(sudoku):
 		
 		self.isEntropyQuadInitialized = False
 		self.isEntropyQuadNegative = False
-		
+					
+		self.isModularQuadInitialized = False
+		self.isModularQuadNegative = False
+
 		self.isEntropyBattenburgInitialized = False
 		self.isEntropyBattenburgNegative = False
 		
@@ -3370,8 +3488,11 @@ class japaneseSumSudoku(sudoku):
 		self.isXVXVNegative = False
 		
 		self.isEntropyQuadInitialized = False
-		self.isEntropyQuadNegative = False
+		self.isEntropyQuadNegative = False		
 		
+		self.isModularQuadInitialized = False
+		self.isModularQuadNegative = False
+
 		self.isEntropyBattenburgInitialized = False
 		self.isEntropyBattenburgNegative = False
 		
@@ -3853,7 +3974,10 @@ class schroedingerCellSudoku(sudoku):
 		
 		self.isEntropyQuadInitialized = False
 		self.isEntropyQuadNegative = False
-		
+				
+		self.isModularQuadInitialized = False
+		self.isModularQuadNegative = False
+
 		self.isEntropyBattenburgInitialized = False
 		self.isEntropyBattenburgNegative = False
 		
@@ -4166,16 +4290,20 @@ class schroedingerCellSudoku(sudoku):
 				self.model.AddAllDifferent([self.cellValues[i][j],self.cellValues[i+1][j-1],self.sCellValues[i][j],self.sCellValues[i+1][j-1]])
 
 	def setAntiKnight(self):
-		for i in range(self.boardWidth-1):
+		for i in range(self.boardWidth):
 			for j in range(self.boardWidth):
-				if j > 1:
-					self.model.AddAllDifferent([self.cellValues[i][j],self.cellValues[i+1][j-2],self.sCellValues[i][j],self.sCellValues[i+1][j-2]])
-				if j > 0 and i < self.boardWidth-2:
-					self.model.AddAllDifferent([self.cellValues[i][j],self.cellValues[i+2][j-1],self.sCellValues[i][j],self.sCellValues[i+2][j-1]])
-				if j < self.boardWidth-1 and i < self.boardWidth-2:
-					self.model.AddAllDifferent([self.cellValues[i][j],self.cellValues[i+2][j+1],self.sCellValues[i][j],self.sCellValues[i+2][j+1]])
-				if j < self.boardWidth-2:
-					self.model.AddAllDifferent([self.cellValues[i][j],self.cellValues[i+1][j+2],self.sCellValues[i][j],self.sCellValues[i+1][j+2]])
+				kCells = [(i+k,j+m) for k in [1,2] for m in [-2,-1,1,2] if abs(k) != abs(m) and i+k >= 0 and i+k < self.boardWidth and j+m >= 0 and j+m < self.boardWidth]
+				for k in kCells:
+					self.model.AddAllDifferent([self.cellValues[i][j],self.cellValues[k[0]][k[1]],self.sCellValues[i][j],self.sCellValues[k[0]][k[1]]])
+					
+	def setKnightMare(self):
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				ij = self.cellValues[i][j] + self.sCellValues[i][j]
+				kCells = [self.cellValues[i+k][j+m]+self.sCellValues[i+k][j+m] for k in [1,2] for m in [-2,-1,1,2] if abs(k) != abs(m) and i+k >= 0 and i+k < self.boardWidth and j+m >= 0 and j+m < self.boardWidth]
+				for k in kCells:
+					self.model.Add(ij + k != 5)
+					self.model.Add(ij + k != 15)
 
 	def setDisjointGroups(self,allDigits=True):
 		for i in range(self.boardSizeRoot):
@@ -4763,6 +4891,18 @@ class superpositionSudoku(schroedingerCellSudoku):
 	def setDoubleArrow(self,inlist):
 		self.__setSuperpositionArrow(inlist,2)
 		
+	def setKnightMare(self):
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				ij = [self.cellValues[i][j],self.sCellValues[i][j]]
+				self.model.Add(ij[0] + ij[1] != 5)
+				self.model.Add(ij[0] + ij[1] != 15)
+				kCells = [self.cellValues[i+k][j+m] for k in [1,2] for m in [-2,-1,1,2] if abs(k) != abs(m) and i+k >= 0 and i+k < self.boardWidth and j+m >= 0 and j+m < self.boardWidth] + [self.sCellValues[i+k][j+m] for k in [1,2] for m in [-2,-1,1,2] if abs(k) != abs(m) and i+k >= 0 and i+k < self.boardWidth and j+m >= 0 and j+m < self.boardWidth]
+				for m in ij:
+					for k in kCells:
+						self.model.Add(m + k != 5)
+						self.model.Add(m + k != 15)
+
 	def setRenbanLine(self,inlist):
 		inlist = self._sudoku__procCellList(inlist)
 		# First the easy part: ensure all of the digits are different. The unassigned S-Cells will not get in the way, and we want to ensure the assigned ones are different from the regular cell values. So this is safe regardless of which are the S-cells
@@ -4834,7 +4974,10 @@ class scarySudoku(sudoku):
 		
 		self.isEntropyQuadInitialized = False
 		self.isEntropyQuadNegative = False
-		
+				
+		self.isModularQuadInitialized = False
+		self.isModularQuadNegative = False
+
 		self.isEntropyBattenburgInitialized = False
 		self.isEntropyBattenburgNegative = False
 		

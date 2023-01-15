@@ -52,6 +52,7 @@ Genetics
 German Whispers Lines - see Whispers Lines
 Given Digits
 Global Entropy
+Global Modular (see Global Entropy)
 Global Whispers (Dutch, et. al.)
 Gurth's Symmetric Placement (GSP)
 Indexing
@@ -61,11 +62,14 @@ Japanese Sum Sudoku
 Keypad King Lines
 Keypad Knight Lines
 Killer Cages (repeating and non-repeating)
+Knightmare (seee Anti-Knight)
 Kropki (see Kropki Pairs)
 Kropki Pairs
 Little Killer
 Lockout Lines
+Logic Bombs
 Look-and-Say Cages - see Zones
+Magic Lines
 Magic Squares
 MaxAscending
 Maximin - see Minimax
@@ -76,6 +80,7 @@ Minimax
 Missing Arrow - see Arrows
 Missing Bulb Thermos - see Thermometers
 Modular Lines
+Modular Quads - see Entropy Quads
 More-Odd-Than-Even/More-Even-Than-Odd Cages
 Nabner Lines
 Negator Sudoku - see Cell Transform Sudoku
@@ -98,6 +103,7 @@ Parity Party
 Parity Quads (2x2 regions which contain both parities)
 Parity Snakes
 Pencilmarks
+Psycho Killer Cages - see Killer Cages
 Pointing Arrows - see Arrows
 Position Sums
 Quadruple
@@ -223,6 +229,8 @@ setAntiKing(): applies the anti-king constraint to the whole puzzle
 Anti-Knight
 -----------
 setAntiKnight(): applies the anti-knight constraint to the whole puzzle
+
+setKnightmare(): applies the Knightmare constraint, where no two cells a knight's move apoart can sum to either 5 or 15.
 
 Anti-Queen
 ----------
@@ -499,6 +507,22 @@ setAntiEntropyQuadArray(list): creates multiple anti-entropy quad constraints
   
 setEntropyQuadNegative(): specify that all cells not specifically designated with entropy quads do NOT satisfy the entropy quad constraint, i.e., some entropic rank will be missing around each quad which is not an entropy quad
 
+The following analogous functions are available for modular quads, which are the same as Entropy quads, but use the modular grouping {1,4,7},{2,5,8},{3,6,9}
+
+setModularQuad(cell): creates an entropy constraint (all three entropic ranks must appear in the quad) for an individual quad
+  cell: a single cell specification, e.g., 13,'05',(4,7)
+  
+setModularQuadArray(list): creates multiple entropy quad constraints
+  list: a list of cell specifications
+  
+setAntiModularQuad(cell): creates an anti-entropy constraint (all three entropic ranks cannot appear in the quad) for an individual quad
+  cell: a single cell specification, e.g., 13,'05',(4,7)
+  
+setAntiModularQuadArray(list): creates multiple anti-entropy quad constraints
+  list: a list of cell specifications
+  
+setModularQuadNegative(): specify that all cells not specifically designated with entropy quads do NOT satisfy the entropy quad constraint, i.e., some entropic rank will be missing around each quad which is not an entropy quad
+
 Even-Odd
 --------
 setEven(cell): asserts the cell value is even
@@ -571,6 +595,8 @@ setGivenArray(list): set multiple given digits
 Global Entropy
 --------------
 setGlobalEntropy(): assert the Entropy condition on all quads. Effectively the same as setting entropy quads on all quads; see set EntropyQuad
+
+setGlobalModular(): same as Entropy, but with modular digit grouping {1,4,7},{2,5,8},{3,6,9}
 
 Global Whispers
 ---------------
@@ -653,6 +679,10 @@ setRepeatingCage(list,value): creates a killer cage where values may repeat
   list: list of cell specifications indicating the cells in a killer cage
   value: indicates the sum of the digits in the cage
   
+setPsychoKillerCage(list,value): creates a psycho killer cage, where the elements of the cage *provide a reference* to the digit in the same relative position in the box indicated by the cage element, and the sum of the referred digits is given
+  list: list of cell specifications of cells in the cage
+  value: sum of the referred cells
+  
 Kropki and Kropki Pairs
 -----------------------
 setKropkiWhite(cellHV): creates a white Kropki dot
@@ -698,6 +728,19 @@ Lockout Lines
 setlockoutLine(list): creates a lockout line constraint
   list: a list of cell specifications
   
+Logic Bombs
+-----------
+setLogicBomb(row,col): asserts a cell is a logic bomb, so that it and its 8 knightly neighbors are all distinct digits
+  row,col: cell specification
+  
+assertNumberOfLogicBombs(n): asserts that there are at least n logic Bombs in the grid (10 is max for 9x9)
+  n: positive integer
+
+Magic Lines
+-----------
+setMagicLine(list): create a magic line, where each set of four consecutive cells along the line contains one or more set of three consecutive cells whose sum is 15
+  list: list of cell specifications
+
 Magic Squares
 -------------
 setMagicSquare(cell): creates a magic square with given cell the upper left corner
