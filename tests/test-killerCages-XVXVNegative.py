@@ -4,7 +4,7 @@ import ORsudoku
 class TestPuzzle(unittest.TestCase):
 	# Puzzle: XV - XV = 0
 	# Author: jeremydover
-	# Link: 
+	# Link: https://tinyurl.com/3hwcdyn2
 	# Constraints tested: setGivenArray, setOddEvenArray, setXVArray, setXVNegative
 	
 	def test_puzzle(self):
