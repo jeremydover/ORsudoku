@@ -106,6 +106,7 @@ Pencilmarks
 Psycho Killer Cages - see Killer Cages
 Pointing Arrows - see Arrows
 Position Sums
+Punctured Cages - see Killer Cages
 Quadruple
 Quad Max Arrows
 Quad Max Parity Values - see Odd Max Values
@@ -117,6 +118,7 @@ Region Sum Lines (sum of all cells along a line in a region is fixed)
 Region Segment Sum Lines - see Region Sum Lines
 Renban Lines
 Repeating Arrows - see Arrows
+Repelling Digits
 Reverse Numbered Rooms - see Numbered Rooms
 Reverse X-Sums - see X-Sums
 Rossini Clues
@@ -683,6 +685,11 @@ setPsychoKillerCage(list,value): creates a psycho killer cage, where the element
   list: list of cell specifications of cells in the cage
   value: sum of the referred cells
   
+setPuncturedCage(list,value,puncture): creates a punctured cage, where the value is the sum of all but puncture digits in the cage
+  list: list of cells in the cage
+  value: sum of subset of the cells
+  puncture: (optional, default is 1) number of cells punctured from the sum
+  
 Kropki and Kropki Pairs
 -----------------------
 setKropkiWhite(cellHV): creates a white Kropki dot
@@ -1029,6 +1036,12 @@ setRunOnRenbanLine(list,n): set a run-on Renban line, i.e. a line where each con
 setNotRenbanLine(list): asserts that a set of digits does NOT form a Renban line
   list: list of cell specifications
   
+Repelling Digits
+----------------
+setRepellingDigit(value,list): assert that no cell containing digit value can be orthogonally adjacent to a cell containing a digit from list
+  value: the value of the repelling digit
+  list: list of digits that value repels
+
 Rossini Clues
 -------------
 Rossini clues appear as arrows on the outside of of the grid, and indicate that the first few cells next to the clue increase in the given direction. In normal Sudoku there is no ambiguity, since the number of cells used is 3, but is that 3 because of the region, or because 3 is a nice number? We provide the option to define the length of the run applied either by using regions, or specifying a value.
@@ -1213,9 +1226,8 @@ setUnicornDigit(value): set a unicorn digit, i.e. for any instance of that digit
 
 Up and Down Lines
 -----------------
-setUpAndDownLine(inlist): sets an up and down line constraint; cells must laternately increase and decrease
+setUpAndDownLine(inlist): sets an up and down line constraint; cells must alternately increase and decrease
   inlist: list of cell specifications
-  
   
 Weak Palindrome Lines
 ---------------------

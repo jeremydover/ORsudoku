@@ -552,6 +552,18 @@ class sudoku:
 						self.model.Add(kCells[k] != kCells[m]).OnlyEnforceIf(c)
 
 				self.model.Add(self.cellValues[i][j] != value).OnlyEnforceIf(c.Not())
+				
+	def setRepellingDigit(self,value,inlist):
+		#A repelling digit has a list of other digits it cannot be adjacent to
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				c = self.model.NewBoolVar('RepellingDigitD{:d}R{:d}C{:d}'.format(value,i,j))
+				self.model.Add(self.cellValues[i][j] == value).OnlyEnforceIf(c)
+				kCells = [self.cellValues[i+k][j+m] for k in [-1,0,1] for m in [-1,0,1] if abs(k) != abs(m) and i+k >= 0 and i+k < self.boardWidth and j+m >= 0 and j+m < self.boardWidth]
+				for k in range(len(kCells)):
+					for m in inlist:
+						self.model.Add(kCells[k] != m).OnlyEnforceIf(c)
+				self.model.Add(self.cellValues[i][j] != value).OnlyEnforceIf(c.Not())
 
 	def setAntiQueenDigit(self,values):
 		# An anti-queen digit cannot repeat on diagonals
@@ -1151,7 +1163,24 @@ class sudoku:
 		if self.isParity is False:
 			self.__setParity()
 		self.model.Add(sum([self.cellParity[inlist[i][0]][inlist[i][1]] for i in range(len(inlist))]) <= (len(inlist)-1)//2)
-
+		
+	def setPuncturedCage(self,inlist,value,puncture=1):
+		# A punctured cage is one with no repeated digits, where the given value is the sum of some subset of 
+		# digits in the cage, less the number of punctured digits. So a cage containing 1,2,3,4 could be clued
+		# with 6, 7, 8 or 9.
+		inlist = self.__procCellList(inlist)
+		
+		varBitmap = self.__varBitmap('PuncturedCageRow{:d}Col{:d}'.format(inlist[0][0],inlist[0][1]),math.comb(len(inlist),puncture))
+		varTrack = 0
+		
+		cI = CombinationIterator(len(inlist)-1,puncture)
+		comb = cI.getNext()
+		
+		while comb is not None:
+			self.model.Add(sum(self.cellValues[inlist[i][0]][inlist[i][1]] for i in range(len(inlist)) if i not in comb) == value).OnlyEnforceIf(varBitmap[varTrack])
+			varTrack = varTrack + 1
+			comb = cI.getNext()
+			
 	def setPsychoKillerCage(self,inlist,value):
 		inlist = self.__procCellList(inlist)
 		refDigits = []
