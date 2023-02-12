@@ -1,3 +1,8 @@
+2/11/2023	
+	Added alias for Gamma-Epsilon rules.
+	Updated input for indexing rows and columns to allow a purely negative constraint (i.e., no cells in row/col true)
+	Added debug output to support resolution of Issue #25
+
 2/3/2023
 	Added support for repelling digits, inspired by pirate sudoku...thanks clover!
 	Added support for punctured cages, inspired by zetamath...thanks!

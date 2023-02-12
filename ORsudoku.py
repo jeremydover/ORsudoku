@@ -420,6 +420,7 @@ class sudoku:
 		vStep = 0 if rc == sudoku.Row else 1		
 		target = row+1 if rc == sudoku.Col else col+1
 		varBitmap = self.__varBitmap('IndexRow{:d}Col{:d}'.format(row,col),self.boardWidth)
+		self.allVars = self.allVars + varBitmap[0]
 		
 		for k in range(self.boardWidth):
 			self.model.Add(self.cellValues[row][col] == k+1).OnlyEnforceIf(varBitmap[k])
@@ -427,8 +428,7 @@ class sudoku:
 	
 	def __setNonIndexCell(self,row,col,rc):
 		# This is the atomic call to set a negative constraint on an index condition. Dealing with whether it's a whole row, whether
-		# or not there's a negative
-		# constraint is dealt with higher level functions. This is not generally meant to be set outside the class.
+		# or not there's a negative constraint is dealt with higher level functions. This is not generally meant to be set outside the class.
 		# row,col is exactly what you think
 		# rc determines whether the cell is indexing its row or its column: 0 -> row, 1 -> column
 				
@@ -436,6 +436,7 @@ class sudoku:
 		vStep = 0 if rc == sudoku.Row else 1		
 		target = row+1 if rc == sudoku.Col else col+1
 		varBitmap = self.__varBitmap('IndexRow{:d}Col{:d}'.format(row,col),self.boardWidth-1)
+		self.allVars = self.allVars + varBitmap[0]
 		
 		varTrack = 0
 		for k in range(self.boardWidth):
@@ -456,7 +457,10 @@ class sudoku:
 		# Convert 1-base to 0-base
 		row0 = row1 - 1
 		if len(inlist1) == 0:
-			inlist0 = [x for x in range(self.boardWidth)]
+			if neg is True:
+				inlist0 = []
+			else:
+				inlist0 = [x for x in range(self.boardWidth)]
 		else:
 			inlist0 = [x-1 for x in inlist1]
 		
@@ -476,7 +480,10 @@ class sudoku:
 		# Convert 1-base to 0-base
 		col0 = col1 - 1
 		if len(inlist1) == 0:
-			inlist0 = [x for x in range(self.boardWidth)]
+			if neg is True:
+				inlist0 = []
+			else:
+				inlist0 = [x for x in range(self.boardWidth)]
 		else:
 			inlist0 = [x-1 for x in inlist1]
 		
@@ -895,6 +902,7 @@ class sudoku:
 			self.kropkiCells.append((row,col,hv))
 		# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
 		bit = self.model.NewBoolVar('KropkiWhiteBiggerDigitRow{:d}Col{:d}HV{:d}'.format(row,col,hv))
+		self.allVars.append(bit)
 		self.model.Add(self.cellValues[row][col] - self.cellValues[row+hv][col+(1-hv)] == self.kropkiDiff).OnlyEnforceIf(bit)
 		self.model.Add(self.cellValues[row][col] - self.cellValues[row+hv][col+(1-hv)] == -1*self.kropkiDiff).OnlyEnforceIf(bit.Not())
 		
@@ -908,6 +916,7 @@ class sudoku:
 			self.kropkiCells.append((row,col,hv))
 		# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
 		bit = self.model.NewBoolVar('KropkiBlackBiggerDigitRow{:d}Col{:d}HV{:d}'.format(row,col,hv))
+		self.allVars.append(bit)
 		self.model.Add(self.cellValues[row][col] == self.kropkiRatio*self.cellValues[row+hv][col+(1-hv)]).OnlyEnforceIf(bit)
 		self.model.Add(self.kropkiRatio*self.cellValues[row][col] == self.cellValues[row+hv][col+(1-hv)]).OnlyEnforceIf(bit.Not())
 		
@@ -957,6 +966,10 @@ class sudoku:
 	def setKropkiRatio(self,ratio=2):
 		# Sets the ratio used in all subseqequent black Kropki dots
 		self.kropkiRatio = ratio
+		
+	def setGammaEpsilon(self):
+		self.setKropkiDifference(5)
+		self.setKropkiRatio(3)
 					
 	def setXVV(self,row,col=-1,hv=-1):
 		if col == -1:

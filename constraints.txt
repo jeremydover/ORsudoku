@@ -48,6 +48,7 @@ Extra Regions - see irregular Sudoku
 Fortress
 Friendly Cells
 Full Rank
+Gamma-Epsilon - see Kropki
 Genetics
 German Whispers Lines - see Whispers Lines
 Given Digits
@@ -619,7 +620,7 @@ all solutions.
 setIndexRow(row,neg=False,inlist=[]): set an index row, namely one which indicates the position of the digit corresponding to the row within some subset of columns
   row: the row (1-9) used as an index. By default, all column positions index
   neg (optional): if a column position is indicated as not indexing, then position indicate specifically does NOT indicate the position of the digit. Default is False.
-  inlist (optional): a list of which column positions (1-9) are indexing, with columns not in the list NOT indexing
+  inlist (optional): a list of which column positions (1-9) are indexing, with columns not in the list NOT indexing. Note: if inlist is not given, and neg=True, then code assumes *NO* cell in the row indexes. If inlist is not given, and new is True, or not given, then code assumes *ALL* cells in the row index.
   Example: If we call setIndexRow(5,True,[1,2,3,4,5,6,7,8]), then in all but the rightmost column, the entry in row 5, column X indicates which row contains a 5 in that column. So if 5,1 is a 2, then 2,1 must be 5. In the rightmost column, the 5 CANNOT appear in the row indicated by the entry in row 5. Specifically if 5,9 is a 3, then the entry in 3,9 CANNOT be a 5.
 
 setIndexColumn(row,neg=False,inlist=[]): set an index column. See setIndexRow for details of the mechanics
@@ -723,6 +724,8 @@ setKropkiDifference(value)
 setKropkiRatio(value)
 
 The values can be reset to their defaults by calling them with no argument. All dots added subsequently to these calls will use the new values, without changing constraints already entered. HOWEVER, if a negative constraint is applied, it will ALWAYS use the final set value of these two variables to apply the negative constraint against.
+
+setGammaEpsilon(): implement Gamma Epsilon rules, equivalent to setKropkiDifference(5) & setKropkiRatio(3)
 
 Little Killers
 --------------
