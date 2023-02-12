@@ -130,6 +130,8 @@ Scary Cells
 Schrödinger Cell Sudoku
 Search Nine
 Shift Lines
+Skyscrapers
+Skyscraper Sums - see Skyscrapers
 Slow Thermometers (see Thermometers)
 Sum Dots (see Killer Cages)
 Thermometers
@@ -1198,6 +1200,11 @@ setSkyscraper(row,col,rc,value): sets a skyscraper constraint, specifying the nu
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: the number of digits that can be seen
+  
+setSkyscraperSum(row,col,rc,value): sets a skyscraper sum constraint, specifying the SUM OF the number of digits that can be "seen" from the clue, where seen means greater than all digits between it and the clue
+  row,col: The coordinates of the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  value: the sum of digits that can be seen
   
 Thermometers
 ------------

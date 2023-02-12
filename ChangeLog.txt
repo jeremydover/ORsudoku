@@ -1,3 +1,7 @@
+2/12/2023
+	Added test cases for Double X-Sums and Broken 159/Gamma Epsilon
+	Added support for Skyscraper Sums, which clue the sum of the Skyscrapers seen...inspired by ICHTUES
+
 2/11/2023	
 	Added alias for Gamma-Epsilon rules.
 	Updated input for indexing rows and columns to allow a purely negative constraint (i.e., no cells in row/col true)

@@ -1974,6 +1974,43 @@ class sudoku:
 			
 		self.model.Add(sum([seenInts[i] for i in range(self.boardWidth)]) == value)
 		
+	def setSkyscraperSum(self,row1,col1,rc,value):
+		# row,col are the coordinates of the cell containing the index of the target cell
+		# rc is whether things are row/column
+		# value is the SUM of the digits that can be "seen" (i.e. are greater than all their predecessors) from the direction of the clue
+		
+		# Convert from 1-base to 0-base
+		row = row1 - 1
+		col = col1 - 1
+		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
+		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
+		
+		# Create Boolean variables to determine where cell i in the row (from the correct direction) is greater than each of its predecessors
+		incVars = [[]]
+		for i in range(1,self.boardWidth):
+			t = []
+			for j in range(i):
+				c = self.model.NewBoolVar('SkyscraperRow{:d}Col{:d}Cell{:d}Cell{:d}'.format(row,col,i,j))
+				t.append(c)
+				self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] > self.cellValues[row+j*vStep][col+j*hStep]).OnlyEnforceIf(c)
+				self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] < self.cellValues[row+j*vStep][col+j*hStep]).OnlyEnforceIf(c.Not())
+			incVars.insert(i,t)
+		
+		seenBools = [self.model.NewBoolVar('SkyscraperSeenBool{:d}{:d}'.format(row+i*vStep,col+i*hStep)) for i in range(self.boardWidth)]
+		seenInts = [self.model.NewIntVar(min(self.minDigit,0),self.maxDigit,'SkyscraperSeenInt{:d}{:d}'.format(row+i*vStep,col+i*hStep)) for i in range(self.boardWidth)]
+		for i in range(self.boardWidth):
+			self.model.Add(seenInts[i] == self.cellValues[row+i*vStep][col+i*hStep]).OnlyEnforceIf(seenBools[i])
+			self.model.Add(seenInts[i] == 0).OnlyEnforceIf(seenBools[i].Not())
+			
+		# Need to treat i=0 separately, since it is always seen, so seenBool[0] is always true
+		self.model.AddBoolAnd([seenBools[0]])
+		
+		for i in range(1,self.boardWidth):
+			self.model.AddBoolAnd(incVars[i]).OnlyEnforceIf(seenBools[i])
+			self.model.AddBoolAnd([seenBools[i]]).OnlyEnforceIf(incVars[i])
+			
+		self.model.Add(sum([seenInts[i] for i in range(self.boardWidth)]) == value)
+	
 	def setNextToNine(self,row1,col1,rc,values,digit=9):
 		if type(values) is int:
 			values  = [values]
