@@ -156,6 +156,7 @@ class sudoku:
 		self.isRossiniInitialized = False
 		self.isRossiniNegative = False
 		self.rossiniLength = -1
+		self.outsideLength = -1
 		
 		self.isXVInitialized = False
 		self.isXVNegative = False
@@ -611,6 +612,20 @@ class sudoku:
 						self.model.Add(self.cellValues[i][j] != pairs[k][1]).OnlyEnforceIf([otherDigit])
 						self.model.Add(self.cellValues[self.boardWidth-1-i][self.boardWidth-1-j] != pairs[k][0]).OnlyEnforceIf([otherDigit])
 						self.model.Add(self.cellValues[self.boardWidth-1-i][self.boardWidth-1-j] != pairs[k][1]).OnlyEnforceIf([otherDigit])
+
+	def setRotationalPairs(self):
+		for i in range((self.boardWidth + 1)//2):
+			for j in range(self.boardWidth):
+				if (i == self.boardWidth//2) and (j >= i): continue	# Does top half of board, and if there is a center row, do left half of it
+				for k in range(i,(self.boardWidth + 1)//2):
+					for m in range(self.boardWidth):
+						if (k == i) and (m <= j): continue
+						if (k == self.boardWidth//2) and (m >= k): continue
+						c = self.model.NewBoolVar('')
+						self.model.Add(self.cellValues[i][j] == self.cellValues[k][m]).OnlyEnforceIf(c)
+						self.model.Add(self.cellValues[self.boardWidth-1-i][self.boardWidth-1-j] == self.cellValues[self.boardWidth-1-k][self.boardWidth-1-m]).OnlyEnforceIf(c)
+						self.model.Add(self.cellValues[i][j] != self.cellValues[k][m]).OnlyEnforceIf(c.Not())
+						self.model.Add(self.cellValues[self.boardWidth-1-i][self.boardWidth-1-j] != self.cellValues[self.boardWidth-1-k][self.boardWidth-1-m]).OnlyEnforceIf(c.Not())
 						
 	def setNoThreeInARowParity(self):
 		if self.isParity is False:
@@ -1097,6 +1112,18 @@ class sudoku:
 					self.setAntiXVXV(i,j,1)
 				if j < 8 and (i,j,0) not in self.xvxvCells:
 					self.setAntiXVXV(i,j,0)
+
+	def setXYDifference(self,row,col=-1,hv=-1):
+		if col == -1:
+			(row,col,hv) = self.__procCell(row)
+		# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
+		bit = self.model.NewBoolVar('XYDifferenceBiggerDigitRow{:d}Col{:d}HV{:d}'.format(row,col,hv))
+		self.allVars.append(bit)
+		self.model.Add(self.cellValues[row][col] - self.cellValues[row+hv][col+(1-hv)] == self.cellValues[(1-hv)*row][hv*col]).OnlyEnforceIf(bit)
+		self.model.Add(self.cellValues[row][col] - self.cellValues[row+hv][col+(1-hv)] == -1*self.cellValues[(1-hv)*row][hv*col]).OnlyEnforceIf(bit.Not())
+
+	def setXYDifferenceArray(self,cells):
+		for x in cells: self.setXYDifference(x)
 
 	def setEitherOr(self,row,col=-1,hv=-1,value=-1):
 		if col == -1:
@@ -1780,6 +1807,22 @@ class sudoku:
 				self.model.Add(self.cellValues[row+(allowableDigits[i]-1)*vStep][col+(allowableDigits[i]-1)*hStep] + self.cellValues[row+(allowableDigits[j]-1)*vStep][col+(allowableDigits[j]-1)*hStep] == value2).OnlyEnforceIf(varBitmap[varTrack])
 				varTrack = varTrack + 1
 
+	def __setDigitsInBlock(self,inlist,values):
+		# The list of values must appear in the listed cells
+		for x in set(values):
+			xVars = []
+			for i in range(len(inlist)):
+				c = self.model.NewBoolVar('ZoneR{:d}C{:d}V{:d}'.format(inlist[i][0],inlist[i][1],x))
+				# Tie Boolean to integer so we can count instances
+				cI = self.model.NewIntVar(0,1,'ZoneIntR{:d}C{:d}V{:d}'.format(inlist[i][0],inlist[i][1],x))
+				self.model.Add(cI == 1).OnlyEnforceIf(c)
+				self.model.Add(cI == 0).OnlyEnforceIf(c.Not())
+				xVars.append(cI)
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] == x).OnlyEnforceIf(c)
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] != x).OnlyEnforceIf(c.Not())
+				
+			self.model.Add(sum(xVars) >= values.count(x))
+
 	def setOutside(self,row1,col1,rc,valueList):
 		# row,col are the coordinates of the cell next to the clues
 		# rc is whether things are row/column
@@ -1791,18 +1834,47 @@ class sudoku:
 		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
 		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
 		
-		# List of cell indices in the row/column we're looking at
-		candCells = {(row+i*vStep,col+i*hStep) for i in range(self.boardWidth)}
-		for i in range(len(self.regions)):
-			if len({(row,col)} & set(self.regions[i])) > 0: currentRegion = i
+		if self.outsideLength == -1:
+			# Clue is based on the region
+			candCells = {(row+i*vStep,col+i*hStep) for i in range(self.boardWidth)}
+			for i in range(len(self.regions)):
+				if len({(row,col)} & set(self.regions[i])) > 0: currentRegion = i
 			
-		clueCells = list(candCells & set(self.regions[currentRegion]))
-		vars = [[self.model.NewBoolVar('OutsideClue') for i in range(len(clueCells))] for j in range(len(valueList))]
-		for j in range(len(valueList)):
-			for i in range(len(clueCells)):
-				self.model.Add(self.cellValues[clueCells[i][0]][clueCells[i][1]] == valueList[j]).OnlyEnforceIf(vars[j][i])
-				self.model.Add(self.cellValues[clueCells[i][0]][clueCells[i][1]] != valueList[j]).OnlyEnforceIf(vars[j][i].Not())
-			self.model.AddBoolOr(vars[j])
+			clueCells = list(candCells & set(self.regions[currentRegion]))
+		else:
+			# Clue is based on number of cells, independent of region
+			clueCells = [(row+i*vStep,col+i*hStep) for i in range(self.outsideLength)]
+			
+		self.__setDigitsInBlock(clueCells,valueList)
+		#vars = [[self.model.NewBoolVar('OutsideClue') for i in range(len(clueCells))] for j in range(len(valueList))]
+		#for j in range(len(valueList)):
+		#	for i in range(len(clueCells)):
+		#		self.model.Add(self.cellValues[clueCells[i][0]][clueCells[i][1]] == valueList[j]).OnlyEnforceIf(vars[j][i])
+		#		self.model.Add(self.cellValues[clueCells[i][0]][clueCells[i][1]] != valueList[j]).OnlyEnforceIf(vars[j][i].Not())
+		#	self.model.AddBoolOr(vars[j])
+		
+	def setOutsideDiagonal(self,row1,col1,row2,col2,valueList):
+		# row1,col1 is the position of the first cell on the diagonal
+		# row2,col2 is the position of the second cell on the diagonal
+		row = row1 - 1
+		col = col1 - 1
+		hStep = col2 - col1
+		vStep = row2 - row1
+		
+		if self.outsideLength == -1:
+			# Clue is based on the region
+			candCells = {(row+i*vStep,col+i*hStep) for i in range(self.boardWidth)}
+			for i in range(len(self.regions)):
+				if len({(row,col)} & set(self.regions[i])) > 0: currentRegion = i
+			
+			clueCells = list(candCells & set(self.regions[currentRegion]))
+		else:
+			# Clue is based on length
+			clueCells = list({(row+i*vStep,col+i*hStep) for i in range(self.outsideLength)} & {(j,k) for j in range(self.boardWidth) for k in range(self.boardWidth)})
+		self.__setDigitsInBlock(clueCells,valueList)
+
+	def setOutsideLength(self,value):
+		self.outsideLength = value
 
 	def setCornerEdge(self,box1,ce,valueList):
 		# box is the box number to which to apply the clue. 1-based so, upper left corner is 1, to its right is 2, etc.
@@ -3227,6 +3299,7 @@ class cellTransformSudoku(sudoku):
 		self.isRossiniInitialized = False
 		self.isRossiniNegative = False
 		self.rossiniLength = -1
+		self.outsideLength = -1
 		
 		self.isXVInitialized = False
 		self.isXVNegative = False
@@ -3559,6 +3632,7 @@ class japaneseSumSudoku(sudoku):
 		self.isRossiniInitialized = False
 		self.isRossiniNegative = False
 		self.rossiniLength = -1
+		self.outsideLength = -1
 		
 		self.isXVInitialized = False
 		self.isXVNegative = False
@@ -4044,6 +4118,7 @@ class schroedingerCellSudoku(sudoku):
 		self.isRossiniInitialized = False
 		self.isRossiniNegative = False
 		self.rossiniLength = -1
+		self.outsideLength = -1
 		
 		self.isXVInitialized = False
 		self.isXVNegative = False
@@ -5044,6 +5119,7 @@ class scarySudoku(sudoku):
 		self.isRossiniInitialized = False
 		self.isRossiniNegative = False
 		self.rossiniLength = -1
+		self.outsideLength = -1
 		
 		self.isXVInitialized = False
 		self.isXVNegative = False

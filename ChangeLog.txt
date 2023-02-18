@@ -1,3 +1,8 @@
+2/17/2023	
+	Added support for Outside Diagonal clues, per issue #31...inspired by Sudoku Mahabharat 2023 Round 2, h/t/ to Bill Murphy
+	Added support for XY-difference pairs, per issue #32...inspired by glum_hippo, h/t to clover!
+	Added support for Rotational Pairs constraint
+
 2/12/2023
 	Added test cases for Double X-Sums and Broken 159/Gamma Epsilon
 	Added support for Skyscraper Sums, which clue the sum of the Skyscrapers seen...inspired by ICHTUES

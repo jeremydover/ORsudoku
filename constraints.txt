@@ -95,6 +95,7 @@ Odd Max Quad - see Odd Max Values
 Openfaced Sandwich Sums - see Sandwich Sums
 Order Sum Cages
 Outside Clues
+Outside Diagonal Clues
 Palindrome Lines
 Parindrome Lines - see Palindrome Lines
 Parity Count Lines (endpoints show the number of odd/even digits along the line)
@@ -123,6 +124,7 @@ Repelling Digits
 Reverse Numbered Rooms - see Numbered Rooms
 Reverse X-Sums - see X-Sums
 Rossini Clues
+Rotational Pairs - see Gurth's Symmetric Placement
 Run-On Renban Lines - see Renban Lines
 Samurai Sudoku
 Sandwich Sums
@@ -145,6 +147,7 @@ X-Sum
 XV (see XV Pairs)
 XV Pairs
 XVXV
+XY-Difference Pairs
 Zones
 
 Some Notes on Data Structures
@@ -613,6 +616,8 @@ Asserts that the the grid has symmetry based on 180 degree rotation plus some pe
 setGSP(pairs): assert the GSP constraint
   pairs: a list of lists of pairs of digits whose placement implements the symmetry. Default is pairs that sum to the grid size + 1, e.g. (19,28,37,46). Computationally, this list does NOT need to be complete, so one could use this to assert that everywhere a 1 appears, a 7 appears in the rotational symmetric position, and leave it at that. Don't know if that makes for an interesting puzzle though.
 
+setRotationalPairs(): assert the rotational pairs contraint: each digit has a partner digit which is always placed in cells under a 180 degree rotation. Like GSP, but pairs are not asserted in advance
+
 Indexing (159)
 --------------
 ****NOTE****
@@ -885,10 +890,17 @@ setOrderSumCages(list,slow,repeat): a set of cages with indeterminate sums, but 
   
 Outside Clues
 -------------
-setOutside(row,col,rc,valueList): provides a set of values on a row or column that must appear in that row/column in the first box (region for irregular sudoku) appearing next to the clue
+setOutside(row,col,rc,valueList): provides a set of values on a row or column that must appear in that row/column in the first box (region for irregular sudoku) appearing next to the clue; also option for using a fixed number of cells...see setOutsideLength
   row,col: The coordinates of the cell containing the indexing clue, i.e. the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   valueList: a list of values to be placed
+  
+setOutsideLength(num): sets a fixed length for outside clues, independent of regions
+
+setOutsideDiagonal(r1,c1,r2,c2,valueList): provide a set of values that must appear along a diagonal containing r1c1 and r2c2; defaults to limiting diagonal to a region, but canuse a fixed length as well...see setOutsideLength
+  r1,c1: Coordinates of cell next to clue
+  r2,c2: Coordinates of second cell along the diagonal
+  valueList: List of values to appear along the diagonal within the region (default) or a fixed number of cells
 
 Palindrome Lines
 ----------------
@@ -1363,6 +1375,12 @@ Vaults
 ------
 setVault(list): sets a vault, i.e., a region sich that no cell inside the region can appear in any cell outside, but orthogonally adjacent to any cell of the region
   list: list of cell specifications
+
+XY-Difference Pairs
+-------------------
+setXYDifference(cellHV): creates an XY-difference clue, where the difference of the two cells separated by the clue equals the first cell in the row/column
+  cellHV: an extended cell specification which adds the hv parameter: clue is on the right side if H, or on the bottom if V. All parameters can be given in a tuple, and these can use the Horz and Vert variables for the HV specification. Shorthand is possible, appending 0 to a cell spec to indicate horizontal and 1 to indicate vertical.
+  Example: 251, '251' and (2,5,p.Vert) all specify a XY-difference clue on the bottom edge of cell 2,5
 
 Zones
 -----
