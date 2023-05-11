@@ -1,3 +1,9 @@
+5/11/2023	
+	Added support for renrenbanban lines, h/t DarthParadox...thanks!
+	Added support for consecutive chain regions, h/t/ clover!...thanks!
+	Added support for consecutive lines
+	Added support for Sum Sandwiches, h/t clover!...thanks!
+
 2/17/2023	
 	Added support for Outside Diagonal clues, per issue #31...inspired by Sudoku Mahabharat 2023 Round 2, h/t/ to Bill Murphy
 	Added support for XY-difference pairs, per issue #32...inspired by glum_hippo, h/t to clover!

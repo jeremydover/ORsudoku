@@ -1470,6 +1470,60 @@ class sudoku:
 					self.model.Add(sum(pathInt[x[0]][x[1]] for x in self.getOrthogonalNeighbors(i,j)) == 2).OnlyEnforceIf(pathBool[i][j])
 					self.model.Add(self.cellParity[i][j] == parity).OnlyEnforceIf(pathBool[i][j])
 					
+	def setConsecutiveChainRegion(self,inlist):
+		self.setRenbanLine(inlist)		# Ensures region contains a set of consecutive digits of the right size
+		inlist = self.__procCellList(inlist)
+		inset = set(inlist)
+		rMin = self.__varBitmap('ConsecutiveChainRegionMin',len(inlist))
+		rMax = self.__varBitmap('ConsecutiveChainRegionMax',len(inlist))
+		for i in range(len(inlist)):
+			for j in range(len(inlist)):
+				if i == j:
+					# Just null out this case...a value can't be both min and max
+					self.model.AddBoolAnd([rMin[i][0].Not()]).OnlyEnforceIf(rMin[i]+rMax[j])
+				else:
+					# First, enforce min and max constraints regardless of whether or not both conditions are SAT
+					self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] < self.cellValues[inlist[j][0]][inlist[j][1]]).OnlyEnforceIf(rMin[i])
+					self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] < self.cellValues[inlist[j][0]][inlist[j][1]]).OnlyEnforceIf(rMax[j])
+					
+					# Now construct the chain
+					for k in range(len(inlist)):
+						x = inlist[k]
+						neigh = inset & {(x[0]-1,x[1]),(x[0]+1,x[1]),(x[0],x[1]-1),(x[0],x[1]+1)}
+						if len(neigh) == 1:
+							if k == i:
+								for y in neigh:
+									self.model.Add(self.cellValues[y[0]][y[1]] - self.cellValues[x[0]][x[1]] == 1).OnlyEnforceIf(rMin[i]+rMax[j])
+							elif k == j:
+								for y in neigh:
+									self.model.Add(self.cellValues[x[0]][x[1]] - self.cellValues[y[0]][y[1]] == 1).OnlyEnforceIf(rMin[i]+rMax[j])
+							else:
+								self.model.AddBoolAnd(rMin[i][0].Not()).OnlyEnforceIf(rMin[i]+rMax[j])
+						else:
+							c = self.__varBitmap('ConsecutiveChainRegion',len(neigh))
+							d = self.__varBitmap('ConsecutiveChainRegion',len(neigh))
+							varTrack = 0
+							if k == i:
+								for y in neigh:
+									# If min, only enforce single neighbor
+									self.model.Add(self.cellValues[y[0]][y[1]] - self.cellValues[x[0]][x[1]] == 1).OnlyEnforceIf(c[varTrack]+rMin[i]+rMax[j])
+									varTrack = varTrack + 1
+								# Peg d variables in this case
+								self.model.AddBoolAnd(d[0]).OnlyEnforceIf(rMin[i]+rMax[j])
+							elif k == j:
+								for y in neigh:
+									# If max, only enforce single neighbor
+									self.model.Add(self.cellValues[x[0]][x[1]] - self.cellValues[y[0]][y[1]] == 1).OnlyEnforceIf(c[varTrack]+rMin[i]+rMax[j])
+									varTrack = varTrack + 1
+								# Peg d variables in this case
+								self.model.AddBoolAnd(d[0]).OnlyEnforceIf(rMin[i]+rMax[j])
+							else:
+								for y in neigh:
+									# c enforces bigger neighbor, d enforces smaller neighbor
+									self.model.Add(self.cellValues[y[0]][y[1]] - self.cellValues[x[0]][x[1]] == 1).OnlyEnforceIf(c[varTrack]+rMin[i]+rMax[j])
+									self.model.Add(self.cellValues[x[0]][x[1]] - self.cellValues[y[0]][y[1]] == 1).OnlyEnforceIf(d[varTrack]+rMin[i]+rMax[j])
+									varTrack = varTrack + 1
+		
 	def setAntiQueenCell(self,row,col=-1,r2=-1,c2=-1):
 		# The digit in an anti-queen cell cannot repeat on any diagonal. If a second cell is given, only repeats in the direction of the given cell are forbidden
 		if col == -1:
@@ -2250,7 +2304,32 @@ class sudoku:
 				for j in range(1,i-1):
 					self.model.Add(self.cellParity[row][col] == self.cellParity[row+j*vStep][col+j*hStep]).OnlyEnforceIf(varBitmap[i])
 				self.model.Add(self.cellParity[row][col] != self.cellParity[row+(i-1)*vStep][col+(i-1)*hStep]).OnlyEnforceIf(varBitmap[i])
+				
+	def setSumSandwich(self,row1,col1,rc,values,neg=False):
+		if type(values) is int:
+			values  = [values]
+		row = row1 - 1
+		col = col1 - 1
+		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
+		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
 
+		for v in values:
+			self.model.Add(self.cellValues[row][col] != v)
+			self.model.Add(self.cellValues[row+(self.boardWidth-1)*vStep][col+(self.boardWidth-1)*hStep] != v)
+			varBitmap = self.__varBitmap('SumSandwich{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth-2)
+			for i in range(1,self.boardWidth-1):
+				self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] == v).OnlyEnforceIf(varBitmap[i-1])
+				self.model.Add(self.cellValues[row+(i-1)*vStep][col+(i-1)*hStep] + self.cellValues[row+(i+1)*vStep][col+(i+1)*hStep] == v).OnlyEnforceIf(varBitmap[i-1])
+				
+		if neg is True:
+			for v in self.digits:
+				if v not in values:
+					varBitmap = self.__varBitmap('SumSandwich{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth)
+					for i in range(self.boardWidth):
+						self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] == v).OnlyEnforceIf(varBitmap[i])
+						if i > 0 and i < self.boardWidth-1:
+							self.model.Add(self.cellValues[row+(i-1)*vStep][col+(i-1)*hStep] + self.cellValues[row+(i+1)*vStep][col+(i+1)*hStep] != v).OnlyEnforceIf(varBitmap[i])
+				
 ####2x2 constraints
 	def setQuadruple(self,row,col=-1,values=-1):
 		if col == -1:
@@ -2842,6 +2921,24 @@ class sudoku:
 			for y in range(len(inlist)):
 				self.model.Add(self.cellValues[inlist[x][0]][inlist[x][1]]-self.cellValues[inlist[y][0]][inlist[y][1]] < len(inlist))
 				
+	def setRenrenbanbanLine(self,inlist):
+		inlist = self.__procCellList(inlist)
+		varBitmap = self.__varBitmap('RenrenbanbanLine',math.comb(len(inlist)-1,len(inlist)//2-1))
+		varTrack = 0
+		cI = CombinationIterator(len(inlist)-2,len(inlist)//2-1)
+		comb = cI.getNext()
+		while comb is not None:
+			for myList in [[x for x in comb] + [len(inlist)-1],[x for x in range(len(inlist)-1) if x not in comb]]:
+				for i in range(len(inlist)//2):
+					x = inlist[myList[i]]
+					for j in range(i+1,len(inlist)//2):
+						y = inlist[myList[j]]
+						self.model.Add(self.cellValues[x[0]][x[1]] - self.cellValues[y[0]][y[1]] > 0).OnlyEnforceIf(varBitmap[varTrack])
+						self.model.Add(self.cellValues[x[0]][x[1]] - self.cellValues[y[0]][y[1]] < len(inlist)//2).OnlyEnforceIf(varBitmap[varTrack])
+						self.model.Add(self.cellValues[y[0]][y[1]] - self.cellValues[x[0]][x[1]] < len(inlist)//2).OnlyEnforceIf(varBitmap[varTrack])
+			comb = cI.getNext()
+			varTrack = varTrack + 1
+				
 	def setNotRenbanLine(self,inlist):
 		inlist = self.__procCellList(inlist)
 		
@@ -3086,6 +3183,10 @@ class sudoku:
 			self.model.Add(sum1 == 15).OnlyEnforceIf(varBitmap[2])
 			self.model.Add(sum2 == 15).OnlyEnforceIf(varBitmap[2])
 			
+	def setConsecutiveLine(self,inlist):
+		self.setRenbanLine(inlist)
+		self.setMissingThermo(inlist)
+			
 ####Model solving
 	def applyNegativeConstraints(self):
 		# This method is used to prepare the model for solution. If negative constraints have been set, i.e. all items not marked
@@ -3242,16 +3343,17 @@ class sudoku:
 		# We repeat the same procedure, except when we are done, instead of appending new variable lists.
 		# we create constraints to ensure these cases cannot happen
 		
-		for j in range(len(var)):
-			if len(var) < num:
-				var.append(var[j] + [bits[-1].Not()])
-			else:
-				# This ensures an unused combination of variables cannot occur
-				#self.model.AddBoolAnd([bits[-1]]).OnlyEnforceIf(var[j] + [bits[-1].Not()])
-				self.model.AddBoolAnd(var[j] + [bits[-1]]).OnlyEnforceIf(var[j] + [bits[-1].Not()])
+		if (num > 2):
+			for j in range(len(var)):
+				if len(var) < num:
+					var.append(var[j] + [bits[-1].Not()])
+				else:
+					# This ensures an unused combination of variables cannot occur
+					#self.model.AddBoolAnd([bits[-1]]).OnlyEnforceIf(var[j] + [bits[-1].Not()])
+					self.model.AddBoolAnd(var[j] + [bits[-1]]).OnlyEnforceIf(var[j] + [bits[-1].Not()])
 				
-			# Either way append to existing lists
-			var[j].append(bits[-1])
+				# Either way append to existing lists
+				var[j].append(bits[-1])
 			
 		return var
 		

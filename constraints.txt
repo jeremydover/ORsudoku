@@ -20,6 +20,8 @@ Cell Transform Sudoku
 Chinese Whispers Lines - see Whispers Lines
 Clock Lines
 Clone Regions
+Consecutive Chain Regions
+Consecutive Lines
 Consecutive Quads
 Corner/Edge Clues
 Count the Odds Lines
@@ -119,6 +121,7 @@ Ratio Pairs - see Kropki and Kropki pairs
 Region Sum Lines (sum of all cells along a line in a region is fixed)
 Region Segment Sum Lines - see Region Sum Lines
 Renban Lines
+Renrenbanban Lines (see Renban Lines)
 Repeating Arrows - see Arrows
 Repelling Digits
 Reverse Numbered Rooms - see Numbered Rooms
@@ -136,6 +139,7 @@ Skyscrapers
 Skyscraper Sums - see Skyscrapers
 Slow Thermometers (see Thermometers)
 Sum Dots (see Killer Cages)
+Sum Sandwiches
 Thermometers
 Unicorn Digits
 Vaults
@@ -360,6 +364,17 @@ setCloneRegion(list): creates a set of regions that are clones of each other, i.
 setDominantCloneRegion(list,strict): creates a set of regions such that in every position, the first region has a digit larger than the corresonding digit in all other regions
   list: a list OF LISTS of cell specifications
   strict: OPTIONAL, defaults to True. If strict, dominant clone contains strictly greater than digits. If strict is False, this is relaxed to greater than or equal to.
+  
+Consecutive Chain Regions
+-------------------------
+setConsecutiveChainRegion(list): creates a region which has contains a set of consecutive digits such that an orthogonal snake can be drawn within the region from the lowest to the highest digit
+	list: list of cell specifications
+NOTE: do NOT use this constraint with countSolutions...the chain construction creates numerous free Booleans which can flap while leaving the numerical solution fixed
+
+Consecutive Lines
+-----------------
+setConsecutiveLine(list): creates a line which consists of consecutive digits in order from lowest to highest (which end is lowest is not specified)
+	list: a list of cell specifications
   
 Consecutive Quads
 -----------------
@@ -1050,6 +1065,10 @@ setRunOnRenbanLine(list,n): set a run-on Renban line, i.e. a line where each con
   list: list of cell specifications
   n: length of subsegment that is a Renban. If not present, defaults to 5
   
+setRenrenbanbanLine(list): line consists of two renban sets, whose digits may overlap
+	list: list of cell specifications
+NOTE: do not use with countSolutions...has unconstrained Booleans that will give multiple solutions for each set of digits
+  
 setNotRenbanLine(list): asserts that a set of digits does NOT form a Renban line
   list: list of cell specifications
   
@@ -1217,6 +1236,14 @@ setSkyscraperSum(row,col,rc,value): sets a skyscraper sum constraint, specifying
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: the sum of digits that can be seen
+  
+Sum Sandwiches
+--------------
+setSumSandwich(row,col,rc,values,neg=False): sets a sum sandwich - in a row/column, each value in values is the sum of its neighbors, e.g., the 9 in that row/column must be between two digits that sum to 9
+  row,col: The coordinates of the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  values: a list of values who are the "filling" in a sum sandwich in the designated row/column
+  neg: Optional, default False. Asserts that digits not in the value list are *not* the sum of their neighbors
   
 Thermometers
 ------------
