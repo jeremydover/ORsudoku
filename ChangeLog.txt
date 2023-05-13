@@ -1,3 +1,6 @@
+5/13/2023
+	Added support for Knapp Daneben cages...thanks clover!
+
 5/11/2023	
 	Added support for renrenbanban lines, h/t DarthParadox...thanks!
 	Added support for consecutive chain regions, h/t/ clover!...thanks!

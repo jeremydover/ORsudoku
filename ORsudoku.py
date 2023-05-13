@@ -1237,6 +1237,13 @@ class sudoku:
 			refDigits.append(c)
 		self.model.Add(sum(refDigits) == value)
 
+	def setKnappDanebenCage(self,inlist,value):
+		inlist = self.__procCellList(inlist)
+		self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in inlist])
+		c = self.model.NewBoolVar('KnappDaneben')
+		self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in inlist) == value+1).OnlyEnforceIf(c)
+		self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in inlist) == value-1).OnlyEnforceIf(c.Not())
+	
 	def setCapsule(self,inlist):
 		# A capsule has the same number of even and odd digits
 		inlist = self.__procCellList(inlist)

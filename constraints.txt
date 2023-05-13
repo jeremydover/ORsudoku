@@ -65,6 +65,7 @@ Japanese Sum Sudoku
 Keypad King Lines
 Keypad Knight Lines
 Killer Cages (repeating and non-repeating)
+Knapp Daneben Cages - see Killer Cages
 Knightmare (seee Anti-Knight)
 Kropki (see Kropki Pairs)
 Kropki Pairs
@@ -712,6 +713,10 @@ setPuncturedCage(list,value,puncture): creates a punctured cage, where the value
   list: list of cells in the cage
   value: sum of subset of the cells
   puncture: (optional, default is 1) number of cells punctured from the sum
+  
+setKnappDanebenCage(list,value): creates a killer cage with all cell values distinct, where the sum of the digits is either one greater or one less than the given digit
+  list: list of cell specifications indicating the cells in a killer cage
+  value: indicates the sum of the digits in the cage, plus or minus 1.
   
 Kropki and Kropki Pairs
 -----------------------
