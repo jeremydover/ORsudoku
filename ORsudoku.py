@@ -5283,12 +5283,6 @@ class scarySudoku(sudoku):
 			self.model.AddAllDifferent([self.cellValues[rcIndex][crIndex] for crIndex in range(self.boardWidth)]) 	# Rows
 			self.model.AddAllDifferent([self.cellValues[crIndex][rcIndex] for crIndex in range(self.boardWidth)]) 	# Columns
 
-		self.regions = []
-		if irregular is None:
-			self._sudoku__setBoxes()
-			for i in range(len(self.regions)):
-				self.model.Add(sum(self.scaryInt[x[0]][x[1]] for x in self.regions[i]) == 1)
-
 		# Create variables to track which cells are scary
 		self.scary = []
 		self.scaryInt = []	
@@ -5310,6 +5304,13 @@ class scarySudoku(sudoku):
 		for i in range(self.boardWidth):
 			self.model.Add(sum(self.scaryInt[i][j] for j in range(self.boardWidth)) == 1)
 			self.model.Add(sum(self.scaryInt[j][i] for j in range(self.boardWidth)) == 1)
+
+		# Define regions
+		self.regions = []
+		if irregular is None:
+			self._sudoku__setBoxes()
+			for i in range(len(self.regions)):
+				self.model.Add(sum(self.scaryInt[x[0]][x[1]] for x in self.regions[i]) == 1)
 				
 		if noDiag is True:
 			for j in range(self.boardWidth):
