@@ -1,3 +1,9 @@
+8/27/2023
+	Added support for diagonal mirrors and anti-mirrors. (h/t Xeon Risq for Magnitude and Primality ideas)
+	Added support for ascending starter clues (h/t Bill Murphy...thanks!)
+	Added support for diagonal consecutive pairs (h/t Philip Newman...thanks!)
+	Added support for zipper lines
+
 5/13/2023
 	Added support for Knapp Daneben cages...thanks clover!
 

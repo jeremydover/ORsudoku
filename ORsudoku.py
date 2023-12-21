@@ -183,6 +183,7 @@ class sudoku:
 		self.isEntropy = False
 		self.isModular = False
 		self.isFullRank = False
+		self.isPrimality = False
 		
 		if digitSet is None:
 			self.digits = {x for x in range(1,self.boardWidth+1)}
@@ -329,7 +330,41 @@ class sudoku:
 				self.model.Add(self.rcRank[i] < self.rcRank[j]).OnlyEnforceIf(c.Not())
 				
 		self.isFullRank = True
+		
+	def __setPrimality(self):
+		if self.boardWidth != 9 or self.minDigit < 0 or self.maxDigit > 9:
+			print("Primality constraints only supported for digits {0..9} on 9x9 boards or smaller.")
+			sys.exit()
 
+		# Set up variables to track primality constraints
+		self.cellPrimality = []
+		for i in range(self.boardWidth):
+			t = []
+			for j in range(self.boardWidth):
+				varBitmap = self.__varBitmap('PrimalityRow{:d}Col{:d}'.format(i,j),self.boardWidth)
+				c = self.model.NewIntVar(0,2,'primalityValue{:d}{:d}'.format(i,j))
+				self.model.Add(self.cellValues[i][j] == 1).OnlyEnforceIf(varBitmap[0])
+				self.model.Add(c == 1).OnlyEnforceIf(varBitmap[0])
+				self.model.Add(self.cellValues[i][j] == 2).OnlyEnforceIf(varBitmap[1])
+				self.model.Add(c == 0).OnlyEnforceIf(varBitmap[1])
+				self.model.Add(self.cellValues[i][j] == 3).OnlyEnforceIf(varBitmap[2])
+				self.model.Add(c == 0).OnlyEnforceIf(varBitmap[2])
+				self.model.Add(self.cellValues[i][j] == 4).OnlyEnforceIf(varBitmap[3])
+				self.model.Add(c == 2).OnlyEnforceIf(varBitmap[3])
+				self.model.Add(self.cellValues[i][j] == 5).OnlyEnforceIf(varBitmap[4])
+				self.model.Add(c == 0).OnlyEnforceIf(varBitmap[4])
+				self.model.Add(self.cellValues[i][j] == 6).OnlyEnforceIf(varBitmap[5])
+				self.model.Add(c == 2).OnlyEnforceIf(varBitmap[5])
+				self.model.Add(self.cellValues[i][j] == 7).OnlyEnforceIf(varBitmap[6])
+				self.model.Add(c == 0).OnlyEnforceIf(varBitmap[6])
+				self.model.Add(self.cellValues[i][j] == 8).OnlyEnforceIf(varBitmap[7])
+				self.model.Add(c == 2).OnlyEnforceIf(varBitmap[7])
+				self.model.Add(self.cellValues[i][j] == 9).OnlyEnforceIf(varBitmap[8])
+				self.model.Add(c == 2).OnlyEnforceIf(varBitmap[8])
+				t.append(c)
+			self.cellPrimality.insert(i,t)
+		self.isPrimality = True
+		
 	def getCellVar(self,i,j):
 		# Returns the model variable associated with a cell value. Useful when tying several puzzles together, e.g. Samurai
 		return self.cellValues[i][j]
@@ -355,6 +390,142 @@ class sudoku:
 		self.model.AddAllDifferent(br + bl + c)
 		self.model.AddAllDifferent(ur + br + c)
 		
+	def setMagnitudeMirrorMain(self):
+		for i in range(1,self.boardWidth):
+			for j in range(i):
+				b = self.model.NewBoolVar("magvar")
+				self.model.Add(self.cellValues[i][j] <= 5).OnlyEnforceIf(b)
+				self.model.Add(self.cellValues[j][i] <= 5).OnlyEnforceIf(b)
+				self.model.Add(self.cellValues[i][j] >= 5).OnlyEnforceIf(b.Not())
+				self.model.Add(self.cellValues[j][i] >= 5).OnlyEnforceIf(b.Not())
+	
+	def setMagnitudeMirrorOff(self):
+		for i in range(self.boardWidth-1):
+			for j in range(self.boardWidth-1-i):
+				b = self.model.NewBoolVar("magvar")
+				fi = self.boardWidth-1-j
+				fj = self.boardWidth-1-i
+				self.model.Add(self.cellValues[i][j] <= 5).OnlyEnforceIf(b)
+				self.model.Add(self.cellValues[fi][fj] <= 5).OnlyEnforceIf(b)
+				self.model.Add(self.cellValues[i][j] >= 5).OnlyEnforceIf(b.Not())
+				self.model.Add(self.cellValues[fi][fj] >= 5).OnlyEnforceIf(b.Not())
+				
+	def setMagnitudeAntiMirrorMain(self):
+		for i in range(1,self.boardWidth):
+			for j in range(i):
+				b = self.model.NewBoolVar("magvar")
+				self.model.Add(self.cellValues[i][j] <= 5).OnlyEnforceIf(b)
+				self.model.Add(self.cellValues[j][i] >= 5).OnlyEnforceIf(b)
+				self.model.Add(self.cellValues[i][j] >= 5).OnlyEnforceIf(b.Not())
+				self.model.Add(self.cellValues[j][i] <= 5).OnlyEnforceIf(b.Not())
+	
+	def setMagnitudeAntiMirrorOff(self):
+		for i in range(self.boardWidth-1):
+			for j in range(self.boardWidth-1-i):
+				b = self.model.NewBoolVar("magvar")
+				fi = self.boardWidth-1-j
+				fj = self.boardWidth-1-i
+				self.model.Add(self.cellValues[i][j] <= 5).OnlyEnforceIf(b)
+				self.model.Add(self.cellValues[fi][fj] >= 5).OnlyEnforceIf(b)
+				self.model.Add(self.cellValues[i][j] >= 5).OnlyEnforceIf(b.Not())
+				self.model.Add(self.cellValues[fi][fj] <= 5).OnlyEnforceIf(b.Not())
+
+	def setParityMirrorMain(self):
+		if self.isParity is False:
+			self.__setParity()
+		for i in range(1,self.boardWidth):
+			for j in range(i):
+				self.model.Add(self.cellParity[i][j] == self.cellParity[j][i])
+	
+	def setParityMirrorOff(self):
+		if self.isParity is False:
+			self.__setParity()
+		for i in range(self.boardWidth-1):
+			for j in range(self.boardWidth-1-i):
+				fi = self.boardWidth-1-j
+				fj = self.boardWidth-1-i
+				self.model.Add(self.cellParity[i][j] == self.cellParity[fi][fj])
+
+	def setEntropyMirrorMain(self):
+		if self.isEntropy is False:
+			self.__setEntropy()
+		for i in range(1,self.boardWidth):
+			for j in range(i):
+				self.model.Add(self.cellEntropy[i][j] == self.cellEntropy[j][i])
+	
+	def setEntropyMirrorOff(self):
+		if self.isEntropy is False:
+			self.__setEntropy()
+		for i in range(self.boardWidth-1):
+			for j in range(self.boardWidth-1-i):
+				fi = self.boardWidth-1-j
+				fj = self.boardWidth-1-i
+				self.model.Add(self.cellEntropy[i][j] == self.cellEntropy[fi][fj])
+				
+	def setEntropyAntiMirrorMain(self):
+		if self.isEntropy is False:
+			self.__setEntropy()
+		for i in range(1,self.boardWidth):
+			for j in range(i):
+				self.model.Add(self.cellEntropy[i][j] != self.cellEntropy[j][i])
+	
+	def setEntropyAntiMirrorOff(self):
+		if self.isEntropy is False:
+			self.__setEntropy()
+		for i in range(self.boardWidth-1):
+			for j in range(self.boardWidth-1-i):
+				fi = self.boardWidth-1-j
+				fj = self.boardWidth-1-i
+				self.model.Add(self.cellEntropy[i][j] != self.cellEntropy[fi][fj])
+			
+	def setPrimalityMirrorMain(self):
+		if self.isPrimality is False:
+			self.__setPrimality()
+		for i in range(1,self.boardWidth):
+			for j in range(i):
+				b = self.model.NewBoolVar("primvar")
+				self.model.Add(self.cellPrimality[i][j] <= 1).OnlyEnforceIf(b)
+				self.model.Add(self.cellPrimality[j][i] <= 1).OnlyEnforceIf(b)
+				self.model.Add(self.cellPrimality[i][j] >= 1).OnlyEnforceIf(b.Not())
+				self.model.Add(self.cellPrimality[j][i] >= 1).OnlyEnforceIf(b.Not())		
+
+	def setPrimalityMirrorOff(self):
+		if self.isPrimality is False:
+			self.__setPrimality()
+		for i in range(self.boardWidth-1):
+			for j in range(self.boardWidth-1-i):
+				b = self.model.NewBoolVar("primvar")
+				fi = self.boardWidth-1-j
+				fj = self.boardWidth-1-i
+				self.model.Add(self.cellPrimality[i][j] <= 1).OnlyEnforceIf(b)
+				self.model.Add(self.cellPrimality[fi][fj] <= 1).OnlyEnforceIf(b)
+				self.model.Add(self.cellPrimality[i][j] >= 1).OnlyEnforceIf(b.Not())
+				self.model.Add(self.cellPrimality[fi][fj] >= 1).OnlyEnforceIf(b.Not())
+				
+	def setPrimalityAntiMirrorMain(self):
+		if self.isPrimality is False:
+			self.__setPrimality()
+		for i in range(1,self.boardWidth):
+			for j in range(i):
+				b = self.model.NewBoolVar("primvar")
+				self.model.Add(self.cellPrimality[i][j] <= 1).OnlyEnforceIf(b)
+				self.model.Add(self.cellPrimality[j][i] >= 1).OnlyEnforceIf(b)
+				self.model.Add(self.cellPrimality[i][j] >= 1).OnlyEnforceIf(b.Not())
+				self.model.Add(self.cellPrimality[j][i] <= 1).OnlyEnforceIf(b.Not())
+	
+	def setPrimalityAntiMirrorOff(self):
+		if self.isPrimality is False:
+			self.__setPrimality()
+		for i in range(self.boardWidth-1):
+			for j in range(self.boardWidth-1-i):
+				b = self.model.NewBoolVar("primvar")
+				fi = self.boardWidth-1-j
+				fj = self.boardWidth-1-i
+				self.model.Add(self.cellPrimality[i][j] <= 1).OnlyEnforceIf(b)
+				self.model.Add(self.cellPrimality[fi][fj] >= 1).OnlyEnforceIf(b)
+				self.model.Add(self.cellPrimality[i][j] >= 1).OnlyEnforceIf(b.Not())
+				self.model.Add(self.cellPrimality[fi][fj] <= 1).OnlyEnforceIf(b.Not())
+				
 	def setAntiKing(self):
 		for i in range(self.boardWidth-1):
 			for j in range(self.boardWidth-1):
@@ -920,7 +1091,7 @@ class sudoku:
 		self.allVars.append(bit)
 		self.model.Add(self.cellValues[row][col] - self.cellValues[row+hv][col+(1-hv)] == self.kropkiDiff).OnlyEnforceIf(bit)
 		self.model.Add(self.cellValues[row][col] - self.cellValues[row+hv][col+(1-hv)] == -1*self.kropkiDiff).OnlyEnforceIf(bit.Not())
-		
+
 	def setKropkiBlack(self,row,col=-1,hv=-1):
 		if col == -1:
 			(row,col,hv) = self.__procCell(row)
@@ -2336,6 +2507,20 @@ class sudoku:
 						self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] == v).OnlyEnforceIf(varBitmap[i])
 						if i > 0 and i < self.boardWidth-1:
 							self.model.Add(self.cellValues[row+(i-1)*vStep][col+(i-1)*hStep] + self.cellValues[row+(i+1)*vStep][col+(i+1)*hStep] != v).OnlyEnforceIf(varBitmap[i])
+							
+	def setAscendingStarter(self,row1,col1,rc,value):
+		row = row1 - 1
+		col = col1 - 1
+		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
+		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
+		
+		varBitmap = self.__varBitmap('AscendingStarterRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth)
+		for i in range(self.boardWidth):
+			for j in range(i):
+				self.model.Add(self.cellValues[row+j*vStep][col+j*hStep] < self.cellValues[row+(j+1)*vStep][col+(j+1)*hStep]).OnlyEnforceIf(varBitmap[i])
+			if i < self.boardWidth-1:
+				self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] > self.cellValues[row+(i+1)*vStep][col+(i+1)*hStep]).OnlyEnforceIf(varBitmap[i])
+			self.model.Add(sum(self.cellValues[row+j*vStep][col+j*hStep] for j in range(i+1)) == value).OnlyEnforceIf(varBitmap[i])
 				
 ####2x2 constraints
 	def setQuadruple(self,row,col=-1,values=-1):
@@ -2777,6 +2962,20 @@ class sudoku:
 				if (i,j) not in self.consecutiveQuadCells:
 					self.setAntiConsecutiveQuad(i,j)	
 		
+	def setDiagonalConsecutivePairs(self,row,col=-1):
+		if col == -1:
+			(row,col) = self.__procCell(row)
+			
+		self.model.Add(self.cellValues[row][col] != self.cellValues[row+1][col+1])
+		self.model.Add(self.cellValues[row][col] - self.cellValues[row+1][col+1] <= 1)
+		self.model.Add(self.cellValues[row+1][col+1] - self.cellValues[row][col] <= 1)
+		self.model.Add(self.cellValues[row][col+1] != self.cellValues[row+1][col])
+		self.model.Add(self.cellValues[row][col+1] - self.cellValues[row+1][col] <= 1)
+		self.model.Add(self.cellValues[row+1][col] - self.cellValues[row][col+1] <= 1)
+		
+	def setDiagonalConsecutivePairsArray(self,cells):
+		for x in cells: self.DiagonalConsecutivePairs(x)
+		
 ####Linear constraints
 	def setArrow(self,inlist):
 		inlist = self.__procCellList(inlist)
@@ -3193,6 +3392,18 @@ class sudoku:
 	def setConsecutiveLine(self,inlist):
 		self.setRenbanLine(inlist)
 		self.setMissingThermo(inlist)
+		
+	def setZipperLine(self,inlist):
+		inlist = self.__procCellList(inlist)
+		l = len(inlist)
+		if l % 2 == 0:
+			target = self.cellValues[inlist[(l//2) - 1][0]][inlist[(l//2) - 1][1]] + self.cellValues[inlist[l // 2][0]][inlist[l // 2][1]]
+			test = (l-2) // 2
+		else:
+			target = self.cellValues[inlist[(l-1) // 2][0]][inlist[(l-1) // 2][1]]
+			test = (l-1) // 2
+		for i in range(test):
+			self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]]+self.cellValues[inlist[l-1-i][0]][inlist[l-1-i][1]] == target)
 			
 ####Model solving
 	def applyNegativeConstraints(self):
@@ -3435,6 +3646,7 @@ class cellTransformSudoku(sudoku):
 		self.isEntropy = False
 		self.isModular = False
 		self.isFullRank = False
+		self.isPrimality = False
 		
 		if digitSet is None:
 			self.baseDigits = {x for x in range(1,self.boardWidth+1)}
@@ -3768,6 +3980,7 @@ class japaneseSumSudoku(sudoku):
 		self.isEntropy = False
 		self.isModular = False
 		self.isFullRank = False
+		self.isPrimality = False
 		
 		if digitSet is None:
 			self.digits = {x for x in range(1,self.boardWidth+1)}
@@ -4254,6 +4467,7 @@ class schroedingerCellSudoku(sudoku):
 		self.isEntropy = False
 		self.isModular = False
 		self.isFullRank = False
+		self.isPrimality = False
 		
 		if digitSet is None:
 			self.digits = {x for x in range(self.boardWidth+1)}		# Add additional digit from Schroedinger
@@ -5255,6 +5469,7 @@ class scarySudoku(sudoku):
 		self.isEntropy = False
 		self.isModular = False
 		self.isFullRank = False
+		self.isPrimality = False
 		
 		if digitSet is None:
 			self.digits = {x for x in range(1,self.boardWidth+1)}

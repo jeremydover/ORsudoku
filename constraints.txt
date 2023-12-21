@@ -8,6 +8,7 @@ Anti-King
 Anti-Knight
 Anti-Queen
 Arrows
+Ascending Starters
 Average Lines
 Battenburg
 Battlefield
@@ -27,6 +28,8 @@ Corner/Edge Clues
 Count the Odds Lines
 David and Goliath Pairs
 Descriptive Pairs
+Diagonal Consecutive Pairs
+Diagonal Mirrors
 Difference Pairs - see Kropki and Kropki Pairs
 Digit Count Cages
 Disjoint Groups
@@ -40,6 +43,7 @@ Doubling Lines
 Dutch Whispers Lines - see Whispers Lines
 Either-Or
 Entropic Lines
+Entropic Mirror - see Diagonal Mirrors
 Entropki Dots (same/different entropy classes)
 Entropy (see Global Entropy)
 Entropy Battenburg (on a 2x2, no pair of same entropic cells are adjacent)
@@ -75,6 +79,7 @@ Logic Bombs
 Look-and-Say Cages - see Zones
 Magic Lines
 Magic Squares
+Magnitude Mirror - see Diagonal Mirrors
 MaxAscending
 Maximin - see Minimax
 Maximum Runs (Maximum Triplets)
@@ -104,6 +109,7 @@ Parindrome Lines - see Palindrome Lines
 Parity Count Lines (endpoints show the number of odd/even digits along the line)
 Parity Dots
 Parity Lines (alternating parity along line)
+Parity Mirror - see Diagonal Mirrors
 Parity Party
 Parity Quads (2x2 regions which contain both parities)
 Parity Snakes
@@ -111,6 +117,7 @@ Pencilmarks
 Psycho Killer Cages - see Killer Cages
 Pointing Arrows - see Arrows
 Position Sums
+Primality Mirror - see Diagonal Mirrors
 Punctured Cages - see Killer Cages
 Quadruple
 Quad Max Arrows
@@ -153,6 +160,7 @@ XV (see XV Pairs)
 XV Pairs
 XVXV
 XY-Difference Pairs
+Zipper Lines
 Zones
 
 Some Notes on Data Structures
@@ -283,6 +291,13 @@ setRepeatingArrow(list,repeat): an arrow where the arrow portion can be parition
   list: a list of cells along arrow, where the first element of list is the circle
   repeat (optional): the number of times the circle sum will repeat, default is 2
   
+Ascending Starters
+------------------
+setAscendingStarter(row,col,rc,value): specifies the sum of the ascending run (which may be only one digit) starting at the cell next to the clue
+  row,col: The coordinates of a cell on either end of the row/column
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  value: the sum of the ascending run of digits next to the clue
+  
 Average Lines
 -------------
 setAverageLine(inlist): creates an average line, where the first cell in the list is the average (arithmetical mean) of the cell values in the list
@@ -306,7 +321,7 @@ setBattenburgNegative(): specify that all cells not specifically designated with
 
 Battlefield
 -----------
-setBattlefield(row,col,rc,value): inplements a Battlefield constraint in a row or column
+setBattlefield(row,col,rc,value): implements a Battlefield constraint in a row or column
   row,col: The coordinates of a cell on either end of the row/column
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: summarized from Realshaggy: Consider the first x and last y cells of a row or column where x is the value of the first and y the value of the last cell. value is the sum of the digits where these groups overlap or the sum of the digits between these groups.
@@ -429,6 +444,39 @@ setDescriptivePair(row,col,rc,values): clue on a row or column with two digits X
   row,col: The coordinates of the cell containing the indexing clue, i.e. the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   values: A list or tuple of digits defining the pair. A 2-digit integer (e.g. 45) can also be given. Negative digits are allowed, and index from the opposite end of the row/column
+
+Diagonal Consecutive Pairs
+--------------------------
+setDiagonalConsecutivePairs(cell):	asserts that the diagonal pairs on this 2x2 are consecutive digits
+	cell: single cell specification
+	
+setDiagonalConsecutivePairsArray(list): set multiple diagonal consecutive pairs
+	list: a list of cell specifications
+
+Diagonal Mirrors
+----------------
+Diagonal mirrors allow the main and/or off diagonals to serve as mirrors, or anti-mirrors, for certain numeric properties. Currently supported properties are:
+Entropy - low, middle, high
+Magnitude - {1,2,3,4,5}, {5,6,7,8,9} (note: 5 is a wildcard and matches either set)
+Parity
+Primality - {1,2,3,5,7}, {1,4,6,8,9} (note: 1 is a wildcard and matches either set)
+
+A mirror ensures that cells reflected across a diagonal have the same value for the property, an anti-mirror ensures those properties are different. Supported functions include:
+setEntropyMirrorMain()
+setEntropyMirrorOff()
+setEntropyAntiMirrorMain()
+setEntropyAntiMirrorOff()
+setMagnitudeMirrorMain()
+setMagnitudeMirrorOff()
+setMagnitudeAntiMirrorMain()
+setMagnitudeAntiMirrorOff()
+setParityMirrorMain()
+setParityMirrorOff()
+setPrimalityMirrorOff()
+setPrimalityAntiMirrorMain()
+setPrimalityAntiMirrorOff()
+
+Note that parity anti-mirror does not lead to any solutions, so it is not supported.
 
 Digit Count Cages
 -----------------
@@ -1413,6 +1461,11 @@ XY-Difference Pairs
 setXYDifference(cellHV): creates an XY-difference clue, where the difference of the two cells separated by the clue equals the first cell in the row/column
   cellHV: an extended cell specification which adds the hv parameter: clue is on the right side if H, or on the bottom if V. All parameters can be given in a tuple, and these can use the Horz and Vert variables for the HV specification. Shorthand is possible, appending 0 to a cell spec to indicate horizontal and 1 to indicate vertical.
   Example: 251, '251' and (2,5,p.Vert) all specify a XY-difference clue on the bottom edge of cell 2,5
+
+Zipper Lines
+------------
+setZipperLine(list): for an odd length, the sum of the cells equidistant from the ends equals the cell in the middle of the line. For an even length line, the sum of the cells equidistant from the ends is constant
+  list: list of cell specifications
 
 Zones
 -----
