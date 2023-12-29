@@ -142,6 +142,7 @@ Sandwich Sums
 Scary Cells
 Schrödinger Cell Sudoku
 Search Nine
+Shaken Clone Regions - see Clone Regions
 Shift Lines
 Skyscrapers
 Skyscraper Sums - see Skyscrapers
@@ -380,6 +381,10 @@ setCloneRegion(list): creates a set of regions that are clones of each other, i.
 setDominantCloneRegion(list,strict): creates a set of regions such that in every position, the first region has a digit larger than the corresonding digit in all other regions
   list: a list OF LISTS of cell specifications
   strict: OPTIONAL, defaults to True. If strict, dominant clone contains strictly greater than digits. If strict is False, this is relaxed to greater than or equal to.
+  
+setShakenCloneRegion(list,noRepeat): creates a set of regions that contain the same multi-set of digits
+  list: a list OF LISTS of cell specifications
+  noRepeat: OPTIONAL, defaults to False. If noRepeat, digits cannot repeat in the zone. By default, repeats are allowed.
   
 Consecutive Chain Regions
 -------------------------

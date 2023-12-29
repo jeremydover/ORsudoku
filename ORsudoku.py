@@ -1321,7 +1321,37 @@ class sudoku:
 					self.model.Add(self.cellValues[inlist[0][k][0]][inlist[0][k][1]] > self.cellValues[inlist[j][k][0]][inlist[j][k][1]])
 				else:
 					self.model.Add(self.cellValues[inlist[0][k][0]][inlist[0][k][1]] >= self.cellValues[inlist[j][k][0]][inlist[j][k][1]])
-				
+					
+	def setShakenCloneRegion(self,inlist,noRepeat=False):
+		inlist = list(map(self.__procCellList,inlist))
+		cloneCounts = []
+		myDigits = list(self.digits)
+		for j in range(len(inlist)): # Loop over clones
+			# Create the variables which will count the number of appearances of a digit in this clone
+			thisCloneCount = []
+			for k in range(len(myDigits)): # Loop over the digits
+				# Create the count variables
+				v = self.model.NewIntVar(0,len(inlist[j]),'numberOfAppearancesOfDigit{:d}inClone{:d}'.format(myDigits[k],j))
+				thisCloneCount.append(v)
+				if j > 0:
+					self.model.Add(cloneCounts[0][k] == v) # Force the total number of appearances of each digit to equal those in the first clone
+					
+				# Create the Booleans and 0/1 integer to pair cells to digits
+				thisDigitCount = []
+				for x in inlist[j]:
+					v1 = self.model.NewBoolVar('cell{:d}{:d}Is{:d}'.format(x[0],x[1],myDigits[k]))
+					v2 = self.model.NewIntVar(0,1,'cell{:d}{:d}Is{:d}'.format(x[0],x[1],myDigits[k]))
+					self.model.Add(v2 == 1).OnlyEnforceIf(v1)
+					self.model.Add(v2 == 0).OnlyEnforceIf(v1.Not())
+					self.model.Add(self.cellValues[x[0]][x[1]] == myDigits[k]).OnlyEnforceIf(v1)
+					self.model.Add(self.cellValues[x[0]][x[1]] != myDigits[k]).OnlyEnforceIf(v1.Not())
+					thisDigitCount.append(v2)
+				self.model.Add(sum(thisDigitCount) == v)
+			cloneCounts.append(thisCloneCount)
+		
+			if noRepeat:
+				self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in inlist[j]])
+		
 	def setCage(self,inlist,value = None):
 		inlist = self.__procCellList(inlist)
 		self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in inlist])
@@ -3015,9 +3045,12 @@ class sudoku:
 	def setMissingArrow(self,inlist):
 		# Arrow where one end or the other is the sum of the other cells along the arrow
 		inlist = self.__procCellList(inlist)
-		c = self.model.NewBoolVar('MissingArrow')
-		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] == sum(self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(1,len(inlist)))).OnlyEnforceIf(c)
-		self.model.Add(self.cellValues[inlist[-1][0]][inlist[-1][1]] == sum(self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(len(inlist)-1))).OnlyEnforceIf(c.Not())
+		if (len(inlist) > 2):
+			c = self.model.NewBoolVar('MissingArrow')
+			self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] == sum(self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(1,len(inlist)))).OnlyEnforceIf(c)
+			self.model.Add(self.cellValues[inlist[-1][0]][inlist[-1][1]] == sum(self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(len(inlist)-1))).OnlyEnforceIf(c.Not())
+		else:
+			self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] == self.cellValues[inlist[1][0]][inlist[1][1]])
 		
 	def setRepeatingArrow(self,inlist,repeat=2):
 		inlist = self.__procCellList(inlist)

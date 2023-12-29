@@ -1,4 +1,11 @@
-8/27/2023
+12/29/2023
+	Added support for shaken clone regions (h/t Bill Murphy...thanks!)
+
+12/24/2023
+	Added new tests
+	Fixed error in missing arrow code for length 2 arrows.
+
+12/20/2023
 	Added support for diagonal mirrors and anti-mirrors. (h/t Xeon Risq for Magnitude and Primality ideas)
 	Added support for ascending starter clues (h/t Bill Murphy...thanks!)
 	Added support for diagonal consecutive pairs (h/t Philip Newman...thanks!)
