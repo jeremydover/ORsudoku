@@ -708,6 +708,38 @@ class sudoku:
 					wwwvars.append(cOn)
 				self.model.AddBoolOr(wwwvars)
 				
+#	def setGlobalNeighborSum(self,sums=[]):
+#		# Every cell must have at least one neighbor with which it sums to a value in the list
+#		for i in range(self.boardWidth):
+#			for j in range(self.boardWidth):
+#				gnsvars = []
+#				varBitmap = self._sudoku__varBitmap('GNSRow{:d}Col{:d}'.format(i,j),len(sums))
+#				if i > 0:
+#					cOn = self.model.NewBoolVar('GNSUpNeighborGoodRow{:d}Col{:d}'.format(i,j))
+#					for k in range(len(sums)):
+#						self.model.Add(self.cellValues[i][j] + self.cellValues[i-1][j] == sums[k]).OnlyEnforceIf([cOn] + varBitmap[k])
+#						self.model.Add(self.cellValues[i][j] + self.cellValues[i-1][j] != sums[k]).OnlyEnforceIf(cOn.Not())
+#					gnsvars.append(cOn)
+#				if i < self.boardWidth-1:
+#					cOn = self.model.NewBoolVar('GNSDownNeighborGoodRow{:d}Col{:d}'.format(i,j))
+#					for k in range(len(sums)):
+#						self.model.Add(self.cellValues[i][j] + self.cellValues[i+1][j] == sums[k]).OnlyEnforceIf([cOn] + varBitmap[k])
+#						self.model.Add(self.cellValues[i][j] + self.cellValues[i+1][j] != sums[k]).OnlyEnforceIf(cOn.Not())
+#					gnsvars.append(cOn)
+#				if j > 0:
+#					cOn = self.model.NewBoolVar('GNSLeftNeighborGoodRow{:d}Col{:d}'.format(i,j))
+#					for k in range(len(sums)):
+#						self.model.Add(self.cellValues[i][j] + self.cellValues[i][j-1] == sums[k]).OnlyEnforceIf([cOn] + varBitmap[k])
+#						self.model.Add(self.cellValues[i][j] + self.cellValues[i][j-1] != sums[k]).OnlyEnforceIf(cOn.Not())
+#					gnsvars.append(cOn)
+#				if j < self.boardWidth-1:
+#					cOn = self.model.NewBoolVar('GNSRightNeighborGoodRow{:d}Col{:d}'.format(i,j))
+#					for k in range(len(sums)):
+#						self.model.Add(self.cellValues[i][j] + self.cellValues[i][j+1] == sums[k]).OnlyEnforceIf([cOn] + varBitmap[k])
+#						self.model.Add(self.cellValues[i][j] + self.cellValues[i][j+1] != sums[k]).OnlyEnforceIf(cOn.Not())
+#					gnsvars.append(cOn)
+#				self.model.AddBoolOr(gnsvars)
+
 	def setGlobalEntropy(self):
 		self.setEntropyQuadArray([(i,j) for i in range(1,self.boardWidth) for j in range(1,self.boardWidth)])
 		
@@ -829,6 +861,16 @@ class sudoku:
 				for n in range(8):
 					for p in range(8):
 						self.model.Add(self.cellValues[3*i+1+w[p][0]][3*j+1+w[p][1]] == self.cellValues[3*k+1+w[(p+n)%8][0]][3*m+1+w[(p+n)%8][1]]).OnlyEnforceIf(varBitmap[n]+[c])
+
+	def setNoConsecutiveSum(self,sums=[]):
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth-1):
+				for x in sums:
+					self.model.Add(self.cellValues[i][j]+self.cellValues[i][j+1] != x)
+					self.model.Add(self.cellValues[j][i]+self.cellValues[j+1][i] != x)
+					
+	def setNoSeven(self):
+		self.setNoConsecutiveSum([7])
 
 ####Single cell constraints
 	def setGiven(self,row,col=-1,value=-1):
@@ -3068,26 +3110,39 @@ class sudoku:
 			comb = cI.getNext()
 			varTrack = varTrack + 1
 	
-	def setThermo(self,inlist,slow=False,missing=False):
+	def setThermo(self,inlist,slow=False,missing=False,speed=False):
 		inlist = self.__procCellList(inlist)
 		if missing is False:
 			for j in range(len(inlist)-1):
-				if slow is True:
+				if slow is True or speed == 'slow':
 					self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] <= self.cellValues[inlist[j+1][0]][inlist[j+1][1]])
+				elif slow is False and speed == 'fast':
+					self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] + 1 < self.cellValues[inlist[j+1][0]][inlist[j+1][1]])
+				elif slow is False and isinstance(speed, int):
+					self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] + speed < self.cellValues[inlist[j+1][0]][inlist[j+1][1]])
 				else:
 					self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] < self.cellValues[inlist[j+1][0]][inlist[j+1][1]])
 		else:
 			c = self.model.NewBoolVar('MissingThermo')
 			for j in range(len(inlist)-1):
-				if slow is True:
+				if slow is True or speed == 'slow':
 					self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] <= self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(c)
 					self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] >= self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(c.Not())
+				elif slow is False and speed == 'fast':
+					self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] + 1 < self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(c)
+					self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] > self.cellValues[inlist[j+1][0]][inlist[j+1][1]] + 1).OnlyEnforceIf(c.Not())
+				elif slow is False and isinstance(speed, int):
+					self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] + speed < self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(c)
+					self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] > self.cellValues[inlist[j+1][0]][inlist[j+1][1]] + speed).OnlyEnforceIf(c.Not())
 				else:
 					self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] < self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(c)
 					self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] > self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(c.Not())
 			
 	def setSlowThermo(self,inlist,missing=False):
 		self.setThermo(inlist,True,missing)
+		
+	def setFastThermo(self,inlist,missing=False):
+		self.setThermo(inlist,False,missing,'fast')
 	
 	def setOddEvenThermo(self,inlist,slow=False,missing=False):
 		if self.isParity is False:

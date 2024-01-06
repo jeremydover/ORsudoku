@@ -51,6 +51,8 @@ Entropy Quads (partial Entropy, asserts Entropy on an individual 2x2)
 Even Max Quads - see Quad Max Values
 Even-Odd
 Extra Regions - see irregular Sudoku
+Fast Thermos - see Thermos
+Forbidden Consecutive Sums
 Fortress
 Friendly Cells
 Full Rank
@@ -96,6 +98,7 @@ Negator Sudoku - see Cell Transform Sudoku
 Neighbor Sums
 Next-To-Nine
 No-Three-In-A-Row (Parity)
+No Seven - see Forbidden Consecutive Sums
 Non-Consecutive
 Numbered Room
 Odd-Even Thermos - see Thermometers
@@ -622,6 +625,13 @@ setEvenOddArray(list): create multipl parity constraints
 setOddEvenArray(list): create multipl parity constraints
   list: list of cellEO specifications; see setEvenOdd
   
+Forbidden Conseuctive Sums
+--------------------------
+setNoConsecutiveSum(list): asserts that no pair of adjacent cells can have digits that sum to a value in the list
+  list: list of forbidden sum values
+  
+setNoSeven(): asserts that adjacent cells may not sum to 7
+
 Fortress
 --------
 setFortress(list): creates a Fortress constraint on a group of cells
@@ -1305,12 +1315,20 @@ setSumSandwich(row,col,rc,values,neg=False): sets a sum sandwich - in a row/colu
   
 Thermometers
 ------------
-setThermo(list,slow,missing): asserts that the values in cells increase from the beginning of the line to the end
+setThermo(list,slow,missing,speed): asserts that the values in cells increase from the beginning of the line to the end
   list: list of cell specifications, with bulb end of thermo being the first element
   slow: set thermo to slow (i.e., nondecreasing vs. increasing); Optional: defaults to False, can also use setSlowThermo
   missing: set thermo to have missing bulb, so increase may start from either end; Optional: defaults to False, can also use setMissingThermo.
+  speed: provides several options about the speed of the thermo, i.e., the level of difference between consecutive values. Allowable values are:
+    'slow': Same as setting slow=True
+	'fast': Ensures that each value along a fast thermo is at least two larger than the previous cell, can also use setFastThermo
+	integer: Each value along a thermo is strictly greater than the previous value plus the speed. So speed=1 is equivalent to speed='fast'
   
 setSlowThermo(list,missing): asserts that the values in cells do not decrease from the beginning of the line to the end
+  list: list of cell specifications, with bulb end of thermo being the first element
+  missing: Optional, defaults to false. See setThermo
+ 
+setFastThermo(list,missing): asserts that the values in cells increase by at least 2 from the beginning of the line to the end
   list: list of cell specifications, with bulb end of thermo being the first element
   missing: Optional, defaults to false. See setThermo
   
