@@ -4010,9 +4010,9 @@ class doubleOrNegativeSudoku(cellTransformSudoku):
 class affineTransformSudoku(cellTransformSudoku):
 	
 	def __init__(self,boardSizeRoot,ratio,shift,canRepeatDigits=False,irregular=None,digitSet=None):
-		cellTransformSudoku.__init__(self,boardSizeRoot,canRepeatDigits=canRepeatDigits,irregular=irregular,digitSet=digitSet)
 		self.ratio = ratio
 		self.shift = shift
+		cellTransformSudoku.__init__(self,boardSizeRoot,canRepeatDigits=canRepeatDigits,irregular=irregular,digitSet=digitSet)
 		
 	def transformDoublerCell(self,i,j):
 		self.model.Add(self.cellValues[i][j] == self.ratio*self.baseValues[i][j]+self.shift).OnlyEnforceIf([self.double[i][j]])

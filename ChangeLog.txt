@@ -1,7 +1,9 @@
+1/16/2024
+	Fixed error in affineTransformSudoku class
+
 1/6/2024
 	Added support for fast thermos
 	Added support for forbidden consecutive sums, generalizing no-seven rules.
-		
 
 12/29/2023
 	Added support for shaken clone regions (h/t Bill Murphy...thanks!)
