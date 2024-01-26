@@ -1,3 +1,7 @@
+1/26/2024
+	Added support fo QuattroQuadri
+	Fixed/added support for countSolutions printing all solutions for non 9x9 grids
+
 1/16/2024
 	Fixed error in affineTransformSudoku class
 

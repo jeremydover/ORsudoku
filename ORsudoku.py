@@ -10,7 +10,7 @@ init()
 
 class SolutionPrinter(cp_model.CpSolverSolutionCallback):
 	"""Print intermediate solutions."""
-	def __init__(self, variables):
+	def __init__(self, variables,boardWidth):
 		cp_model.CpSolverSolutionCallback.__init__(self)
 		self.__variables = variables
 		self.__solution_count = 0
@@ -18,6 +18,7 @@ class SolutionPrinter(cp_model.CpSolverSolutionCallback):
 		self.__debug = False
 		self.__testMode = False
 		self.__testStringArray = []
+		self.__boardWidth = boardWidth
 
 	def setPrintAll(self):
 		self.__printAll = True
@@ -43,7 +44,7 @@ class SolutionPrinter(cp_model.CpSolverSolutionCallback):
 				for v in self.__variables:
 					print('%i' % (self.Value(v)), end = ' ')
 					cntr += 1
-					if cntr == 9:
+					if cntr == self.__boardWidth:
 						print ()
 						cntr = 0
 				print()
@@ -3515,7 +3516,7 @@ class sudoku:
 		self.solver = cp_model.CpSolver()
 		consolidatedCellValues = []
 		for tempArray in self.cellValues: consolidatedCellValues = consolidatedCellValues + tempArray
-		solution_printer = SolutionPrinter(consolidatedCellValues)
+		solution_printer = SolutionPrinter(consolidatedCellValues,self.boardWidth)
 		self.solveStatus = self.solver.Solve(self.model)
 	
 		if test is True:
@@ -3532,9 +3533,9 @@ class sudoku:
 		consolidatedCellValues = []
 		for tempArray in self.cellValues: consolidatedCellValues = consolidatedCellValues + tempArray
 		if debug is True:
-			solution_printer = SolutionPrinter(self.allVars)
+			solution_printer = SolutionPrinter(self.allVars,self.boardWidth)
 		else:	
-			solution_printer = SolutionPrinter(consolidatedCellValues)
+			solution_printer = SolutionPrinter(consolidatedCellValues,self.boardWidth)
 		if printAll is True: solution_printer.setPrintAll()
 		if debug is True: solution_printer.setDebug()
 		if test is True: solution_printer.setTestMode()
@@ -3675,7 +3676,7 @@ class sudoku:
 			myCell = tuple(map(int,list(cell)))
 		elif type(cell) is int:
 			myCell = tuple(map(int,list(str(cell))))
-			
+		
 		return tuple([myCell[i]-1 for i in range(2)] + [myCell[i] for i in range(2,len(myCell))])
 			
 	def __procCellList(self,inlist):
@@ -3686,6 +3687,133 @@ class sudoku:
 	def getOrthogonalNeighbors(self,i,j):
 		return [(i+k,j+m) for k in [-1,0,1] for m in [-1,0,1] if i+k >= 0 and i+k < self.boardWidth and j+m >= 0 and j+m < self.boardWidth and abs(k) != abs(m)]
 		
+class quattroQuadri(sudoku):
+	"""A class used to implement QuattroQuadri puzzles. A QQ is a 6-by-6 grid with four square regions. Digits are usually 1-9, and must be different in each row, column and box."""
+	
+	def __init__(self,blockSizeRoot=3,gridSize=2,irregular=None,digitSet={1,2,3,4,5,6,7,8,9}):
+		self.boardSizeRoot = blockSizeRoot
+		self.gridSize = gridSize
+		self.boardWidth = gridSize*blockSizeRoot
+
+		self.isBattenburgInitialized = False
+		self.isBattenburgNegative = False
+		
+		self.isKropkiInitialized = False
+		self.isKropkiNegative = False
+		self.kropkiDiff = 1
+		self.kropkiRatio = 2
+		
+		self.isFriendlyInitialized = False
+		self.isFriendlyNegative = False
+		
+		self.isRossiniInitialized = False
+		self.isRossiniNegative = False
+		self.rossiniLength = -1
+		self.outsideLength = -1
+		
+		self.isXVInitialized = False
+		self.isXVNegative = False
+		
+		self.isXVXVInitialized = False
+		self.isXVXVNegative = False
+		
+		self.isEntropyQuadInitialized = False
+		self.isEntropyQuadNegative = False
+					
+		self.isModularQuadInitialized = False
+		self.isModularQuadNegative = False
+
+		self.isEntropyBattenburgInitialized = False
+		self.isEntropyBattenburgNegative = False
+		
+		self.isConsecutiveQuadInitialized = False
+		self.isConsecutiveQuadNegative = False
+		
+		self.isParityQuadInitialized = False
+		self.isParityQuadNegative = False
+		
+		self.isParity = False
+		self.isEntropy = False
+		self.isModular = False
+		self.isFullRank = False
+		self.isPrimality = False
+		
+		self.digits = digitSet
+		self.maxDigit = max(self.digits)
+		self.minDigit = min(self.digits)
+		self.digitRange = self.maxDigit - self.minDigit
+
+		self.model = cp_model.CpModel()
+		self.cellValues = []
+		self.allVars = []
+		self.candTests = [[[None for k in range(len(self.digits))] for j in range(self.boardWidth)] for i in range(self.boardWidth)]
+		self.candToExclude=[]
+		
+		# Create the variables containing the cell values
+		for rowIndex in range(self.boardWidth):
+			tempArrayCell = []
+			tempArrayBase = []
+			for colIndex in range(self.boardWidth):
+				tempCell = self.model.NewIntVar(self.minDigit,self.maxDigit,'cellValue{:d}{:d}'.format(rowIndex,colIndex))
+				if (self.maxDigit - self.minDigit) >= self.boardWidth:	# If base digit set is not continguous, force values
+					self.model.AddAllowedAssignments([tempCell],[(x,) for x in self.digits])
+					# Note: no need to force values on cellValues, because they will be tied to base
+				tempArrayCell.append(tempCell)
+			self.cellValues.insert(rowIndex,tempArrayCell)
+						
+		# Create rules to ensure rows and columns have no repeats for the BASE digits
+		for rcIndex in range(self.boardWidth):
+			self.model.AddAllDifferent([self.cellValues[rcIndex][crIndex] for crIndex in range(self.boardWidth)]) 	# Rows
+			self.model.AddAllDifferent([self.cellValues[crIndex][rcIndex] for crIndex in range(self.boardWidth)]) 	# Columns
+
+		# NOW deal with regions. Default to boxes. Needed to get all variables set up.
+		self.regions = []
+		if irregular is None:
+			self.__setBoxes()
+		
+	def __setBoxes(self):
+		# Create rules to ensure boxes have no repeats
+		for rowBox in range(self.gridSize):
+			for colBox in range(self.gridSize):
+				tempCellArray = []
+				tempCellIndexArray = []
+				for rowIndex in range(self.boardSizeRoot):
+					for colIndex in range(self.boardSizeRoot):
+						tempCellArray.append(self.cellValues[self.boardSizeRoot*rowBox+rowIndex][self.boardSizeRoot*colBox+colIndex])
+						tempCellIndexArray.append((self.boardSizeRoot*rowBox+rowIndex,self.boardSizeRoot*colBox+colIndex))
+				self.model.AddAllDifferent(tempCellArray)					# Squares
+				self.regions.append(tempCellIndexArray)
+			
+	def setRegion(self,inlist):
+		# Allow setting of irregular regions
+		inlist = self.__procCellList(inlist)
+		self.regions.append(inlist)
+		self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in self.regions[-1]])
+		self.model.Add(sum(self.doubleInt[x[0]][x[1]] for x in inlist) == 1)	# Ensure one doubler per region
+
+	def printCurrentSolution(self):
+		dW = max([len(str(x)) for x in self.digits])
+		colorama.init()
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				if self.solver.Value(self.doubleInt[i][j]) == 1: # This one is doubled!
+					print(Fore.RED + '{:d}'.format(self.solver.Value(self.baseValues[i][j])).rjust(dW) + Fore.RESET,end = " ")
+				else:
+					print('{:d}'.format(self.solver.Value(self.baseValues[i][j])).rjust(dW),end = " ")
+			print()
+		print()
+		
+	def testStringSolution(self):
+		testString = ''
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				if self.solver.Value(self.doubleInt[i][j]) == 1: # This one is doubled!
+					testString = testString + '*{:d}*'.format(self.solver.Value(self.baseValues[i][j]))
+				else:
+					testString = testString + '{:d}'.format(self.solver.Value(self.baseValues[i][j]))
+		return testString
+
+
 class cellTransformSudoku(sudoku):
 	"""A class used to implement doubler puzzles. A doubler puzzle has a doubler in each row, column and region. Moreover, each digit is doubled exactly one time. The digit entered is used to determine normal Sudoku contraints, i.e., one of each digit per row, column and region. But for each other constraint, its value needs to be doubled. There are optional parameters to modify the operation from doubling to an arbitrary ratio and/or shift."""	
 	
