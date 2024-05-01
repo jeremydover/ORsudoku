@@ -1,3 +1,11 @@
+5/1/2024	
+	Added 8 new test cases
+	Implemented counting circles
+	Fixed quadruples code to eliminate bit flopping that was causing countSolutions to fail
+	Removed debug printing in MOTE Cage code.
+	Updated implementation of global whispers, adding support for forcing differences to be equal to, or less than a specified value, adding to the previously supported greater than. Added alias for Close Neighbors constraint (each cell has at least one consecutive neighbor...kind of anti-non-consecutive).
+	Added support for Generalized Knightmare (arbitrary set of forbidden sums a knight's move apart)
+
 1/26/2024
 	Added support fo QuattroQuadri
 	Fixed/added support for countSolutions printing all solutions for non 9x9 grids

@@ -21,11 +21,13 @@ Cell Transform Sudoku
 Chinese Whispers Lines - see Whispers Lines
 Clock Lines
 Clone Regions
+Close Neighbors - see Global Whispers
 Consecutive Chain Regions
 Consecutive Lines
 Consecutive Quads
 Corner/Edge Clues
 Count the Odds Lines
+Counting Circles
 David and Goliath Pairs
 Descriptive Pairs
 Diagonal Consecutive Pairs
@@ -57,6 +59,7 @@ Fortress
 Friendly Cells
 Full Rank
 Gamma-Epsilon - see Kropki
+Generalized Knightmare (see Anti-Knight)
 Genetics
 German Whispers Lines - see Whispers Lines
 Given Digits
@@ -256,7 +259,9 @@ Anti-Knight
 -----------
 setAntiKnight(): applies the anti-knight constraint to the whole puzzle
 
-setKnightmare(): applies the Knightmare constraint, where no two cells a knight's move apoart can sum to either 5 or 15.
+setKnightMare(): applies the Knightmare constraint, where no two cells a knight's move apoart can sum to either 5 or 15.
+
+setGeneralizedKnightMare(list): applies the Knightmare constraint with a specified list of forbidden sums at a knight's move apart. Defaults to standard knightmare.
 
 Anti-Queen
 ----------
@@ -440,6 +445,11 @@ Count the Odds Lines
 setCountTheOddsLine(list): set a count the odds line, where the digit in the first cell of the line counts the number of odd digits on the rest of the line; pioneered by clover!
   list: list of cell specifications
   
+Counting Circles
+----------------
+setCountingCircles(list): given a list of circled cells, a digit in a circled cell is the number of times that digit appears in a circled cell
+  list: list of circle cells
+
 David and Goliath Pairs
 -----------------------
 setDavidAndGoliath(list,borderDigit,borderType): sets a David and Goliath pair, where at least one cell must have a "David" (small) digit and at least one must have a "Goliath" (large) digit
@@ -688,7 +698,9 @@ setGlobalModular(): same as Entropy, but with modular digit grouping {1,4,7},{2,
 
 Global Whispers
 ---------------
-setGlobalWhispers(n=4): assert the global whispers constraint: every cell has at least one neighbor with which it has a difference of at least n. The default for n is 4
+setGlobalWhispers(diff,gle): assert a global whispers constraint: every cell has at least one neighbor with which it has a difference of at least, equal to, or at most diff.
+  diff: The difference required. Default is 4
+  gle: Specifies whether difference with neighbor must be greater than (2, use class variable GE), equal to (1, use class variable EQ) or less than (0, use class variable LE) diff. Default is 2, greater than.
 
 Gurth's Symmetric Placement
 ---------------------------

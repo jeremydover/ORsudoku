@@ -139,6 +139,10 @@ class sudoku:
 	Corner = 0	# Constant to determine clue type for corner/edge clues
 	Edge = 1	# Constant to determine clue type for corner/edge clues
 	
+	GE = 2 		# Constant to assert a greater than or equal to comparison
+	EQ = 1		# Constant to assert an equal to comparison
+	LE = 0		# Constant to assert an equal to comparison
+	
 	def __init__(self,boardSizeRoot,irregular=None,digitSet=None,model=None):
 		self.boardSizeRoot = boardSizeRoot
 		self.boardWidth = boardSizeRoot*boardSizeRoot
@@ -554,6 +558,15 @@ class sudoku:
 				for k in kCells:
 					self.model.Add(ij + k != 5)
 					self.model.Add(ij + k != 15)
+	
+	def setGeneralizedKnightMare(self,forbiddenDigits=[5,15]):
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				ij = self.cellValues[i][j]
+				kCells = [self.cellValues[i+k][j+m] for k in [1,2] for m in [-2,-1,1,2] if abs(k) != abs(m) and i+k >= 0 and i+k < self.boardWidth and j+m >= 0 and j+m < self.boardWidth]
+				for k in kCells:
+					for d in forbiddenDigits:
+						self.model.Add(ij + k != d)
 
 	def setDisjointGroups(self):
 		for i in range(self.boardSizeRoot):
@@ -666,48 +679,87 @@ class sudoku:
 			elif neg is True:	
 				self.__setNonIndexCell(i,col0,sudoku.Row)
 
-	def setGlobalWhispers(self,diff=4):
+#	def setGlobalWhispers(self,diff=4):
+#		# Every cell must have at least one neighbor which with its difference is at least diff
+#		for i in range(self.boardWidth):
+#			for j in range(self.boardWidth):
+#				wwwvars = []
+#				if i > 0:
+#					cOn = self.model.NewBoolVar('GlobalWhisperUpNeighborGoodRow{:d}Col{:d}'.format(i,j))
+#					cOrd = self.model.NewBoolVar('GlobalWhisperUpNeighborOrderRow{:d}Col{:d}'.format(i,j))
+#					self.model.Add(self.cellValues[i][j] - self.cellValues[i-1][j] >= diff).OnlyEnforceIf([cOn,cOrd])
+#					self.model.Add(self.cellValues[i-1][j] - self.cellValues[i][j] >= diff).OnlyEnforceIf([cOn,cOrd.Not()])
+#					self.model.Add(self.cellValues[i][j] - self.cellValues[i-1][j] < diff).OnlyEnforceIf([cOn.Not()])
+#					self.model.Add(self.cellValues[i-1][j] - self.cellValues[i][j] < diff).OnlyEnforceIf([cOn.Not()])
+#					self.model.AddBoolAnd([cOrd]).OnlyEnforceIf([cOn.Not()])
+#					wwwvars.append(cOn)
+#				if i < self.boardWidth-1:
+#					cOn = self.model.NewBoolVar('GlobalWhisperDownNeighborGoodRow{:d}Col{:d}'.format(i,j))
+#					cOrd = self.model.NewBoolVar('GlobalWhisperDownNeighborOrderRow{:d}Col{:d}'.format(i,j))
+#					self.model.Add(self.cellValues[i][j] - self.cellValues[i+1][j] >= diff).OnlyEnforceIf([cOn,cOrd])
+#					self.model.Add(self.cellValues[i+1][j] - self.cellValues[i][j] >= diff).OnlyEnforceIf([cOn,cOrd.Not()])
+#					self.model.Add(self.cellValues[i][j] - self.cellValues[i+1][j] < diff).OnlyEnforceIf([cOn.Not()])
+#					self.model.Add(self.cellValues[i+1][j] - self.cellValues[i][j] < diff).OnlyEnforceIf([cOn.Not()])
+#					self.model.AddBoolAnd([cOrd]).OnlyEnforceIf([cOn.Not()])
+#					wwwvars.append(cOn)
+#				if j > 0:
+#					cOn = self.model.NewBoolVar('GlobalWhisperLeftNeighborGoodRow{:d}Col{:d}'.format(i,j))
+#					cOrd = self.model.NewBoolVar('GlobalWhisperLeftNeighborOrderRow{:d}Col{:d}'.format(i,j))
+#					self.model.Add(self.cellValues[i][j] - self.cellValues[i][j-1] >= diff).OnlyEnforceIf([cOn,cOrd])
+#					self.model.Add(self.cellValues[i][j-1] - self.cellValues[i][j] >= diff).OnlyEnforceIf([cOn,cOrd.Not()])
+#					self.model.Add(self.cellValues[i][j] - self.cellValues[i][j-1] < diff).OnlyEnforceIf([cOn.Not()])
+#					self.model.Add(self.cellValues[i][j-1] - self.cellValues[i][j] < diff).OnlyEnforceIf([cOn.Not()])
+#					self.model.AddBoolAnd([cOrd]).OnlyEnforceIf([cOn.Not()])
+#					wwwvars.append(cOn)
+#				if j < self.boardWidth-1:
+#					cOn = self.model.NewBoolVar('GlobalWhisperRightNeighborGoodRow{:d}Col{:d}'.format(i,j))
+#					cOrd = self.model.NewBoolVar('GlobalWhisperRightNeighborOrderRow{:d}Col{:d}'.format(i,j))
+#					self.model.Add(self.cellValues[i][j] - self.cellValues[i][j+1] >= diff).OnlyEnforceIf([cOn,cOrd])
+#					self.model.Add(self.cellValues[i][j+1] - self.cellValues[i][j] >= diff).OnlyEnforceIf([cOn,cOrd.Not()])
+#					self.model.Add(self.cellValues[i][j] - self.cellValues[i][j+1] < diff).OnlyEnforceIf([cOn.Not()])
+#					self.model.Add(self.cellValues[i][j+1] - self.cellValues[i][j] < diff).OnlyEnforceIf([cOn.Not()])
+#					self.model.AddBoolAnd([cOrd]).OnlyEnforceIf([cOn.Not()])
+#					wwwvars.append(cOn)
+#				self.model.AddBoolOr(wwwvars)
+				
+				
+	def setGlobalWhispers(self,diff=4,gle=2):
 		# Every cell must have at least one neighbor which with its difference is at least diff
 		for i in range(self.boardWidth):
 			for j in range(self.boardWidth):
 				wwwvars = []
-				if i > 0:
+				kCells = [self.cellValues[i+k][j+m] for k in [-1,0,1] for m in [-1,0,1] if abs(k) != abs(m) and i+k >= 0 and i+k < self.boardWidth and j+m >= 0 and j+m < self.boardWidth]
+				for k in kCells:
 					cOn = self.model.NewBoolVar('GlobalWhisperUpNeighborGoodRow{:d}Col{:d}'.format(i,j))
 					cOrd = self.model.NewBoolVar('GlobalWhisperUpNeighborOrderRow{:d}Col{:d}'.format(i,j))
-					self.model.Add(self.cellValues[i][j] - self.cellValues[i-1][j] >= diff).OnlyEnforceIf([cOn,cOrd])
-					self.model.Add(self.cellValues[i-1][j] - self.cellValues[i][j] >= diff).OnlyEnforceIf([cOn,cOrd.Not()])
-					self.model.Add(self.cellValues[i][j] - self.cellValues[i-1][j] < diff).OnlyEnforceIf([cOn.Not()])
-					self.model.Add(self.cellValues[i-1][j] - self.cellValues[i][j] < diff).OnlyEnforceIf([cOn.Not()])
-					self.model.AddBoolAnd([cOrd]).OnlyEnforceIf([cOn.Not()])
-					wwwvars.append(cOn)
-				if i < self.boardWidth-1:
-					cOn = self.model.NewBoolVar('GlobalWhisperDownNeighborGoodRow{:d}Col{:d}'.format(i,j))
-					cOrd = self.model.NewBoolVar('GlobalWhisperDownNeighborOrderRow{:d}Col{:d}'.format(i,j))
-					self.model.Add(self.cellValues[i][j] - self.cellValues[i+1][j] >= diff).OnlyEnforceIf([cOn,cOrd])
-					self.model.Add(self.cellValues[i+1][j] - self.cellValues[i][j] >= diff).OnlyEnforceIf([cOn,cOrd.Not()])
-					self.model.Add(self.cellValues[i][j] - self.cellValues[i+1][j] < diff).OnlyEnforceIf([cOn.Not()])
-					self.model.Add(self.cellValues[i+1][j] - self.cellValues[i][j] < diff).OnlyEnforceIf([cOn.Not()])
-					self.model.AddBoolAnd([cOrd]).OnlyEnforceIf([cOn.Not()])
-					wwwvars.append(cOn)
-				if j > 0:
-					cOn = self.model.NewBoolVar('GlobalWhisperLeftNeighborGoodRow{:d}Col{:d}'.format(i,j))
-					cOrd = self.model.NewBoolVar('GlobalWhisperLeftNeighborOrderRow{:d}Col{:d}'.format(i,j))
-					self.model.Add(self.cellValues[i][j] - self.cellValues[i][j-1] >= diff).OnlyEnforceIf([cOn,cOrd])
-					self.model.Add(self.cellValues[i][j-1] - self.cellValues[i][j] >= diff).OnlyEnforceIf([cOn,cOrd.Not()])
-					self.model.Add(self.cellValues[i][j] - self.cellValues[i][j-1] < diff).OnlyEnforceIf([cOn.Not()])
-					self.model.Add(self.cellValues[i][j-1] - self.cellValues[i][j] < diff).OnlyEnforceIf([cOn.Not()])
-					self.model.AddBoolAnd([cOrd]).OnlyEnforceIf([cOn.Not()])
-					wwwvars.append(cOn)
-				if j < self.boardWidth-1:
-					cOn = self.model.NewBoolVar('GlobalWhisperRightNeighborGoodRow{:d}Col{:d}'.format(i,j))
-					cOrd = self.model.NewBoolVar('GlobalWhisperRightNeighborOrderRow{:d}Col{:d}'.format(i,j))
-					self.model.Add(self.cellValues[i][j] - self.cellValues[i][j+1] >= diff).OnlyEnforceIf([cOn,cOrd])
-					self.model.Add(self.cellValues[i][j+1] - self.cellValues[i][j] >= diff).OnlyEnforceIf([cOn,cOrd.Not()])
-					self.model.Add(self.cellValues[i][j] - self.cellValues[i][j+1] < diff).OnlyEnforceIf([cOn.Not()])
-					self.model.Add(self.cellValues[i][j+1] - self.cellValues[i][j] < diff).OnlyEnforceIf([cOn.Not()])
-					self.model.AddBoolAnd([cOrd]).OnlyEnforceIf([cOn.Not()])
-					wwwvars.append(cOn)
+					if gle == 2:
+						self.model.Add(self.cellValues[i][j] - k >= diff).OnlyEnforceIf([cOn,cOrd])
+						self.model.Add(k - self.cellValues[i][j] >= diff).OnlyEnforceIf([cOn,cOrd.Not()])
+						self.model.Add(self.cellValues[i][j] - k < diff).OnlyEnforceIf([cOn.Not()])
+						self.model.Add(k - self.cellValues[i][j] < diff).OnlyEnforceIf([cOn.Not()])
+						self.model.AddBoolAnd([cOrd]).OnlyEnforceIf([cOn.Not()])
+						wwwvars.append(cOn)
+					elif gle == 1:
+						self.model.Add(self.cellValues[i][j] - k == diff).OnlyEnforceIf([cOn,cOrd])
+						self.model.Add(k - self.cellValues[i][j] == diff).OnlyEnforceIf([cOn,cOrd.Not()])
+						self.model.Add(self.cellValues[i][j] - k != diff).OnlyEnforceIf([cOn.Not()])
+						self.model.Add(k - self.cellValues[i][j] != diff).OnlyEnforceIf([cOn.Not()])
+						self.model.AddBoolAnd([cOrd]).OnlyEnforceIf([cOn.Not()])
+						wwwvars.append(cOn)
+					elif gle == 0:
+						self.model.Add(self.cellValues[i][j] - k <= diff).OnlyEnforceIf([cOn])
+						self.model.Add(k - self.cellValues[i][j] <= diff).OnlyEnforceIf([cOn])
+						self.model.Add(self.cellValues[i][j] - k > diff).OnlyEnforceIf([cOn.Not(),cOrd])
+						self.model.Add(k - self.cellValues[i][j] > diff).OnlyEnforceIf([cOn.Not(),cOrd.Not()])
+						self.model.AddBoolAnd([cOrd]).OnlyEnforceIf([cOn])
+						wwwvars.append(cOn)
 				self.model.AddBoolOr(wwwvars)
+				
+	def setCloseNeighbors(self):
+		self.setGlobalWhispers(diff=1,gle=1)
+
+	def setCloseNeighbours(self):
+		self.setCloseNeighbors()
 				
 #	def setGlobalNeighborSum(self,sums=[]):
 #		# Every cell must have at least one neighbor with which it sums to a value in the list
@@ -872,6 +924,25 @@ class sudoku:
 					
 	def setNoSeven(self):
 		self.setNoConsecutiveSum([7])
+
+	def setCountingCircles(self,inlist):
+		inlist = self.__procCellList(inlist)
+		for d in self.digits:
+			circleDigit = []
+			for x in inlist:
+				dx = self.model.NewBoolVar('countingCircle')
+				dxInt = self.model.NewIntVar(0,1,'countingCircle')
+				circleDigit.append(dxInt)
+				self.model.Add(dxInt == 1).OnlyEnforceIf(dx)
+				self.model.Add(dxInt == 0).OnlyEnforceIf(dx.Not())
+				
+				self.model.Add(self.cellValues[x[0]][x[1]] == d).OnlyEnforceIf(dx)
+				self.model.Add(self.cellValues[x[0]][x[1]] != d).OnlyEnforceIf(dx.Not())
+			
+			dAppears = self.model.NewBoolVar('countingCircleValueAppears')
+			self.model.Add(sum(circleDigit) == d).OnlyEnforceIf(dAppears)
+			self.model.Add(sum(circleDigit) == 0).OnlyEnforceIf(dAppears.Not())
+			
 
 ####Single cell constraints
 	def setGiven(self,row,col=-1,value=-1):
@@ -2612,24 +2683,29 @@ class sudoku:
 				# the script from determining a unique solution. So, we set up two variables. One to determine whether or
 				# not the digit appears twice, and one to determine which diagonal the digits lie on.
 				bitDouble = self.model.NewBoolVar('QuadrupleDigitDoubledQueryRow{:d}Col{:d}Value{:d}'.format(row,col,x))
-				bitDiagonal = self.model.NewBoolVar('QuadrupleDiagonalQueryRow{:d}Col{:d}Value{:d}'.format(row,col,x))
-				self.model.Add(self.cellValues[row][col] == x).OnlyEnforceIf([bitDouble,bitDiagonal])
-				self.model.Add(self.cellValues[row+1][col+1] == x).OnlyEnforceIf([bitDouble,bitDiagonal])
-				self.model.Add(self.cellValues[row][col+1] == x).OnlyEnforceIf([bitDouble,bitDiagonal.Not()])
-				self.model.Add(self.cellValues[row+1][col] == x).OnlyEnforceIf([bitDouble,bitDiagonal.Not()])
+				bit1 = self.model.NewBoolVar('Quadruple1Row{:d}Col{:d}Value{:d}'.format(row,col,x))
+				bit2 = self.model.NewBoolVar('Quadruple2Row{:d}Col{:d}Value{:d}'.format(row,col,x))
+				
+				# If bitDouble is true, then we peg bit2 to true, and use bit 1 to determine which diagonal hosts the digits
+				self.model.AddBoolAnd([bit2]).OnlyEnforceIf([bitDouble])
+				self.model.Add(self.cellValues[row][col] == x).OnlyEnforceIf([bitDouble,bit1])
+				self.model.Add(self.cellValues[row+1][col+1] == x).OnlyEnforceIf([bitDouble,bit1])
+				self.model.Add(self.cellValues[row][col+1] == x).OnlyEnforceIf([bitDouble,bit1.Not()])
+				self.model.Add(self.cellValues[row+1][col] == x).OnlyEnforceIf([bitDouble,bit1.Not()])
+				
+				# If bitDouble is false, then we set the appropriate cell to x, and set the one opposite it to be not x
+				self.model.Add(self.cellValues[row][col] == x).OnlyEnforceIf([bitDouble.Not(),bit1,bit2])
+				self.model.Add(self.cellValues[row+1][col+1] != x).OnlyEnforceIf([bitDouble.Not(),bit1,bit2])
+				self.model.Add(self.cellValues[row][col+1] == x).OnlyEnforceIf([bitDouble.Not(),bit1,bit2.Not()])
+				self.model.Add(self.cellValues[row+1][col] != x).OnlyEnforceIf([bitDouble.Not(),bit1,bit2.Not()])
+				self.model.Add(self.cellValues[row+1][col+1] == x).OnlyEnforceIf([bitDouble.Not(),bit1.Not(),bit2.Not()])
+				self.model.Add(self.cellValues[row][col] != x).OnlyEnforceIf([bitDouble.Not(),bit1.Not(),bit2.Not()])
+				self.model.Add(self.cellValues[row+1][col] == x).OnlyEnforceIf([bitDouble.Not(),bit1.Not(),bit2])
+				self.model.Add(self.cellValues[row][col+1] != x).OnlyEnforceIf([bitDouble.Not(),bit1.Not(),bit2])
 				
 				if values.count(x) == 2:
 					# If the digit actually appears twice in the list, force bitDouble to be true
-					self.model.AddBoolAnd([bitDouble])
-				else:
-					# Otherwise allow the possibility the digit appears only once.
-					# These bits determine the location of the digit if it is NOT doubled.
-					bit1 = self.model.NewBoolVar('Quadruple1Row{:d}Col{:d}Value{:d}'.format(row,col,x))
-					bit2 = self.model.NewBoolVar('Quadruple2Row{:d}Col{:d}Value{:d}'.format(row,col,x))
-					self.model.Add(self.cellValues[row][col] == x).OnlyEnforceIf([bitDouble.Not(),bit1,bit2])
-					self.model.Add(self.cellValues[row][col+1] == x).OnlyEnforceIf([bitDouble.Not(),bit1,bit2.Not()])
-					self.model.Add(self.cellValues[row+1][col+1] == x).OnlyEnforceIf([bitDouble.Not(),bit1.Not(),bit2.Not()])
-					self.model.Add(self.cellValues[row+1][col] == x).OnlyEnforceIf([bitDouble.Not(),bit1.Not(),bit2])
+					self.model.AddBoolAnd([bitDouble])					
 					
 	def setQuadrupleArray(self,cells):
 		for x in cells: self.setQuadruple(x)
@@ -3158,6 +3234,13 @@ class sudoku:
 		
 	def setMissingThermo(self,inlist,slow=False):
 		self.setThermo(inlist,slow,True)
+		
+	def setvariableLengthThermo(self,bulb,nextCell,slow=False,reflective=False):
+		b = self.procCell(bulb)
+		n = self.procCell(nextCell)
+		
+		
+		
 			
 	def setCountTheOddsLine(self,inlist):
 		if self.isParity is False:
@@ -3364,7 +3447,6 @@ class sudoku:
 		currentRegionStart = 0
 		for i in range(len(self.regions)):
 			if len({inlist[0]} & set(self.regions[i])) > 0: currentRegion = i
-		print(str(currentRegion))
 		for j in range(1,len(inlist)):
 			for i in range(len(self.regions)):
 				if len({inlist[j]} & set(self.regions[i])) > 0: thisRegion = i
