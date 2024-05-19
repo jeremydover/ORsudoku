@@ -157,6 +157,7 @@ Slow Thermometers (see Thermometers)
 Sum Dots (see Killer Cages)
 Sum Sandwiches
 Thermometers
+Triple Tabs
 Unicorn Digits
 Vaults
 Weak Palindrome Lines
@@ -1370,6 +1371,14 @@ setMissingThermo(list,slow): asserts that the values increase from one end of th
   list: list of cell specifications, with bulb end of thermo being the first element
   slow: set thermo to slow (i.e., nondecreasing vs. increasing); Optional: defaults to False
   
+Triple Tabs
+-----------
+setTripleTab(row,col,uldr,digits,cellCount): sets a triple tab clue, which is like an Outside clue, but appears inside the grid and is based at a cell
+	row,col: the cell where the clue is placed
+	uldr: defines the direction the clue points from the base cell. Use class variables Up, Down, Left, Right
+	digits: a list of digits that must appear in the direction pointed by the tab
+	cellCount: the number of cells from the base cell in which the given digits must appear (Default: 3)
+
 Unicorn Digits
 --------------
 setUnicornDigit(value): set a unicorn digit, i.e. for any instance of that digit in the grid, all of the cells a knight's move away have distinct values

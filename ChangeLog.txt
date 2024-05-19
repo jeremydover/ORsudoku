@@ -1,3 +1,6 @@
+5/19/2024
+	Added support for Triple Tabs
+	Added test case
 5/1/2024	
 	Added 8 new test cases
 	Implemented counting circles

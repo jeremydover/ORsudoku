@@ -1869,6 +1869,31 @@ class sudoku:
 
 		for x in dCells:
 			self.model.Add(self.cellValues[x[0]][x[1]] != self.cellValues[row][col])
+            
+	def setTripleTab(self,row1,col1,uldr,digits,cellCount=3):
+		row = row1 - 1
+		col = col1 - 1
+		if uldr == self.Up:
+			hStep = 0
+			vStep = -1
+		elif uldr == self.Down:
+			hStep = 0
+			vStep = 1
+		elif uldr == self.Left:
+			hStep = -1
+			vStep = 0
+		else:
+			hStep = 1
+			vStep = 0
+		
+		for d in digits:
+			cells = list({(row+i*vStep,col+i*hStep) for i in range(1,cellCount+1)} & {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)})
+			vars = [self.model.NewBoolVar('') for i in range(len(cells))]
+			for i in range(len(cells)):
+				self.model.Add(self.cellValues[cells[i][0]][cells[i][1]] == d).OnlyEnforceIf(vars[i])
+				self.model.Add(self.cellValues[cells[i][0]][cells[i][1]] != d).OnlyEnforceIf(vars[i].Not())
+			self.model.AddBoolOr(vars)
+        
 			
 ####Externally-clued constraints
 	def setLittleKiller(self,row1,col1,row2,col2,value):
