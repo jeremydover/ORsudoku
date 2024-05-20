@@ -119,6 +119,7 @@ class sudoku:
 	
 	White = 0	#Constant to distinguish Kropki clues
 	Black = 1	#Constant to distinguish Kropki clues
+	Gray = 2	#Constant to distinguish Kropki clues
 	
 	Horz = 0	#Constant to determine clues going horizontally/vertically
 	Vert = 1	#Constant to determine clues going horizontally/vertically
@@ -395,6 +396,12 @@ class sudoku:
 		self.model.AddAllDifferent(br + bl + c)
 		self.model.AddAllDifferent(ur + br + c)
 		
+	def setAntiDiagonalMain(self):
+		self.setPointingDifferents(1,1,2,2,self.boardSizeRoot)
+		
+	def setAntiDiagonalOff(self):
+		self.setPointingDifferents(1,self.boardWidth,2,self.boardWidth-1,self.boardSizeRoot)
+
 	def setMagnitudeMirrorMain(self):
 		for i in range(1,self.boardWidth):
 			for j in range(i):
@@ -1144,17 +1151,6 @@ class sudoku:
 			self.model.Add(self.cellValues[row+x*vStep][col+x*hStep] == digit).OnlyEnforceIf(varBitmap[varTrack])
 			varTrack = varTrack + 1
 
-	def setAllOddOrEven(self,inlist):
-		if self.isParity is False:
-			self.__setParity()
-		inlist = set(self.__procCellList(inlist))
-		
-		for i in range(len(self.regions)):
-			rList = list(inlist & set(self.regions[i]))
-			if len(rList) > 1:
-				for j in range(1,len(rList)):
-					self.model.Add(self.cellParity[rList[0][0]][rList[0][1]] == self.cellParity[rList[j][0]][rList[j][1]])
-			
 	def setLogicBomb(self,row,col=-1):
 		if col == -1:
 			(row,col) = self.__procCell(row)
@@ -1178,6 +1174,71 @@ class sudoku:
 						self.model.Add(kCells[k] != kCells[m]).OnlyEnforceIf(b)
 				self.logicCounts.append(c)
 		self.model.Add(sum(self.logicCounts) == num)
+
+	def setCupid(self,row1,col1,row2,col2):
+		row = row1 - 1
+		col = col1 - 1
+		hStep = col2 - col1
+		vStep = row2 - row1
+		cells = list({(row+i*vStep,col+i*hStep) for i in range(1,self.boardWidth)} & {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)})
+		vars = [self.model.NewBoolVar('') for i in range(len(cells))]
+		for i in range(len(cells)):
+			self.model.Add(self.cellValues[cells[i][0]][cells[i][1]] == self.cellValues[row][col]).OnlyEnforceIf(vars[i])
+			self.model.Add(self.cellValues[cells[i][0]][cells[i][1]] != self.cellValues[row][col]).OnlyEnforceIf(vars[i].Not())
+		self.model.AddBoolOr(vars)
+		
+	def setNearestNeighbor(self,row1,col1,pointers):
+		row = row1 - 1
+		col = col1 - 1
+		allNeighbors = {(row+i,col+j) for i in [-1,0,1] for j in [-1,0,1] if abs(i) != abs(j)} & {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)}
+		vDict = {}
+		for x in allNeighbors:
+			bV = self.model.NewBoolVar('')
+			vDict[x] = self.model.NewIntVar(0,self.maxDigit-self.minDigit,'')
+			self.model.Add(self.cellValues[row][col] > self.cellValues[x[0]][x[1]]).OnlyEnforceIf(bV)
+			self.model.Add(vDict[x] == self.cellValues[row][col] - self.cellValues[x[0]][x[1]]).OnlyEnforceIf(bV)
+			self.model.Add(self.cellValues[row][col] < self.cellValues[x[0]][x[1]]).OnlyEnforceIf(bV.Not())
+			self.model.Add(vDict[x] == self.cellValues[x[0]][x[1]] - self.cellValues[row][col]).OnlyEnforceIf(bV.Not())
+		pointedNeighbors = {(row + (1-x//2)*(-1)**(x%2 + 1),col + (x//2)*(-1)**(x%2 + 1)) for x in pointers}
+		for x in pointedNeighbors:
+			for y in allNeighbors:
+				if y in pointedNeighbors:
+					self.model.Add(vDict[x] == vDict[y])
+				else:
+					self.model.Add(vDict[x] < vDict[y])
+
+	def setDifferentNeighbors(self,row1,col1,includeCell=False):
+		# A different neighbor constraint asserts that the digit in the cell is the number of distinct digits in the cell's (8-cell) neighborhood...h/t clover!
+		row = row1 - 1
+		col = col1 - 1
+		neighborSet = {(row+i,col+j) for i in [-1,0,1] for j in [-1,0,1] if (i,j) != (0,0)} & {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)}
+		if includeCell:
+			neighborSet.add((row,col))
+		neighbors = list(neighborSet)
+		
+		digits = list(self.digits)
+		digitCellBools = [[self.model.NewBoolVar('Digit NeighborPairs') for i in range(len(digits))] for j in range(len(neighbors))]
+		digitCellInts = [[self.model.NewIntVar(0,1,'DigitCellPairs') for i in range(len(digits))] for j in range(len(neighbors))]
+		digitBools = [self.model.NewBoolVar('DigitCounts') for i in range(len(digits))]
+		digitInts = [self.model.NewIntVar(0,1,'DigitCounts') for i in range(len(digits))]
+		for j in range(len(neighbors)):
+			for i in range(len(digits)):
+				self.model.Add(self.cellValues[neighbors[j][0]][neighbors[j][1]] == digits[i]).OnlyEnforceIf(digitCellBools[j][i])
+				self.model.Add(self.cellValues[neighbors[j][0]][neighbors[j][1]] != digits[i]).OnlyEnforceIf(digitCellBools[j][i].Not())
+				self.model.Add(digitCellInts[j][i] == 1).OnlyEnforceIf(digitCellBools[j][i])
+				self.model.Add(digitCellInts[j][i] == 0).OnlyEnforceIf(digitCellBools[j][i].Not())
+				
+		for i in range(len(digits)):
+			self.model.Add(sum([digitCellInts[j][i] for j in range(len(neighbors))]) > 0).OnlyEnforceIf(digitBools[i])
+			self.model.Add(sum([digitCellInts[j][i] for j in range(len(neighbors))]) == 0).OnlyEnforceIf(digitBools[i].Not())
+			self.model.Add(digitInts[i] == 1).OnlyEnforceIf(digitBools[i])
+			self.model.Add(digitInts[i] == 0).OnlyEnforceIf(digitBools[i].Not())
+		
+		varBitmap = self.__varBitmap('DifferentNeighborsRow{:d}Col{:d}'.format(row,col),len(digits))
+		
+		for i in range(len(digits)):
+			self.model.Add(sum([digitInts[i] for i in range(len(digits))]) == digits[i]).OnlyEnforceIf(varBitmap[i])
+			self.model.Add(self.cellValues[row][col] == digits[i]).OnlyEnforceIf(varBitmap[i])
 			
 ####Multi-cell constraints
 	def setFortress(self,inlist):
@@ -1220,19 +1281,44 @@ class sudoku:
 		self.model.Add(self.cellValues[row][col] == self.kropkiRatio*self.cellValues[row+hv][col+(1-hv)]).OnlyEnforceIf(bit)
 		self.model.Add(self.kropkiRatio*self.cellValues[row][col] == self.cellValues[row+hv][col+(1-hv)]).OnlyEnforceIf(bit.Not())
 		
+	def setKropkiGray(self,row,col=-1,hv=-1):
+		if col == -1:
+			(row,col,hv) = self.__procCell(row)
+		if self.isKropkiInitialized is not True:
+			self.kropkiCells = [(row,col,hv)]
+			self.isKropkiInitialized = True
+		else:
+			self.kropkiCells.append((row,col,hv))
+		# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
+		bit1 = self.model.NewBoolVar('KropkiGrayBiggerDigitRow{:d}Col{:d}HV{:d}'.format(row,col,hv))
+		bit2 = self.model.NewBoolVar('KropkiGrayBlackWhiteRow{:d}Col{:d}HV{:d}'.format(row,col,hv))
+		self.model.Add(self.cellValues[row][col] - self.cellValues[row+hv][col+(1-hv)] == self.kropkiDiff).OnlyEnforceIf([bit1,bit2])
+		self.model.Add(self.cellValues[row][col] - self.cellValues[row+hv][col+(1-hv)] == -1*self.kropkiDiff).OnlyEnforceIf([bit1.Not(),bit2])
+		
+		self.model.Add(self.cellValues[row][col] == self.kropkiRatio*self.cellValues[row+hv][col+(1-hv)]).OnlyEnforceIf([bit1,bit2.Not()])
+		self.model.Add(self.kropkiRatio*self.cellValues[row][col] == self.cellValues[row+hv][col+(1-hv)]).OnlyEnforceIf([bit1.Not(),bit2.Not()])
+		self.model.Add(self.cellValues[row][col] != self.cellValues[row+hv][col+(1-hv)]+self.kropkiDiff).OnlyEnforceIf([bit2.Not()])
+		self.model.Add(self.cellValues[row][col]+self.kropkiDiff != self.cellValues[row+hv][col+(1-hv)]).OnlyEnforceIf([bit2.Not()])
+		# Note: the last two lines are a way to avoid bit flopping in the case where either a black or white dot could be placed...particularly 1/2 pairs in standard Kropki. Basically this is saying that if a dot could be white, it is white. It can only be black if it does not meet the white condition
+		
 	def setKropkiWhiteArray(self,cells):
 		for x in cells: self.setKropkiWhite(x)
 		
 	def setKropkiBlackArray(self,cells):
 		for x in cells: self.setKropkiBlack(x)
 		
+	def setKropkiGrayArray(self,cells):
+		for x in cells: self.setKropkiGray(x)
+		
 	def setKropkiArray(self,cells):
 		cellList = self.__procCellList(cells)
 		for x in cellList:
 			if x[3] == sudoku.White:
 				self.setKropkiWhite(x[0],x[1],x[2])
-			else:
+			elif x[3] == sudoku.Black:
 				self.setKropkiBlack(x[0],x[1],x[2])
+			else:
+				self.setKropkiGray(x[0],x[1],x[2])
 
 	def setKropkiNegative(self):
 		if self.isKropkiInitialized is not True:
@@ -1519,6 +1605,31 @@ class sudoku:
 			self.__setParity()
 		self.model.Add(sum([self.cellParity[inlist[i][0]][inlist[i][1]] for i in range(len(inlist))]) <= (len(inlist)-1)//2)
 		
+	def setUniparityCage(self,inlist):
+		# A uniparity cage has cells with only one parity
+		inlist = self.__procCellList(inlist)
+		if self.isParity is False:
+			self.__setParity()
+		for i in range(len(inlist)-1):
+			self.model.Add(self.cellParity[inlist[i][0]][inlist[i][1]] == self.cellParity[inlist[i+1][0]][inlist[i+1][1]])
+			
+	def setEquiparityCage(self,inlist):
+		inlist = self.__procCellList(inlist)
+		if self.isParity is False:
+			self.__setParity()
+		self.model.Add(2*sum([self.cellParity[inlist[i][0]][inlist[i][1]] for i in range(len(inlist))]) == len(inlist))
+		
+	def setAllOddOrEven(self,inlist):
+		if self.isParity is False:
+			self.__setParity()
+		inlist = set(self.__procCellList(inlist))
+		
+		for i in range(len(self.regions)):
+			rList = list(inlist & set(self.regions[i]))
+			if len(rList) > 1:
+				for j in range(1,len(rList)):
+					self.model.Add(self.cellParity[rList[0][0]][rList[0][1]] == self.cellParity[rList[j][0]][rList[j][1]])
+
 	def setPuncturedCage(self,inlist,value,puncture=1):
 		# A punctured cage is one with no repeated digits, where the given value is the sum of some subset of 
 		# digits in the cage, less the number of punctured digits. So a cage containing 1,2,3,4 could be clued
@@ -1561,14 +1672,7 @@ class sudoku:
 	
 	def setCapsule(self,inlist):
 		# A capsule has the same number of even and odd digits
-		inlist = self.__procCellList(inlist)
-		if self.isParity is False:
-			self.__setParity()
-		if len(inlist) % 2 == 1:
-			print("Odd length capsule cannot be satisfied")
-			sys.exit()
-		else:
-			self.model.Add(sum([self.cellParity[inlist[i][0]][inlist[i][1]] for i in range(len(inlist))]) == len(inlist)//2)
+		self.setEquiparityCage(inlist)
 			
 	def setDavidAndGoliath(self,inlist,borderDigit=5,borderType=0):
 		# The pair contains at least one David digit and at least one Goliath digit, where any overlapping digit itself meets both conditions
@@ -1893,8 +1997,7 @@ class sudoku:
 				self.model.Add(self.cellValues[cells[i][0]][cells[i][1]] == d).OnlyEnforceIf(vars[i])
 				self.model.Add(self.cellValues[cells[i][0]][cells[i][1]] != d).OnlyEnforceIf(vars[i].Not())
 			self.model.AddBoolOr(vars)
-        
-			
+        			
 ####Externally-clued constraints
 	def setLittleKiller(self,row1,col1,row2,col2,value):
 		# row1,col1 is the position of the first cell in the sum
@@ -2690,7 +2793,56 @@ class sudoku:
 			if i < self.boardWidth-1:
 				self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] > self.cellValues[row+(i+1)*vStep][col+(i+1)*hStep]).OnlyEnforceIf(varBitmap[i])
 			self.model.Add(sum(self.cellValues[row+j*vStep][col+j*hStep] for j in range(i+1)) == value).OnlyEnforceIf(varBitmap[i])
-				
+
+	def setFirstSeenParity(self,row1,col1,rc,value):
+		row = row1 - 1
+		col = col1 - 1
+		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
+		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
+		if self.isParity is False:
+			self.__setParity()
+		varBitmap = self.__varBitmap('FirstSeenParityRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth)
+		clueParity = value % 2
+		for i in range(self.boardWidth):
+			for j in range(i):
+				self.model.Add(self.cellParity[row+j*vStep][col+j*hStep] != clueParity).OnlyEnforceIf(varBitmap[i])
+			self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] == value).OnlyEnforceIf(varBitmap[i])
+			
+	def setFirstSeenEntropy(self,row1,col1,rc,value):
+		row = row1 - 1
+		col = col1 - 1
+		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
+		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
+		if self.isEntropy is False:
+			self.__setEntropy()
+		varBitmap = self.__varBitmap('FirstSeenEntropyRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth)
+		clueEntropy = (value-1) // 3
+		for i in range(self.boardWidth):
+			for j in range(i):
+				self.model.Add(self.cellEntropy[row+j*vStep][col+j*hStep] != clueEntropy).OnlyEnforceIf(varBitmap[i])
+			self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] == value).OnlyEnforceIf(varBitmap[i])
+	
+	def setFirstSeenModular(self,row1,col1,rc,value):
+		row = row1 - 1
+		col = col1 - 1
+		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
+		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
+		if self.isModular is False:
+			self.__setModular()
+		varBitmap = self.__varBitmap('FirstSeenModularRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth)
+		clueModular = value - 3*((value-1) //3)
+		for i in range(self.boardWidth):
+			for j in range(i):
+				self.model.Add(self.cellModular[row+j*vStep][col+j*hStep] != clueModular).OnlyEnforceIf(varBitmap[i])
+			self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] == value).OnlyEnforceIf(varBitmap[i])
+
+	def setPointingDifferents(self,row1,col1,row2,col2,value):
+		hStep = col2 - col1
+		vStep = row2 - row1
+		# Note: we're keeping cells one-based, since we're passing to another function
+		cells = list({(row1+vStep*k,col1+hStep*k) for k in range(self.boardWidth)} & {(i,j) for i in range(1,self.boardWidth+1) for j in range(1,self.boardWidth+1)})
+		self.setDigitCountCage(cells,value)
+
 ####2x2 constraints
 	def setQuadruple(self,row,col=-1,values=-1):
 		if col == -1:
@@ -3600,6 +3752,14 @@ class sudoku:
 			test = (l-1) // 2
 		for i in range(test):
 			self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]]+self.cellValues[inlist[l-1-i][0]][inlist[l-1-i][1]] == target)
+
+	def setLineSumLine(self,inlist):
+		inlist = self.__procCellList(inlist)
+		mySum = sum([self.cellValues[x[0]][x[1]] for x in inlist])
+		vars = [self.model.NewBoolVar('') for i in range(len(inlist))]
+		for i in range(len(inlist)):
+			self.model.Add(mySum == 2*self.cellValues[inlist[i][0]][inlist[i][1]]).OnlyEnforceIf(vars[i])
+		self.model.AddBoolOr(vars)
 			
 ####Model solving
 	def applyNegativeConstraints(self):
@@ -3625,7 +3785,7 @@ class sudoku:
 		for tempArray in self.cellValues: consolidatedCellValues = consolidatedCellValues + tempArray
 		solution_printer = SolutionPrinter(consolidatedCellValues,self.boardWidth)
 		self.solveStatus = self.solver.Solve(self.model)
-	
+		
 		if test is True:
 			return self.testStringSolution()
 		else:

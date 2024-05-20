@@ -4,6 +4,7 @@ Supported Constraint List
 159 (see Indexing)
 All Odd or Even
 Alternate Digits
+Anti-Diagonal - see XSudoku
 Anti-King
 Anti-Knight
 Anti-Queen
@@ -28,11 +29,13 @@ Consecutive Quads
 Corner/Edge Clues
 Count the Odds Lines
 Counting Circles
+Cupid Clues
 David and Goliath Pairs
 Descriptive Pairs
 Diagonal Consecutive Pairs
 Diagonal Mirrors
 Difference Pairs - see Kropki and Kropki Pairs
+Different Neighbors
 Digit Count Cages
 Disjoint Groups
 Dominant Clone Regions - see Clone Regions
@@ -50,10 +53,12 @@ Entropki Dots (same/different entropy classes)
 Entropy (see Global Entropy)
 Entropy Battenburg (on a 2x2, no pair of same entropic cells are adjacent)
 Entropy Quads (partial Entropy, asserts Entropy on an individual 2x2)
+Equiparity/Uniparity Cages - see More-Odd-Than-Even Cages
 Even Max Quads - see Quad Max Values
 Even-Odd
 Extra Regions - see irregular Sudoku
 Fast Thermos - see Thermos
+First-Seen Parity/Entropy/Modular
 Forbidden Consecutive Sums
 Fortress
 Friendly Cells
@@ -78,6 +83,7 @@ Knapp Daneben Cages - see Killer Cages
 Knightmare (seee Anti-Knight)
 Kropki (see Kropki Pairs)
 Kropki Pairs
+Line Sum Lines
 Little Killer
 Lockout Lines
 Logic Bombs
@@ -97,6 +103,7 @@ Modular Lines
 Modular Quads - see Entropy Quads
 More-Odd-Than-Even/More-Even-Than-Odd Cages
 Nabner Lines
+Nearest Neighbor
 Negator Sudoku - see Cell Transform Sudoku
 Neighbor Sums
 Next-To-Nine
@@ -122,6 +129,7 @@ Parity Snakes
 Pencilmarks
 Psycho Killer Cages - see Killer Cages
 Pointing Arrows - see Arrows
+Pointing Differents
 Position Sums
 Primality Mirror - see Diagonal Mirrors
 Punctured Cages - see Killer Cages
@@ -159,6 +167,7 @@ Sum Sandwiches
 Thermometers
 Triple Tabs
 Unicorn Digits
+Uniparity/Equiparity Cages - see More-Odd-Than-Even Cages
 Vaults
 Weak Palindrome Lines
 Windoku
@@ -451,6 +460,12 @@ Counting Circles
 setCountingCircles(list): given a list of circled cells, a digit in a circled cell is the number of times that digit appears in a circled cell
   list: list of circle cells
 
+Cupid Clues
+-----------
+setLittleCupid(row1,col1,row2,col2): sets a cupid clue: value in the cell (row1,col1) must also appear along the diagonal in the direction of (row2,col2)
+  row1,col1: the cell spec of the cupid cell
+  row2,col2: the cell spec for the next cell in the diagonal along which the cupid arrow points
+
 David and Goliath Pairs
 -----------------------
 setDavidAndGoliath(list,borderDigit,borderType): sets a David and Goliath pair, where at least one cell must have a "David" (small) digit and at least one must have a "Goliath" (large) digit
@@ -497,6 +512,12 @@ setPrimalityAntiMirrorMain()
 setPrimalityAntiMirrorOff()
 
 Note that parity anti-mirror does not lead to any solutions, so it is not supported.
+
+Different Neighbors
+-------------------
+setDifferentNeighbors(row,col,includeCell): asserts that the number of distinct digits in the neighborhood of (row,col) (including diagonals) is equal to the digit in the cell. Can optionally include the cell itself in the digit count
+  row,col: cell specification
+  includeCell: default False: if set includes the cell itself in the count of digits, default is to only count the 8 adjacent cells
 
 Digit Count Cages
 -----------------
@@ -637,6 +658,25 @@ setEvenOddArray(list): create multipl parity constraints
 setOddEvenArray(list): create multipl parity constraints
   list: list of cellEO specifications; see setEvenOdd
   
+First-Seen Clues
+----------------
+First-seen clues indicate the first value with a given property seen from outside the grid
+
+setFirstSeenParity(row,col,rc,value): asserts the first digit with the parity of value seen in the row/column is the given value
+  row,col: The coordinates of the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  value: first even/odd value seen in the row/column
+  
+setFirstSeenEntropy(row,col,rc,value): asserts the first digit in the entropic stratum of value seen in the row/column is the given value
+  row,col: The coordinates of the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  value: first low/middle/high value seen in the row/column
+  
+setFirstSeenModular(row,col,rc,value): asserts the first digit with the same modulus as value seen in the row/column is the given value
+  row,col: The coordinates of the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  value: first value equal to 0/1/2 mod 3 seen in the row/column
+
 Forbidden Conseuctive Sums
 --------------------------
 setNoConsecutiveSum(list): asserts that no pair of adjacent cells can have digits that sum to a value in the list
@@ -805,14 +845,21 @@ setKropkiBlack(cellHV): creates a black Kropki dot
   cellHV: an extended cell specification which adds the hv parameter: dot is on the right side if H, or on the bottom if V. All parameters can be given in a tuple, but shorthand is possible, appending 0 to a cell spec to indicate horizontal and 1 to indicate vertical.
   Example: 251, '251' and (2,5,p.Vert) all specify a dot on the bottom edge of cell 2,5
   
+setKropkiGray(cellHV): creates a gray Kropki dot, which can be either a white or black dot
+  cellHV: an extended cell specification which adds the hv parameter: dot is on the right side if H, or on the bottom if V. All parameters can be given in a tuple, but shorthand is possible, appending 0 to a cell spec to indicate horizontal and 1 to indicate vertical.
+  Example: 251, '251' and (2,5,p.Vert) all specify a dot on the bottom edge of cell 2,5
+  
 setKropkiWhiteArray(list): creates multiple white Kropki dots
   list: list of cellHV specifications, see setKropkiWhite
 
 setKropkiBlackArray(list): creates multiple black Kropki dots
   list: list of cellHV specifications, see setKropkiBlack
-  
+
+setKropkiGrayArray(list): creates multiple gray Kropki dots
+  list: list of cellHV specifications, see setKropkiGray
+
 setKropkiArray(list): creates multiple Kropki dots
-  list: list of cellHVWB specifications, which include a cell spec, the HV spec as given in setKropkiWhite, and a WB spec, specifying the color of the dot. When given as a tuple, the White and Black variables can be used to specify W/B. Shorthand is possible, with white being 0 and black 1.
+  list: list of cellHVWBG specifications, which include a cell spec, the HV spec as given in setKropkiWhite, and a WBG spec, specifying the color of the dot. When given as a tuple, the White, Black and Gray variables can be used to specify W/B. Shorthand is possible, with white being 0, black 1, and gray 2.
   Example: 1701 incidates a black dot (1 WB spec is fourth) on the right edge (0 HV spec is third) of cell 1,7 (17 cell spec is first). This can also be written as the tuple (1,7,p.Horz,p.Black)
   
 setAntiKropki(cellHV): asserts that the digits are neither consecutive or in a 2-to-1 ratio by default...uses kropkiDifference and kropkiRatio if these have been changed
@@ -830,6 +877,11 @@ setKropkiRatio(value)
 The values can be reset to their defaults by calling them with no argument. All dots added subsequently to these calls will use the new values, without changing constraints already entered. HOWEVER, if a negative constraint is applied, it will ALWAYS use the final set value of these two variables to apply the negative constraint against.
 
 setGammaEpsilon(): implement Gamma Epsilon rules, equivalent to setKropkiDifference(5) & setKropkiRatio(3)
+
+Line Sum Lines
+--------------
+setLineSumLine(list): asserts that one of the cells on the line is the sum of all remaining cells on the line. See Missing Arrow constraints under Arrows.
+  list: a list of cell specifications
 
 Little Killers
 --------------
@@ -931,11 +983,23 @@ setMOTECage(list): set a MOTE cage
 
 setMETOCage(list): set a METO cage
 	list: list of cell specifications
+	
+setEquiparityCage(list): set a cage with an equal number of even and odd digits; see also Capsules
+	list: list of cell specifications
+
+setUniparityCage(list): set a cage with enitrely even or entirely odd digits
+	list: list of cell specifications
 
 Nabner Lines
 ------------
 setNabnerLine(inlist): assert that there are no two digits lying on the line are the same or consecutive
 	inlist: list of cell specifications
+
+Nearest Neighbor
+----------------
+setNearestNeighbor(row,col,pointers): arrows in a cell point to the orthogonal neighbor that has the closest digit; multiple arrows may occur if two or more neighbors are equidistant
+	row,col: the cell in question
+	pointers: a *list* of directions: use class variables Up, Down, Left and Right
 
 Neighbor Sums
 -------------
@@ -1078,6 +1142,12 @@ setPencilmarks(row,col,values): set pencilmarks (possible values) for a single c
 	
 setPencilmarksArray(list): set multiple pencilmark constraints
 	list: a list of shorthand pencilmark specifications, e.g. [12123,15289]
+
+Pointing Differents
+-------------------
+setPointingDifferents(row1,col1,row2,col2,value): asserts that there are only value different digits on the diagonal containing (row1,col1) and (row2,col2)
+  row1,col1: the cell spec of the first cell in the little killer diagonal, next to the clue
+  row2,col2: the cell spec for the second cell in the diagonal
 
 Position Sums
 -------------
@@ -1432,6 +1502,10 @@ setXSudokuMain(): assert no repeats on the main (top left to bottom right) diago
 setXSudokuOff(): assert no repeats on the off (top right to bottom left) diagonal
 
 setBentDiagonals(): assert no repeats on the bent diagonals between adjacent corners through the center box
+
+setAntiDiagonalMain(): assert that the main diagonal contains the minimum number of digits possible (3 for normal sudoku)
+
+setAntiDiagonalOff(): assert that the off diagonal contains the minimum number of digits possible (3 for normal sudoku)
 
 X-Sums
 ------

@@ -1,3 +1,12 @@
+5/20/24
+	Added support for gray Kropki dots, which are ambiguous and can be either white or black
+	Added support for different neighbors constraints...h/t clover!
+	Added support for pointing differents clues...h/t clover!...thanks! Through aliasing, added support for AntiDiagonal rules as well
+	Added support for first-seen clues. h/t clover! for parity, extended to entropy and modularity
+	Added support for uniparity and equiparity cages. Aliased capsule code to use more modern equiparty cage code.
+	Added support for nearest neighbor clues (h/t clover!...thanks!)
+	Added support for Cupid clues, including test case (h/t Bill Murphy...thanks)
+	Added support for line sum lines (h/t clover!...thanks!)
 5/19/2024
 	Added support for Triple Tabs
 	Added test case
