@@ -35,7 +35,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setCupid(9,6,8,7)
 		p.setGivenArray([139,151,213,297,324,352,388,422,453,486,514,599,623,654,681,729,755,784,812,896,956,979])
 		
-		self.assertEqual(p.findSolution(test=True),'859713624312486597647925183728139465461578239935642718196857342274391856583264971','Failed Cupid Sudoku')
+		self.assertEqual(p.countSolutions(test=True),'1:859713624312486597647925183728139465461578239935642718196857342274391856583264971','Failed Cupid Sudoku')
 		
 if __name__ == '__main__':
     unittest.main()

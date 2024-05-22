@@ -35,7 +35,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setSandwichSum(1,8,p.Col,29)
 		p.setBattlefield(1,8,p.Col,38)										
 		
-		self.assertEqual(p.findSolution(test=True),'915374628263985741478621593542716839139258467687439152354197286821563974796842315','Failed MRE Swap')
+		self.assertEqual(p.countSolutions(test=True),'1:915374628263985741478621593542716839139258467687439152354197286821563974796842315','Failed MRE Swap')
 		
 if __name__ == '__main__':
     unittest.main()

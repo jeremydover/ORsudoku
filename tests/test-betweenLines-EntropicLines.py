@@ -22,7 +22,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setBetweenLine([94,95,96])
 		p.setBetweenLine([79,89,98])
 		
-		self.assertEqual(p.findSolution(test=True),'347165928592483617186927543953714286621859734478632159265398471814276395739541862','Failed Van de Graaff Generator')
+		self.assertEqual(p.countSolutions(test=True),'1:347165928592483617186927543953714286621859734478632159265398471814276395739541862','Failed Van de Graaff Generator')
 		
 if __name__ == '__main__':
     unittest.main()

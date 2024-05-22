@@ -25,7 +25,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setKropkiArray([(2,3,p.Horz,p.White),(2,6,p.Horz,p.Black),(3,1,p.Horz,p.White),(3,8,p.Horz,p.White),(4,3,p.Horz,p.Black),(4,6,p.Horz,p.Black),(5,2,p.Horz,p.Black),(5,2,p.Vert,p.White),(5,3,p.Horz,p.White),(5,6,p.Horz,p.White),(5,7,p.Horz,p.Black),(5,8,p.Vert,p.White),(6,3,p.Horz,p.Black),(6,6,p.Horz,p.Black)])
 		p.setXVArray([(3,3,p.Horz,p.X),(3,6,p.Horz,p.X),(7,3,p.Horz,p.X),(7,6,p.Horz,p.X)])
 		
-		self.assertEqual(p.findSolution(test=True),'627183594915476382348259176276398451184527639593614827752861943831942765469735218','Failed Oceans Rise, Empires Fall')
+		self.assertEqual(p.countSolutions(test=True),'1:627183594915476382348259176276398451184527639593614827752861943831942765469735218','Failed Oceans Rise, Empires Fall')
 		
 if __name__ == '__main__':
     unittest.main()

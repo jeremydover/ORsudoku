@@ -15,7 +15,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setDoublingLine([17,28,39,48,57,46,35,26])
 		p.setDoublingLine([53,64,75,84,93,82,71,62])
 		p.setDoublingLine([54,65,76,85,94,83,72,63])
-		self.assertEqual(p.findSolution(test=True),'513982476489376152762145938971538264824697513635214897356421789147869325298753641','Failed Ice Cubes')
+		self.assertEqual(p.countSolutions(test=True),'1:513982476489376152762145938971538264824697513635214897356421789147869325298753641','Failed Ice Cubes')
 		
 if __name__ == '__main__':
     unittest.main()

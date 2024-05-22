@@ -19,7 +19,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setBetweenLine([54,65,76,67,58])
 		p.setBetweenLine([74,84,94,93])
 		
-		self.assertEqual(p.findSolution(test=True),'684271539215936874937854621859627413462183957371549286546312798723498165198765342','Failed Fishie')
+		self.assertEqual(p.countSolutions(test=True),'1:684271539215936874937854621859627413462183957371549286546312798723498165198765342','Failed Fishie')
 		
 if __name__ == '__main__':
     unittest.main()

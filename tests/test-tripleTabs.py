@@ -26,7 +26,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setTripleTab(8,6,p.Left,[6,7,8])
 		p.setTripleTab(9,9,p.Left,[5,7,9])
 			
-		self.assertEqual(p.findSolution(test=True),'965123874413978265827654193738496521251837649649512387374265918596781432182349756','Failed Tritabs')
+		self.assertEqual(p.countSolutions(test=True),'1:965123874413978265827654193738496521251837649649512387374265918596781432182349756','Failed Tritabs')
 		
 if __name__ == '__main__':
     unittest.main()

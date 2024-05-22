@@ -30,7 +30,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setRegionSumLine([28,37,46,55])
 		p.setRegionSumLine([61,72,83,94])
 		
-		self.assertEqual(p.findSolution(test=True),'387492651694851723215736849471689235928315476563247198739128564852964317146573982','Failed Overlap')
+		self.assertEqual(p.countSolutions(test=True),'1:387492651694851723215736849471689235928315476563247198739128564852964317146573982','Failed Overlap')
 		
 if __name__ == '__main__':
     unittest.main()

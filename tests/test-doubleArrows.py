@@ -27,7 +27,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setDoubleArrow([52,43,42,41])
 		p.setDoubleArrow([41,32,33,22,23,14])
 		
-		self.assertEqual(p.findSolution(test=True),'976458213815236947423197685769312854184765329532984176648523791251679438397841562','Failed Target Practice')
+		self.assertEqual(p.countSolutions(test=True),'1:976458213815236947423197685769312854184765329532984176648523791251679438397841562','Failed Target Practice')
 		
 if __name__ == '__main__':
     unittest.main()

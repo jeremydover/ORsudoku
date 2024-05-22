@@ -16,7 +16,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setGermanWhispersLine([44,45,46,55])
 		p.setGivenArray([483,754,772])
 		
-		self.assertEqual(p.findSolution(test=True),'761829453239456178854137962596281734382764591417395826973648215128573649645912387','Failed Knights who say Shhh')
+		self.assertEqual(p.countSolutions(test=True),'1:761829453239456178854137962596281734382764591417395826973648215128573649645912387','Failed Knights who say Shhh')
 		
 if __name__ == '__main__':
     unittest.main()

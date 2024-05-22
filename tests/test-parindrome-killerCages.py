@@ -38,7 +38,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setParindromeLine([82,93,84])
 		p.setParindromeLine([86,96,97,98,99,89])
 		
-		self.assertEqual(p.findSolution(test=True),'935718426721364958486295713348657291512839647697421385274183569153946872869572134','Failed Parindromes')
+		self.assertEqual(p.countSolutions(test=True),'1:935718426721364958486295713348657291512839647697421385274183569153946872869572134','Failed Parindromes')
 		
 if __name__ == '__main__':
     unittest.main()

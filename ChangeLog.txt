@@ -1,3 +1,13 @@
+5/22/24	
+	Added support for negative constraint for XY Differences, and added a test case.
+	Updated sandwich sum code to fix issue which was actually occurring in #57. Test for MRE Swap also migrated to countSolutions.
+	Did some cleanup in Battlefield constraint code, though this did not resolve issue #57.
+	Added support for global neighbor sums, issue #44; added test case.
+	Moved most test cases from findSolution to countSolutions, since this gives a stronger test, ensuring that the solver verifies that solutions are unique. This did identify one constraint issue, likely with battlefield constraints.
+	Updated solution printer class to accommodate test printing for countSolutions when using cellTransform or Japanese Sums sudoku.
+	Updated Quattroquadri code to remove some legacy references to doubler code from which it was copied. Added QuattroQuadri test case.
+	Updated Search Nine code to allow arrow to point at one of a list of digits, included test case.
+	
 5/20/24
 	Added support for gray Kropki dots, which are ambiguous and can be either white or black
 	Added support for different neighbors constraints...h/t clover!
@@ -7,9 +17,11 @@
 	Added support for nearest neighbor clues (h/t clover!...thanks!)
 	Added support for Cupid clues, including test case (h/t Bill Murphy...thanks)
 	Added support for line sum lines (h/t clover!...thanks!)
+	
 5/19/2024
 	Added support for Triple Tabs
 	Added test case
+	
 5/1/2024	
 	Added 8 new test cases
 	Implemented counting circles

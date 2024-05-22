@@ -14,7 +14,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setXVArray([(2,3,p.Horz,p.X),(3,6,p.Vert,p.X),(4,6,p.Horz,p.X),(6,3,p.Horz,p.X),(6,4,p.Vert,p.X),(8,6,p.Horz,p.X)])
 		p.setXVNegative()
 		
-		self.assertEqual(p.findSolution(test=True),'781526943592843671634971258357269184849715362126438597218657439475392816963184725','Failed Negative Romans are Oddly Even')
+		self.assertEqual(p.countSolutions(test=True),'1:781526943592843671634971258357269184849715362126438597218657439475392816963184725','Failed Negative Romans are Oddly Even')
 		
 if __name__ == '__main__':
     unittest.main()

@@ -24,7 +24,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setGermanWhispersLine([62,71,82,83,84,85])
 		p.setGermanWhispersLine([88,87,97,98,99])
 		
-		self.assertEqual(p.findSolution(test=True),'356918724714235869892746351679521438481367592235894617963482175528173946147659283','Failed Candy Cane Sudoku')
+		self.assertEqual(p.countSolutions(test=True),'1:356918724714235869892746351679521438481367592235894617963482175528173946147659283','Failed Candy Cane Sudoku')
 		
 if __name__ == '__main__':
     unittest.main()

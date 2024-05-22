@@ -20,7 +20,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setKeypadKnightLine([66,67,57,58,59])
 		p.setKropkiBlack(311)
 		
-		self.assertEqual(p.findSolution(test=True),'925841673148376925673529148357294816816753492492618357269185734581437269734962581','Failed Knights of the Xentropy Table')
+		self.assertEqual(p.countSolutions(test=True),'1:925841673148376925673529148357294816816753492492618357269185734581437269734962581','Failed Knights of the Xentropy Table')
 		
 if __name__ == '__main__':
     unittest.main()

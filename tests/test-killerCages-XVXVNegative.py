@@ -19,7 +19,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setXVXVArray([(4,6,p.Horz,p.X),(6,3,p.Horz,p.V),(9,3,p.Horz,p.X),(1,6,p.Horz,p.V),(4,1,p.Vert,p.X),(5,9,p.Vert,p.V),(1,6,p.Horz,p.V),(9,3,p.Horz,p.X),(3,8,p.Vert,p.X),(4,2,p.Horz,p.V),(4,7,p.Vert,p.X),(5,8,p.Vert,p.X),(5,3,p.Vert,p.X),(5,7,p.Horz,p.X)])
 		p.setXVXVNegative()
 		
-		self.assertEqual(p.findSolution(test=True),'136247859245986317798513624623479185471358962859621743984762531567134298312895476','Failed XV - XV = 0')
+		self.assertEqual(p.countSolutions(test=True),'1:136247859245986317798513624623479185471358962859621743984762531567134298312895476','Failed XV - XV = 0')
 		
 if __name__ == '__main__':
     unittest.main()

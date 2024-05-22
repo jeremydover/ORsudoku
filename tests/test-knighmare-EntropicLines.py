@@ -18,7 +18,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setEntropicLine([49,48,47,57,58,59])
 		p.setGivenArray([737,673,922])
 		
-		self.assertEqual(p.findSolution(test=True),'263519748589734126714682593346827951158943267972165384837296415695471832421358679','Failed E is for Entropic')
+		self.assertEqual(p.countSolutions(test=True),'1:263519748589734126714682593346827951158943267972165384837296415695471832421358679','Failed E is for Entropic')
 		
 if __name__ == '__main__':
     unittest.main()

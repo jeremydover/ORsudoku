@@ -23,7 +23,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setRossini(9,6,p.Up)
 		p.setRossiniNegative()
 		
-		self.assertEqual(p.findSolution(test=True),'182647395379152864546983217713268549465379182298415673957826431621734958834591726','Failed La Scala')
+		self.assertEqual(p.countSolutions(test=True),'1:182647395379152864546983217713268549465379182298415673957826431621734958834591726','Failed La Scala')
 		
 if __name__ == '__main__':
     unittest.main()

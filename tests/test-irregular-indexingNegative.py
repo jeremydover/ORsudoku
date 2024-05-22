@@ -27,7 +27,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setIndexRow(5,True,[3,4,5,6,7])
 		p.setIndexRow(9,True,[2,4,5,7,9])
 		
-		self.assertEqual(p.findSolution(test=True),'581794326394867512267153498652471839418935267739628145946382751175249683823516974','Failed Eclipse')
+		self.assertEqual(p.countSolutions(test=True),'1:581794326394867512267153498652471839418935267739628145946382751175249683823516974','Failed Eclipse')
 		
 if __name__ == '__main__':
     unittest.main()

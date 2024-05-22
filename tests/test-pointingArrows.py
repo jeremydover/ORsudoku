@@ -17,7 +17,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setPointingArrow([82,71,61,51])
 		p.setPointingArrow([95,94,84,75])
 			
-		self.assertEqual(p.findSolution(test=True),'623958174458371629917246538289513467541697382376824951162739845895462713734185296','Failed Pointing Arrow Sudoku')
+		self.assertEqual(p.countSolutions(test=True),'1:623958174458371629917246538289513467541697382376824951162739845895462713734185296','Failed Pointing Arrow Sudoku')
 		
 if __name__ == '__main__':
     unittest.main()

@@ -15,7 +15,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setEntropicLine([33,42,51,61,62,72,73,74,85,75,76,77,78,68,59,49,48,37])
 		p.setEntropicLine([53,43,54,55,65,56,57])
 		p.setEntropicLine([71,82,83,84,94,95,96,87,88,98,89,99])
-		self.assertEqual(p.findSolution(test=True),'597682341284317596631945728149758263725163489368294157873426915952871634416539872','Failed Xentropic Lines')
+		self.assertEqual(p.countSolutions(test=True),'1:597682341284317596631945728149758263725163489368294157873426915952871634416539872','Failed Xentropic Lines')
 		
 if __name__ == '__main__':
     unittest.main()

@@ -38,7 +38,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setZone([74,75,76],[8])
 		p.setZone([77,78,79],[9])
 		
-		self.assertEqual(p.findSolution(test=True),'819624375563179248742538196324785961675912834198463527237856419481397652956241783','Failed Bullet Catch')
+		self.assertEqual(p.countSolutions(test=True),'1:819624375563179248742538196324785961675912834198463527237856419481397652956241783','Failed Bullet Catch')
 		
 if __name__ == '__main__':
     unittest.main()

@@ -17,7 +17,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setRenbanLine([92,83,84,95])
 		p.setGivenArray([116,174,246,343,399,515,637,666,685,825,861,884,948,962])
 		
-		self.assertEqual(p.findSolution(test=True),'631298475942657138785314269813425796564739821297186354126543987358971642479862513','Failed Something Amiss (Knightmare)')
+		self.assertEqual(p.countSolutions(test=True),'1:631298475942657138785314269813425796564739821297186354126543987358971642479862513','Failed Something Amiss (Knightmare)')
 		
 if __name__ == '__main__':
     unittest.main()

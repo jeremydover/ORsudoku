@@ -27,7 +27,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setOutside(9,5,p.Col,[9])
 		p.setOutside(9,8,p.Col,[5,7])
 		
-		self.assertEqual(p.findSolution(test=True),'894253167521976438637184529459761283712438695386529714163847952278695341945312876','Failed Gallery')
+		self.assertEqual(p.countSolutions(test=True),'1:894253167521976438637184529459761283712438695386529714163847952278695341945312876','Failed Gallery')
 		
 if __name__ == '__main__':
     unittest.main()

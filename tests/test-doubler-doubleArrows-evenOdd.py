@@ -22,7 +22,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setDoubleArrow([88,89,79,69])
 		p.setDoubleArrow([69,68,67])
 		
-		self.assertEqual(p.findSolution(test=True),'37958*4*62112*5*697348684132*7*59453*8*219678*6*247951379135648*2*2367*1*58945179482*3*6*9*48263175','Failed Double, Double')
+		self.assertEqual(p.countSolutions(test=True),'1:37958*4*62112*5*697348684132*7*59453*8*219678*6*247951379135648*2*2367*1*58945179482*3*6*9*48263175','Failed Double, Double')
 		
 if __name__ == '__main__':
     unittest.main()

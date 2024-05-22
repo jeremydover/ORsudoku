@@ -23,7 +23,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setXSum(9,7,p.Col,19)
 		p.setKropkiWhiteArray([230,830])
 			
-		self.assertEqual(p.findSolution(test=True),'854769312926513784713428956267985143348271695591346278689134527475692831132857469','Failed ReflX-Sum')
+		self.assertEqual(p.countSolutions(test=True),'1:854769312926513784713428956267985143348271695591346278689134527475692831132857469','Failed ReflX-Sum')
 		
 if __name__ == '__main__':
     unittest.main()

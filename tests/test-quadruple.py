@@ -14,7 +14,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setQuadrupleArray([7568,8579])
 		p.setQuadrupleArray([6759,6811,5723,366,634])
 		
-		self.assertEqual(p.findSolution(test=True),'243915786158762349679384152832149675917653428564827931796238514481576293325491867','Failed Quad-Wrangle')
+		self.assertEqual(p.countSolutions(test=True),'1:243915786158762349679384152832149675917653428564827931796238514481576293325491867','Failed Quad-Wrangle')
 		
 if __name__ == '__main__':
     unittest.main()

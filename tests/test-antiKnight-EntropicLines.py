@@ -18,7 +18,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setEntropicLine([75,74,84,85])
 		p.setAntiKnight()
 		
-		self.assertEqual(p.findSolution(test=True),'157249386682753941943681257275394168861527493394168725539416872728935614416872539','Failed Every Third Knight')
+		self.assertEqual(p.countSolutions(test=True),'1:157249386682753941943681257275394168861527493394168725539416872728935614416872539','Failed Every Third Knight')
 		
 if __name__ == '__main__':
     unittest.main()

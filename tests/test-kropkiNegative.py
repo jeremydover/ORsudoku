@@ -13,7 +13,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setKropkiNegative()
 		p.setGivenArray([441,792,944])
 				
-		self.assertEqual(p.findSolution(test=True),'746915328318247596952863741685139274427586913193724685869371452274658139531492867','Failed Classic Kropki Sudoku')
+		self.assertEqual(p.countSolutions(test=True),'1:746915328318247596952863741685139274427586913193724685869371452274658139531492867','Failed Classic Kropki Sudoku')
 
 if __name__ == '__main__':  
     unittest.main()

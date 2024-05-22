@@ -23,7 +23,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setReverseXSum(1,8,p.Col,11)
 		p.setReverseXSum(1,5,p.Col,22)
 		
-		self.assertEqual(p.findSolution(test=True),'859641732713982564642537891384125679297463158165879243521396487436718925978254316','Failed Smus-X')
+		self.assertEqual(p.countSolutions(test=True),'1:859641732713982564642537891384125679297463158165879243521396487436718925978254316','Failed Smus-X')
 		
 if __name__ == '__main__':
     unittest.main()

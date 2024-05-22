@@ -26,7 +26,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setRenbanLine([85,96,87])
 		p.setQuadrupleArray([2227,2636,4846,5535,8158,8337,881])
 			
-		self.assertEqual(p.findSolution(test=True),'345971286926438517871526349269847153137295864458163972712354698594682731683719425','Failed Truth or Consequads')
+		self.assertEqual(p.countSolutions(test=True),'1:345971286926438517871526349269847153137295864458163972712354698594682731683719425','Failed Truth or Consequads')
 		
 if __name__ == '__main__':
     unittest.main()

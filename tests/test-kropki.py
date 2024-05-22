@@ -12,7 +12,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setKropkiWhiteArray([110,320,191,271,710,720,531,491,591,251,750,541,241])
 		p.setKropkiBlackArray([210,220,170,380,781,881,820,850,411,511,580,151,551])
 		
-		self.assertEqual(p.findSolution(test=True),'763945218124386597589271436251639874497528163836417952678154329912863745345792681','Failed Some Dots')
+		self.assertEqual(p.countSolutions(test=True),'1:763945218124386597589271436251639874497528163836417952678154329912863745345792681','Failed Some Dots')
 		
 if __name__ == '__main__':
     unittest.main()

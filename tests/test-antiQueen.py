@@ -15,7 +15,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setAntiQueenDigit(6)
 		p.setAntiQueenDigit(8)
 			
-		self.assertEqual(p.findSolution(test=True),'794163582835724961612895743241637895958412637376958124529376418187249356463581279','Failed Quevens')
+		self.assertEqual(p.countSolutions(test=True),'1:794163582835724961612895743241637895958412637376958124529376418187249356463581279','Failed Quevens')
 		
 if __name__ == '__main__':
     unittest.main()

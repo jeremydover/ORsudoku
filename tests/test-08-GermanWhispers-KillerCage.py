@@ -28,7 +28,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setCage([82,92,91],13)
 		p.setCage([85,95,94],10)
 		
-		self.assertEqual(p.findSolution(test=True),'018735642347126085526480317603241578175608423482573106831052764750864231264317850','Failed SHHHH! Not 9')
+		self.assertEqual(p.countSolutions(test=True),'1:018735642347126085526480317603241578175608423482573106831052764750864231264317850','Failed SHHHH! Not 9')
 		
 if __name__ == '__main__':
     unittest.main()

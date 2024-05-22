@@ -26,7 +26,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setSandwichSum(8,1,p.Row,25)
 		p.setSandwichSum(9,1,p.Row,10)
 		
-		self.assertEqual(p.findSolution(test=True),'496817325783265491215439768379546182658321974142798653564983217821674539937152846','Failed Arsenic on Rye')
+		self.assertEqual(p.countSolutions(test=True),'1:496817325783265491215439768379546182658321974142798653564983217821674539937152846','Failed Arsenic on Rye')
 		
 if __name__ == '__main__':
     unittest.main()

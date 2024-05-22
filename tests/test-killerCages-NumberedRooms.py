@@ -29,7 +29,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setNumberedRoom(9,4,p.Col,2)
 		p.setNumberedRoom(9,8,p.Col,6)
 			
-		self.assertEqual(p.findSolution(test=True),'358167492427895163961234578894571326572643819136982754785429631619358247243716985','Failed Roaches Check In...')
+		self.assertEqual(p.countSolutions(test=True),'1:358167492427895163961234578894571326572643819136982754785429631619358247243716985','Failed Roaches Check In...')
 		
 if __name__ == '__main__':
     unittest.main()

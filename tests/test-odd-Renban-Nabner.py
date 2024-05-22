@@ -29,7 +29,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setNabnerLine([71,81,91,92])
 		p.setNabnerLine([87,97,98,99])
 		
-		self.assertEqual(p.findSolution(test=True),'694157823835264791712983564483621975259478316167539482348716259926845137571392648','Failed Forwards & Backwards')
+		self.assertEqual(p.countSolutions(test=True),'1:694157823835264791712983564483621975259478316167539482348716259926845137571392648','Failed Forwards & Backwards')
 		
 if __name__ == '__main__':
     unittest.main()

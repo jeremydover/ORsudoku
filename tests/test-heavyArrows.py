@@ -25,7 +25,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setHeavyArrow([66,56,46])
 		p.setHeavyArrow([88,87,96])
 		p.setHeavyArrow([94,95,85])		
-		self.assertEqual(p.findSolution(test=True),'124697853593128647876354219765813924481279536932546178657931482319482765248765391','Failed Heavy Arrows')
+		self.assertEqual(p.countSolutions(test=True),'1:124697853593128647876354219765813924481279536932546178657931482319482765248765391','Failed Heavy Arrows')
 		
 if __name__ == '__main__':
     unittest.main()

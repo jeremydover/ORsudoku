@@ -38,7 +38,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setSkyscraper(9,4,p.Col,3)
 		p.setSkyscraper(9,1,p.Col,2)
 		
-		self.assertEqual(p.findSolution(test=True),'546827139789513246123964578374158962691472385258396714935681427462739851817245693','Failed Entropic Skyscrapers')
+		self.assertEqual(p.countSolutions(test=True),'1:546827139789513246123964578374158962691472385258396714935681427462739851817245693','Failed Entropic Skyscrapers')
 		
 if __name__ == '__main__':
     unittest.main()

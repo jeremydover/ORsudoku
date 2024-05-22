@@ -27,7 +27,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setBlockCage([35,45,55],12)
 		p.setBlockCage([94,84,83,73,63,53,43,33,23,24,25,26,27,37,47,57,67,77,87,86,96],19)
 		
-		self.assertEqual(p.findSolution(test=True),'461378925978625341532491867857146239216539478394287516183964752745812693629753184','Failed Strange Portal')
+		self.assertEqual(p.countSolutions(test=True),'1:461378925978625341532491867857146239216539478394287516183964752745812693629753184','Failed Strange Portal')
 		
 if __name__ == '__main__':
     unittest.main()

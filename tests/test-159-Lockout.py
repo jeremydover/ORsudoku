@@ -19,7 +19,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setLockoutLine([62,72,82,83,73,63])
 		p.setLockoutLine([78,88,98,97])
 			
-		self.assertEqual(p.findSolution(test=True),'457129386936478521218653947894365712562917834173284659789542163321896475645731298','Failed Duress Code')
+		self.assertEqual(p.countSolutions(test=True),'1:457129386936478521218653947894365712562917834173284659789542163321896475645731298','Failed Duress Code')
 		
 if __name__ == '__main__':
     unittest.main()

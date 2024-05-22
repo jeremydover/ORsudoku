@@ -27,7 +27,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setArrow([88,77,76,75])
 		p.setArrow([88,97,96])
 		
-		self.assertEqual(p.findSolution(test=True),'135497268297168345864235197948371526516829734723546819689713452372654981451982673','Failed Tidal Currents')
+		self.assertEqual(p.countSolutions(test=True),'1:135497268297168345864235197948371526516829734723546819689713452372654981451982673','Failed Tidal Currents')
 		
 if __name__ == '__main__':
     unittest.main()

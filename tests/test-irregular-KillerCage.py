@@ -34,7 +34,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setCage([86,96,95],13)
 		p.setCage([98,99],15)
 		
-		self.assertEqual(p.findSolution(test=True),'152946873643712985927354618478239156391865247586471392269187534735698421814523769','Failed Irregular Killer')
+		self.assertEqual(p.countSolutions(test=True),'1:152946873643712985927354618478239156391865247586471392269187534735698421814523769','Failed Irregular Killer')
 		
 if __name__ == '__main__':
     unittest.main()

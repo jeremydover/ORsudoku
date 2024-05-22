@@ -14,7 +14,7 @@ class TestPuzzle(unittest.TestCase):
 			p.setRegionSumLine(x)
 		p.setGiven(536)
 		
-		self.assertEqual(p.findSolution(test=True),'365127489419386572287459631158963724936274815724518396643892157572631948891745263','Failed Duality')
+		self.assertEqual(p.countSolutions(test=True),'1:365127489419386572287459631158963724936274815724518396643892157572631948891745263','Failed Duality')
 		
 if __name__ == '__main__':
     unittest.main()

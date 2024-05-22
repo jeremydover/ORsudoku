@@ -33,7 +33,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setCage([78,86,87,88],23)
 		p.setVault([78,86,87,88])
 		
-		self.assertEqual(p.findSolution(test=True),'196547382834192657725638914387926541642351798951874236219465873473289165568713429','Failed Boulevard of Broken Dreams')
+		self.assertEqual(p.countSolutions(test=True),'1:196547382834192657725638914387926541642351798951874236219465873473289165568713429','Failed Boulevard of Broken Dreams')
 		
 if __name__ == '__main__':
     unittest.main()

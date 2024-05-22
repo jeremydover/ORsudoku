@@ -19,7 +19,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setCage([74,75,76,65],23)
 		p.setCage([95,96,97,86],17)
 		
-		self.assertEqual(p.findSolution(test=True),'879452136253716849146893572532974618481365297967128453315687924624539781798241365','Failed Flattened Helix')
+		self.assertEqual(p.countSolutions(test=True),'1:879452136253716849146893572532974618481365297967128453315687924624539781798241365','Failed Flattened Helix')
 		
 if __name__ == '__main__':
     unittest.main()

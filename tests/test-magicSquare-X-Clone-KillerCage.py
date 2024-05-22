@@ -22,7 +22,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setMagicSquare(44)
 		p.setCloneRegion([[81],[98]])
 				
-		self.assertEqual(p.findSolution(test=True),'872345196935216847461987352148672935327159684596834271259468713614793528783521469','Failed A Magical Square')
+		self.assertEqual(p.countSolutions(test=True),'1:872345196935216847461987352148672935327159684596834271259468713614793528783521469','Failed A Magical Square')
 
 if __name__ == '__main__':  
     unittest.main()

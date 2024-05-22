@@ -20,7 +20,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setLittleKiller(5,1,6,2,10)
 		p.setLittleKiller(4,1,5,2,26)
 		
-		self.assertEqual(p.findSolution(test=True),'584263179693571824217894653349156782176328945825749316732685491951437268468912537','Failed Blank Spaces')
+		self.assertEqual(p.countSolutions(test=True),'1:584263179693571824217894653349156782176328945825749316732685491951437268468912537','Failed Blank Spaces')
 		
 if __name__ == '__main__':
     unittest.main()

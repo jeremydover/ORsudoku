@@ -16,7 +16,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setKropkiWhiteArray([210,260,441,520,751,920])
 		p.setKropkiBlackArray([171,251,281,620,660,661,731,861,870])
 		
-		self.assertEqual(p.findSolution(test=True),'384925671615437298972618435197254863538769124426183957243591786759846312861372549','Rockin into the Night')
+		self.assertEqual(p.countSolutions(test=True),'1:384925671615437298972618435197254863538769124426183957243591786759846312861372549','Rockin into the Night')
 		
 if __name__ == '__main__':
     unittest.main()

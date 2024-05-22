@@ -29,7 +29,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setXSum(5,9,p.Row,19)
 		p.setXSum(3,1,p.Row,12)
 		
-		self.assertEqual(p.findSolution(test=True),'95678*1*234*3*874629154215936*7*823*5*874169649135*8*27178*6*2954381435679*2*5*9*32174867629*4*8351','Failed -X Sum')
+		self.assertEqual(p.countSolutions(test=True),'1:95678*1*234*3*874629154215936*7*823*5*874169649135*8*27178*6*2954381435679*2*5*9*32174867629*4*8351','Failed -X Sum')
 		
 if __name__ == '__main__':
     unittest.main()

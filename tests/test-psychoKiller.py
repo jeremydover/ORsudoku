@@ -28,7 +28,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setCage([85,95],15)
 		p.setCage([86,87],12)
 		
-		self.assertEqual(p.findSolution(test=True),'475862139219735684836491572987213465341657298562948713758326941624189357193574826','Failed Psycho Killer 02')
+		self.assertEqual(p.countSolutions(test=True),'1:475862139219735684836491572987213465341657298562948713758326941624189357193574826','Failed Psycho Killer 02')
 		
 if __name__ == '__main__':
     unittest.main()

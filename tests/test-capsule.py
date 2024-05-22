@@ -21,7 +21,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setCapsule([68,78])
 		p.setCapsule([69,79])
 			
-		self.assertEqual(p.findSolution(test=True),'519234786362785491784961325491376258675812934823459167958143672136527849247698513','Failed Odd/Even Capsule')
+		self.assertEqual(p.countSolutions(test=True),'1:519234786362785491784961325491376258675812934823459167958143672136527849247698513','Failed Odd/Even Capsule')
 		
 if __name__ == '__main__':
     unittest.main()

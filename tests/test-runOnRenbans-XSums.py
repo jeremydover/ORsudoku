@@ -22,7 +22,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setXSum(9,7,p.Col,17)
 		p.setXSum(9,2,p.Col,26)
 		
-		self.assertEqual(p.findSolution(test=True),'945783261381269754672154938794321586528647193136895472859432617413976825267518349','Failed Hooked')
+		self.assertEqual(p.countSolutions(test=True),'1:945783261381269754672154938794321586528647193136895472859432617413976825267518349','Failed Hooked')
 		
 if __name__ == '__main__':
     unittest.main()

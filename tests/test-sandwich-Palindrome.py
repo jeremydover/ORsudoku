@@ -26,7 +26,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setPalindromeLine([41,52,63,74,83,92])
 		p.setPalindromeLine([94,85,76,67,78,89])
 				
-		self.assertEqual(p.findSolution(test=True),'294618537867453291351279684432165978186397425975824163729531846618742359543986712','Failed Palindromic Sandwich')
+		self.assertEqual(p.countSolutions(test=True),'1:294618537867453291351279684432165978186397425975824163729531846618742359543986712','Failed Palindromic Sandwich')
 
 if __name__ == '__main__':  
     unittest.main()

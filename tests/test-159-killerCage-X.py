@@ -21,7 +21,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setCage([61,62,72],14)
 		p.setCage([77,78,88],7)
 			
-		self.assertEqual(p.findSolution(test=True),'576413298138972564942865731897654312361297485425138679783549126659721843214386957','Failed Competitive Tetris')
+		self.assertEqual(p.countSolutions(test=True),'1:576413298138972564942865731897654312361297485425138679783549126659721843214386957','Failed Competitive Tetris')
 		
 if __name__ == '__main__':
     unittest.main()

@@ -70,6 +70,7 @@ German Whispers Lines - see Whispers Lines
 Given Digits
 Global Entropy
 Global Modular (see Global Entropy)
+Global Neighbor Sums
 Global Whispers (Dutch, et. al.)
 Gurth's Symmetric Placement (GSP)
 Indexing
@@ -736,6 +737,12 @@ Global Entropy
 setGlobalEntropy(): assert the Entropy condition on all quads. Effectively the same as setting entropy quads on all quads; see set EntropyQuad
 
 setGlobalModular(): same as Entropy, but with modular digit grouping {1,4,7},{2,5,8},{3,6,9}
+
+Global Neighbor Sums
+--------------------
+setGlobalNeighborSum(sums,exceptions): asserts that every cell with a digit not in exceptions must have an orthogonal neighbor with which it sums to a value in sums
+  sums - list of allowed sums
+  exceptions - list of digits excepted from the sum requirement
 
 Global Whispers
 ---------------
@@ -1593,6 +1600,14 @@ XY-Difference Pairs
 setXYDifference(cellHV): creates an XY-difference clue, where the difference of the two cells separated by the clue equals the first cell in the row/column
   cellHV: an extended cell specification which adds the hv parameter: clue is on the right side if H, or on the bottom if V. All parameters can be given in a tuple, and these can use the Horz and Vert variables for the HV specification. Shorthand is possible, appending 0 to a cell spec to indicate horizontal and 1 to indicate vertical.
   Example: 251, '251' and (2,5,p.Vert) all specify a XY-difference clue on the bottom edge of cell 2,5
+
+setAntiXYDifference(cellHV): asserts that a pair of cells cannot have difference equal to the first cell in the row/column
+	cellHV: an extended cell specification which adds the hv parameter: clue is on the right side if H, or on the bottom if V. 
+  
+setAntiXYDifferenceArray(list): creates multiple anti-XY Difference clues
+  list: list of cellHV specifications, see setXYDifference
+  
+setXYDifferenceNegative(): implements negative constraint
 
 Zipper Lines
 ------------

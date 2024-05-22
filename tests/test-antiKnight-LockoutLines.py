@@ -19,7 +19,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setLockoutLine([54,64,55,56,46,47])
 		p.setLockoutLine([68,78,89,98])
 		
-		self.assertEqual(p.findSolution(test=True),'537641298682597143491238657319784562856912734274356981923475816165823479748169325','Failed Keep off the Border!')
+		self.assertEqual(p.countSolutions(test=True),'1:537641298682597143491238657319784562856912734274356981923475816165823479748169325','Failed Keep off the Border!')
 		
 if __name__ == '__main__':
     unittest.main()

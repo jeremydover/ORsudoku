@@ -15,7 +15,7 @@ class TestPuzzle(unittest.TestCase):
 			p.setRenbanLine(x)
 			p.setParityLine(x)
 		
-		self.assertEqual(p.findSolution(test=True),'513927486294618735687354129438169257129785364765243918356492871971836542842571693','Failed Space Oddity')
+		self.assertEqual(p.countSolutions(test=True),'1:513927486294618735687354129438169257129785364765243918356492871971836542842571693','Failed Space Oddity')
 		
 if __name__ == '__main__':
     unittest.main()

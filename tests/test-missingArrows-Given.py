@@ -21,7 +21,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setMissingArrow([68,69,79])
 		p.setMissingArrow([74,85,76])
 		p.setMissingArrow([78,87,96])
-		self.assertEqual(p.findSolution(test=True),'243156897518974362976823541397465128164287935825319674751692483632548719489731256','Failed Missing Arrow')
+		self.assertEqual(p.countSolutions(test=True),'1:243156897518974362976823541397465128164287935825319674751692483632548719489731256','Failed Missing Arrow')
 		
 if __name__ == '__main__':
     unittest.main()

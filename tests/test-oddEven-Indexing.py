@@ -15,7 +15,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setIndexColumn(5,True,[2,5,6,8])
 		p.setIndexColumn(9,True,[2,3,4,6,8])
 		
-		self.assertEqual(p.findSolution(test=True),'968315247217489356345276198132968574789543621654721839471832965893654712526197483','Failed Shipping Hub')
+		self.assertEqual(p.countSolutions(test=True),'1:968315247217489356345276198132968574789543621654721839471832965893654712526197483','Failed Shipping Hub')
 		#self.assertEqual(p.countSolutions(test=True),'1:968315247217489356345276198132968574789543621654721839471832965893654712526197483','Failed Shipping Hub')
 		
 if __name__ == '__main__':

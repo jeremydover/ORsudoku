@@ -20,7 +20,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setThermo([69,79])
 		p.setThermo([91,92])
 		
-		self.assertEqual(p.findSolution(test=True),'934528617715436829826971534582697143641352798397184265279813456458269371163745982','Failed Endless Knight')
+		self.assertEqual(p.countSolutions(test=True),'1:934528617715436829826971534582697143641352798397184265279813456458269371163745982','Failed Endless Knight')
 		
 if __name__ == '__main__':
     unittest.main()

@@ -33,7 +33,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setKeypadKingLine([64,65,66])
 		p.setKeypadKingLine([77,88])
 		
-		self.assertEqual(p.findSolution(test=True),'694827153231654789785391642518739264972486315463512897857963421326145978149278536','Failed Keys to the Kingdom')
+		self.assertEqual(p.countSolutions(test=True),'1:694827153231654789785391642518739264972486315463512897857963421326145978149278536','Failed Keys to the Kingdom')
 		
 if __name__ == '__main__':
     unittest.main()

@@ -34,7 +34,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setSkyscraper(6,1,p.Row,6)
 		p.setMaxAscending(6,9,p.Row,3)
 		
-		self.assertEqual(p.findSolution(test=True),'465321789123789654789654321847593216596172438231468975972845163618937542354216897','Failed Elevator Up')
+		self.assertEqual(p.countSolutions(test=True),'1:465321789123789654789654321847593216596172438231468975972845163618937542354216897','Failed Elevator Up')
 		
 if __name__ == '__main__':
     unittest.main()

@@ -36,7 +36,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setDescriptivePair(8,9,p.Row,48)
 		p.setDescriptivePair(9,9,p.Row,28)
 			
-		self.assertEqual(p.findSolution(test=True),'876291543152436897439875621643729185218564379597183264385942716764318952921657438','Failed Sudoku Variants Series (065) - Descriptive Pairs')
+		self.assertEqual(p.countSolutions(test=True),'1:876291543152436897439875621643729185218564379597183264385942716764318952921657438','Failed Sudoku Variants Series (065) - Descriptive Pairs')
 		
 if __name__ == '__main__':
     unittest.main()

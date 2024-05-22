@@ -35,7 +35,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setPuncturedCage([87,97,98],11)
 		p.setGiven(538)
 			
-		self.assertEqual(p.findSolution(test=True),'923865174584172693167349285259687341348921756716453928491238567635794812872516439','Failed Somewhat')
+		self.assertEqual(p.countSolutions(test=True),'1:923865174584172693167349285259687341348921756716453928491238567635794812872516439','Failed Somewhat')
 		
 if __name__ == '__main__':
     unittest.main()

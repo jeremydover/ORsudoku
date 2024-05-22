@@ -17,7 +17,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setGivenArray([558,696])
 		p.setKropkiWhiteArray([381,621,950])
 		
-		self.assertEqual(p.findSolution(test=True),'519463827264758391873219564981645273637182945452937186748391652196524738325876419','Failed Spotting the 8 ball')
+		self.assertEqual(p.countSolutions(test=True),'1:519463827264758391873219564981645273637182945452937186748391652196524738325876419','Failed Spotting the 8 ball')
 		
 if __name__ == '__main__':
     unittest.main()

@@ -21,7 +21,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setLockoutLine([75,74,85,96,86])
 		p.setLockoutLine([78,89,99,98,87])
 		
-		self.assertEqual(p.findSolution(test=True),'534896127768521439129743658497218365812365974356479281285134796943687512671952843','Failed Locking out the Odds')
+		self.assertEqual(p.countSolutions(test=True),'1:534896127768521439129743658497218365812365974356479281285134796943687512671952843','Failed Locking out the Odds')
 		
 if __name__ == '__main__':
     unittest.main()

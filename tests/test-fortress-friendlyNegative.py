@@ -21,7 +21,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setFriendlyArray([14,18,22,28,34,38,41,42,43,45,47,48,57,64,72,74,75,76,81,82,84,99])
 		p.setFriendlyNegative()
 		
-		self.assertEqual(p.findSolution(test=True),'237169485416385927598247136143952768682714593759638241921876354875493612364521879','Failed Axis and Allies')
+		self.assertEqual(p.countSolutions(test=True),'1:237169485416385927598247136143952768682714593759638241921876354875493612364521879','Failed Axis and Allies')
 		
 if __name__ == '__main__':
     unittest.main()

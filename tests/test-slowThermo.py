@@ -18,7 +18,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setSlowThermo([37,48,57,68,69,78,77])
 		p.setSlowThermo([89,98])
 		
-		self.assertEqual(p.findSolution(test=True),'125897634368241795497536182974623518816475329253918467582364971641789253739152846','Failed Cthulhu slowly rises')
+		self.assertEqual(p.countSolutions(test=True),'1:125897634368241795497536182974623518816475329253918467582364971641789253739152846','Failed Cthulhu slowly rises')
 		
 if __name__ == '__main__':
     unittest.main()

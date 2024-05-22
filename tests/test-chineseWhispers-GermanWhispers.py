@@ -24,7 +24,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setGermanWhispersLine([73,82,93])
 		p.setGermanWhispersLine([77,78,89,99,98,87,77])
 		
-		self.assertEqual(p.findSolution(test=True),'483927516629531847175684392957216483316845729248379165861752934794163258532498671','Failed Sine De Times')
+		self.assertEqual(p.countSolutions(test=True),'1:483927516629531847175684392957216483316845729248379165861752934794163258532498671','Failed Sine De Times')
 		
 if __name__ == '__main__':
     unittest.main()

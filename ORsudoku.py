@@ -37,11 +37,23 @@ class SolutionPrinter(cp_model.CpSolverSolutionCallback):
 		cntr = 0
 				
 		if self.__testMode is True:
-			self.__testStringArray.append(''.join(map(str,[self.Value(v) for v in self.__variables])))
+			## This is a hack to detect if we got transform variables
+			if len(self.__variables) > self.__boardWidth**2:
+				thisSolution = ''
+				for i in range(self.__boardWidth**2):
+					if self.Value(self.__variables[i+self.__boardWidth**2]) > 0:
+						thisSolution += '*'+str(self.Value(self.__variables[i]))+'*'
+					else:
+						thisSolution += str(self.Value(self.__variables[i]))
+				self.__testStringArray.append(thisSolution)
+			else:
+				self.__testStringArray.append(''.join(map(str,[self.Value(v) for v in self.__variables])))
 		
 		elif self.__printAll is True:
 			if self.__debug is False:
-				for v in self.__variables:
+				# Note: updated this so print only the expected number of variables on-cut, instead of all variables passed
+				for i in range(self.__boardWidth**2):
+					v = self.__variables[i]
 					print('%i' % (self.Value(v)), end = ' ')
 					cntr += 1
 					if cntr == self.__boardWidth:
@@ -169,6 +181,9 @@ class sudoku:
 		
 		self.isXVXVInitialized = False
 		self.isXVXVNegative = False
+		
+		self.isXYDifferenceInitialized = False
+		self.isXYDifferenceNegative = False
 		
 		self.isEntropyQuadInitialized = False
 		self.isEntropyQuadNegative = False
@@ -686,50 +701,6 @@ class sudoku:
 			elif neg is True:	
 				self.__setNonIndexCell(i,col0,sudoku.Row)
 
-#	def setGlobalWhispers(self,diff=4):
-#		# Every cell must have at least one neighbor which with its difference is at least diff
-#		for i in range(self.boardWidth):
-#			for j in range(self.boardWidth):
-#				wwwvars = []
-#				if i > 0:
-#					cOn = self.model.NewBoolVar('GlobalWhisperUpNeighborGoodRow{:d}Col{:d}'.format(i,j))
-#					cOrd = self.model.NewBoolVar('GlobalWhisperUpNeighborOrderRow{:d}Col{:d}'.format(i,j))
-#					self.model.Add(self.cellValues[i][j] - self.cellValues[i-1][j] >= diff).OnlyEnforceIf([cOn,cOrd])
-#					self.model.Add(self.cellValues[i-1][j] - self.cellValues[i][j] >= diff).OnlyEnforceIf([cOn,cOrd.Not()])
-#					self.model.Add(self.cellValues[i][j] - self.cellValues[i-1][j] < diff).OnlyEnforceIf([cOn.Not()])
-#					self.model.Add(self.cellValues[i-1][j] - self.cellValues[i][j] < diff).OnlyEnforceIf([cOn.Not()])
-#					self.model.AddBoolAnd([cOrd]).OnlyEnforceIf([cOn.Not()])
-#					wwwvars.append(cOn)
-#				if i < self.boardWidth-1:
-#					cOn = self.model.NewBoolVar('GlobalWhisperDownNeighborGoodRow{:d}Col{:d}'.format(i,j))
-#					cOrd = self.model.NewBoolVar('GlobalWhisperDownNeighborOrderRow{:d}Col{:d}'.format(i,j))
-#					self.model.Add(self.cellValues[i][j] - self.cellValues[i+1][j] >= diff).OnlyEnforceIf([cOn,cOrd])
-#					self.model.Add(self.cellValues[i+1][j] - self.cellValues[i][j] >= diff).OnlyEnforceIf([cOn,cOrd.Not()])
-#					self.model.Add(self.cellValues[i][j] - self.cellValues[i+1][j] < diff).OnlyEnforceIf([cOn.Not()])
-#					self.model.Add(self.cellValues[i+1][j] - self.cellValues[i][j] < diff).OnlyEnforceIf([cOn.Not()])
-#					self.model.AddBoolAnd([cOrd]).OnlyEnforceIf([cOn.Not()])
-#					wwwvars.append(cOn)
-#				if j > 0:
-#					cOn = self.model.NewBoolVar('GlobalWhisperLeftNeighborGoodRow{:d}Col{:d}'.format(i,j))
-#					cOrd = self.model.NewBoolVar('GlobalWhisperLeftNeighborOrderRow{:d}Col{:d}'.format(i,j))
-#					self.model.Add(self.cellValues[i][j] - self.cellValues[i][j-1] >= diff).OnlyEnforceIf([cOn,cOrd])
-#					self.model.Add(self.cellValues[i][j-1] - self.cellValues[i][j] >= diff).OnlyEnforceIf([cOn,cOrd.Not()])
-#					self.model.Add(self.cellValues[i][j] - self.cellValues[i][j-1] < diff).OnlyEnforceIf([cOn.Not()])
-#					self.model.Add(self.cellValues[i][j-1] - self.cellValues[i][j] < diff).OnlyEnforceIf([cOn.Not()])
-#					self.model.AddBoolAnd([cOrd]).OnlyEnforceIf([cOn.Not()])
-#					wwwvars.append(cOn)
-#				if j < self.boardWidth-1:
-#					cOn = self.model.NewBoolVar('GlobalWhisperRightNeighborGoodRow{:d}Col{:d}'.format(i,j))
-#					cOrd = self.model.NewBoolVar('GlobalWhisperRightNeighborOrderRow{:d}Col{:d}'.format(i,j))
-#					self.model.Add(self.cellValues[i][j] - self.cellValues[i][j+1] >= diff).OnlyEnforceIf([cOn,cOrd])
-#					self.model.Add(self.cellValues[i][j+1] - self.cellValues[i][j] >= diff).OnlyEnforceIf([cOn,cOrd.Not()])
-#					self.model.Add(self.cellValues[i][j] - self.cellValues[i][j+1] < diff).OnlyEnforceIf([cOn.Not()])
-#					self.model.Add(self.cellValues[i][j+1] - self.cellValues[i][j] < diff).OnlyEnforceIf([cOn.Not()])
-#					self.model.AddBoolAnd([cOrd]).OnlyEnforceIf([cOn.Not()])
-#					wwwvars.append(cOn)
-#				self.model.AddBoolOr(wwwvars)
-				
-				
 	def setGlobalWhispers(self,diff=4,gle=2):
 		# Every cell must have at least one neighbor which with its difference is at least diff
 		for i in range(self.boardWidth):
@@ -768,37 +739,34 @@ class sudoku:
 	def setCloseNeighbours(self):
 		self.setCloseNeighbors()
 				
-#	def setGlobalNeighborSum(self,sums=[]):
-#		# Every cell must have at least one neighbor with which it sums to a value in the list
-#		for i in range(self.boardWidth):
-#			for j in range(self.boardWidth):
-#				gnsvars = []
-#				varBitmap = self._sudoku__varBitmap('GNSRow{:d}Col{:d}'.format(i,j),len(sums))
-#				if i > 0:
-#					cOn = self.model.NewBoolVar('GNSUpNeighborGoodRow{:d}Col{:d}'.format(i,j))
-#					for k in range(len(sums)):
-#						self.model.Add(self.cellValues[i][j] + self.cellValues[i-1][j] == sums[k]).OnlyEnforceIf([cOn] + varBitmap[k])
-#						self.model.Add(self.cellValues[i][j] + self.cellValues[i-1][j] != sums[k]).OnlyEnforceIf(cOn.Not())
-#					gnsvars.append(cOn)
-#				if i < self.boardWidth-1:
-#					cOn = self.model.NewBoolVar('GNSDownNeighborGoodRow{:d}Col{:d}'.format(i,j))
-#					for k in range(len(sums)):
-#						self.model.Add(self.cellValues[i][j] + self.cellValues[i+1][j] == sums[k]).OnlyEnforceIf([cOn] + varBitmap[k])
-#						self.model.Add(self.cellValues[i][j] + self.cellValues[i+1][j] != sums[k]).OnlyEnforceIf(cOn.Not())
-#					gnsvars.append(cOn)
-#				if j > 0:
-#					cOn = self.model.NewBoolVar('GNSLeftNeighborGoodRow{:d}Col{:d}'.format(i,j))
-#					for k in range(len(sums)):
-#						self.model.Add(self.cellValues[i][j] + self.cellValues[i][j-1] == sums[k]).OnlyEnforceIf([cOn] + varBitmap[k])
-#						self.model.Add(self.cellValues[i][j] + self.cellValues[i][j-1] != sums[k]).OnlyEnforceIf(cOn.Not())
-#					gnsvars.append(cOn)
-#				if j < self.boardWidth-1:
-#					cOn = self.model.NewBoolVar('GNSRightNeighborGoodRow{:d}Col{:d}'.format(i,j))
-#					for k in range(len(sums)):
-#						self.model.Add(self.cellValues[i][j] + self.cellValues[i][j+1] == sums[k]).OnlyEnforceIf([cOn] + varBitmap[k])
-#						self.model.Add(self.cellValues[i][j] + self.cellValues[i][j+1] != sums[k]).OnlyEnforceIf(cOn.Not())
-#					gnsvars.append(cOn)
-#				self.model.AddBoolOr(gnsvars)
+	def setGlobalNeighborSum(self,sums=[],exceptions=[]):
+		# Every cell must have an orthogonal neighbor with which it sums to a value in sums, unless the digit is in exceptions
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				
+				# This section creates variables determining if the digit in this cell is one of the exceptions. We have a variable for each exception, and then a catch all "not them"
+				# This is a bit different of an idiom than we usually use. For each of the affirmative 
+				# cases, we define exactly the value of the cell, so all is good
+				# For the "other" case, we define the condition negatively by saying none of the exceptions are met in that case
+				exVars = self._sudoku__varBitmap('GNSRow{:d}Col{:d}'.format(i,j),len(exceptions)+1)
+				for k in range(len(exceptions)):
+					self.model.Add(self.cellValues[i][j] == exceptions[k]).OnlyEnforceIf(exVars[k])
+					self.model.Add(self.cellValues[i][j] != exceptions[k]).OnlyEnforceIf(exVars[len(exceptions)])
+				gnsvars = []
+				kCells = [self.cellValues[i+k][j+m] for k in [-1,0,1] for m in [-1,0,1] if abs(k) != abs(m) and i+k >= 0 and i+k < self.boardWidth and j+m >= 0 and j+m < self.boardWidth]
+				for k in kCells:
+					cOn = self.model.NewBoolVar('GlobalWhisperUpNeighborGoodRow{:d}Col{:d}'.format(i,j))
+					# Note: we have to bury cOn if we're in one of the exceptions. This will consequently bury the varBitmap
+					for m in range(len(exceptions)):
+						self.model.AddBoolAnd(cOn.Not()).OnlyEnforceIf(exVars[m])
+					
+					varBitmap = self._sudoku__varBitmap('GNSRow{:d}Col{:d}'.format(i,j),len(sums))
+					self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf(cOn.Not())
+					for m in range(len(sums)):
+						self.model.Add(self.cellValues[i][j] + k == sums[m]).OnlyEnforceIf([cOn]+varBitmap[m]+exVars[len(exceptions)])
+						self.model.Add(self.cellValues[i][j] + k != sums[m]).OnlyEnforceIf([cOn.Not()]+exVars[len(exceptions)])
+					gnsvars.append(cOn)
+				self.model.AddBoolOr(gnsvars).OnlyEnforceIf(exVars[len(exceptions)])
 
 	def setGlobalEntropy(self):
 		self.setEntropyQuadArray([(i,j) for i in range(1,self.boardWidth) for j in range(1,self.boardWidth)])
@@ -1122,7 +1090,7 @@ class sudoku:
 	def setSearchNine(self,row1,col1,uldr,digit=9):
 		# A search nine clue indicates the distance and direction of a 9 from the clued cell. The distance is the cell value, the arrow clue points
 		row = row1 - 1
-		col = col1 - 1		
+		col = col1 - 1
 		if uldr == self.Up:
 			maxD = row
 			minD = self.boardWidth-1-row
@@ -1143,12 +1111,19 @@ class sudoku:
 			minD = col
 			hStep = 1
 			vStep = 0
+
 		allowableDigits = [x for x in self.digits if 0 <= x <= maxD or 0 <= -1*x <= minD]
 		varBitmap = self.__varBitmap('SearchNineRow{:d}Col{:d}'.format(row,col),len(allowableDigits))
 		varTrack = 0
+		if type(digit) is list:
+			digitBitmap = self.__varBitmap('SearchNineDigitsRow{:d}Col{:d}'.format(row,col),len(digit))
 		for x in allowableDigits:
 			self.model.Add(self.cellValues[row][col] == x).OnlyEnforceIf(varBitmap[varTrack])
-			self.model.Add(self.cellValues[row+x*vStep][col+x*hStep] == digit).OnlyEnforceIf(varBitmap[varTrack])
+			if type(digit) is list:
+				for i in range(len(digit)):
+					self.model.Add(self.cellValues[row+x*vStep][col+x*hStep] == digit[i]).OnlyEnforceIf(varBitmap[varTrack]+digitBitmap[i])
+			else:
+				self.model.Add(self.cellValues[row+x*vStep][col+x*hStep] == digit).OnlyEnforceIf(varBitmap[varTrack])
 			varTrack = varTrack + 1
 
 	def setLogicBomb(self,row,col=-1):
@@ -1488,6 +1463,12 @@ class sudoku:
 		if col == -1:
 			(row,col,hv) = self.__procCell(row)
 		# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
+		if self.isXYDifferenceInitialized is not True:
+			self.xyDifferenceCells = [(row,col,hv)]
+			self.isXYDifferenceInitialized = True
+		else:
+			self.xyDifferenceCells.append((row,col,hv))
+			
 		bit = self.model.NewBoolVar('XYDifferenceBiggerDigitRow{:d}Col{:d}HV{:d}'.format(row,col,hv))
 		self.allVars.append(bit)
 		self.model.Add(self.cellValues[row][col] - self.cellValues[row+hv][col+(1-hv)] == self.cellValues[(1-hv)*row][hv*col]).OnlyEnforceIf(bit)
@@ -1495,6 +1476,30 @@ class sudoku:
 
 	def setXYDifferenceArray(self,cells):
 		for x in cells: self.setXYDifference(x)
+
+	def setAntiXYDifference(self,row,col=-1,hv=-1):
+		if col == -1:
+			(row,col,hv) = self.__procCell(row)
+		# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
+		self.model.Add(self.cellValues[row][col] - self.cellValues[row+hv][col+(1-hv)] != self.cellValues[(1-hv)*row][hv*col])
+		self.model.Add(self.cellValues[row][col] - self.cellValues[row+hv][col+(1-hv)] != -1*self.cellValues[(1-hv)*row][hv*col])
+		
+	def setAntiXYDifferenceArray(self,cells):
+		for x in cells: self.setAntiXYDifference(x)
+
+	def setXYDifferenceNegative(self):
+		if self.isXYDifferenceInitialized is not True:
+			self.xyDifferenceCells = []
+			self.isXYDifferenceInitialized = True
+		self.isXYDifferenceNegative = True
+		
+	def __applyXYDifferenceNegative(self):
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				if i < 8 and (i,j,1) not in self.xyDifferenceCells:
+					self.setAntiXYDifference(i,j,1)
+				if j < 8 and (i,j,0) not in self.xyDifferenceCells:
+					self.setAntiXYDifference(i,j,0)
 
 	def setEitherOr(self,row,col=-1,hv=-1,value=-1):
 		if col == -1:
@@ -2172,7 +2177,7 @@ class sudoku:
 		
 	def setReverseNumberedRoom(self,row1,col1,rc,value):
 		self.setNumberedRoomBase(row1,col1,rc,value,-1)
-			
+
 	def setSandwichSum(self,row1,col1,rc,value,digits=[]):
 		# row,col are the coordinates of the cell containing the index of the target cell
 		# rc is whether things are row/column
@@ -2182,53 +2187,43 @@ class sudoku:
 		# If digits is null, set it to highest and lowest
 		if len(digits) == 0:
 			digits = [self.minDigit,self.maxDigit]
-		
+			
 		# Convert from 1-base to 0-base
 		row = row1 - 1
 		col = col1 - 1
-		hStep = 0 if rc == sudoku.Col else (1 if col == 0 else -1)
-		vStep = 0 if rc == sudoku.Row else (1 if row == 0 else -1)
+		hStep = 0 if rc == sudoku.Col else 1
+		vStep = 0 if rc == sudoku.Row else 1
 		
-		# This variable determines if the sandwich digits are adjacent. We have to treat this case separately, since we
-		# cannot create a constraint with an empty sum
-		adj = self.model.NewBoolVar('SandwichAdjacentRow{:d}Col{:d}RC{:d}'.format(row,col,rc))
+		varBitmap = self.__varBitmap('SandwichPositionsRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth*(self.boardWidth-1))
 		
-		if value == 0:
-			# This is the only case where the lowest and highest digits can be adjacent, which can happen in boardWidth-1 ways
-			varBitmap = self.__varBitmap('Sandwich0PosRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth-1)
-			lgr = self.model.NewBoolVar('Sandwich0LargerRow{:d}Col{:d}RC{:d}'.format(row,col,rc))
-					
-			for j in range(self.boardWidth-1):
-				firstCell = self.cellValues[row+j*vStep][col+j*hStep]
-				secondCell = self.cellValues[row+(j+1)*vStep][col+(j+1)*hStep]
-				# Note: High/low pairs forces if difference is maximal
-				self.model.Add(firstCell == digits[0]).OnlyEnforceIf(varBitmap[j] + [lgr,adj])
-				self.model.Add(secondCell == digits[1]).OnlyEnforceIf(varBitmap[j] + [lgr,adj])
-				self.model.Add(firstCell == digits[1]).OnlyEnforceIf(varBitmap[j] + [lgr.Not(),adj])
-				self.model.Add(secondCell == digits[0]).OnlyEnforceIf(varBitmap[j] + [lgr.Not(),adj])
-		else:
-			# If value is not 0, then we need to make sure adj does not occur, since otherwise constraint is ignored
-			self.model.AddBoolAnd([adj.Not()]).OnlyEnforceIf(adj)
-		
-		# In this case there are spaces. Combinatorics helps here...there are 9 choose 2 minus (9-1) pairs of positions
-		# where they can go. Man this new varBitmap function makes this easier..save a whole page of code. Notice: with varying digits,
-		# we may still be able to get a zero sum, but that side was not the problem, so we can just put the conditions in and go.
-		
-		varBitmap = self.__varBitmap('SandwichPosRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth*(self.boardWidth-1) // 2 - (self.boardWidth-1))
-		lgr = self.model.NewBoolVar('SandwichLargerRow{:d}Col{:d}RC{:d}'.format(row,col,rc))
-			
+		# We loop over all possible positions for the sandwich digits
 		varTrack = 0
-		for j in range(self.boardWidth-2):
-			for k in range(j+2,self.boardWidth):
-				firstCell = self.cellValues[row+j*vStep][col+j*hStep]
-				secondCell = self.cellValues[row+k*vStep][col+k*hStep]
-				self.model.Add(firstCell == digits[0]).OnlyEnforceIf(varBitmap[varTrack] + [lgr,adj.Not()])
-				self.model.Add(secondCell == digits[1]).OnlyEnforceIf(varBitmap[varTrack] + [lgr,adj.Not()])
-				self.model.Add(firstCell == digits[1]).OnlyEnforceIf(varBitmap[varTrack] + [lgr.Not(),adj.Not()])
-				self.model.Add(secondCell == digits[0]).OnlyEnforceIf(varBitmap[varTrack] + [lgr.Not(),adj.Not()])
-				self.model.Add(sum(self.cellValues[row+m*vStep][col+m*hStep] for m in range(j+1,k)) == value).OnlyEnforceIf(varBitmap[varTrack] + [adj.Not()])
-				varTrack = varTrack + 1
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				if i == j:
+					continue
+				else:
+					self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] == digits[0]).OnlyEnforceIf(varBitmap[varTrack])
+					self.model.Add(self.cellValues[row+j*vStep][col+j*hStep] == digits[1]).OnlyEnforceIf(varBitmap[varTrack])
+
+				if i > j:
+					myMax = i
+					myMin = j
+				else:
+					myMax = j
+					myMin = i
+
+				if (myMax - myMin) == 1:
+					# This is an adjacent case
+					if value == 0:
+						pass # There is no additional constraint to put here
+					else:
+						self.model.AddBoolAnd(varBitmap[varTrack][0].Not()).OnlyEnforceIf(varBitmap[varTrack])
+				else:
+					self.model.Add(sum(self.cellValues[row+k*vStep][col+k*hStep] for k in range(myMin+1,myMax)) == value).OnlyEnforceIf(varBitmap[varTrack])
 					
+				varTrack = varTrack + 1
+
 	def setOpenfacedSandwichSum(self,row1,col1,rc,value,digit=9):
 		# Also known as before 9, like a sandwich sum, but clue is the sum of all digits prior to the stopper digit, usually 9.
 		
@@ -2267,24 +2262,27 @@ class sudoku:
 		rLast = row if rc == sudoku.Row else self.boardWidth-1
 		cLast = col if rc == sudoku.Col else self.boardWidth-1
 		
-		allowableDigits = [x for x in self.digits if x >= 1 and x <=self.boardWidth]
-		varBitmap = self.__varBitmap('BattlefieldRow{:d}Col{:d}RC{:d}'.format(row,col,rc),len(allowableDigits)*(len(allowableDigits)-1))
-		
-		varTrack = 0
-		for i in range(len(allowableDigits)):
-			for j in range(len(allowableDigits)):
-				if i == j: continue
-				self.model.Add(self.cellValues[rFirst][cFirst] == allowableDigits[i]).OnlyEnforceIf(varBitmap[varTrack])
-				self.model.Add(self.cellValues[rLast][cLast] == allowableDigits[j]).OnlyEnforceIf(varBitmap[varTrack])
-				if (allowableDigits[i]+allowableDigits[j]) < self.boardWidth:
-					# Add up gap between
-					self.model.Add(sum(self.cellValues[rFirst+k*vStep][cFirst+k*hStep] for k in range(allowableDigits[i],self.boardWidth - allowableDigits[j])) == value).OnlyEnforceIf(varBitmap[varTrack])
-				elif (allowableDigits[i]+allowableDigits[j]) == self.boardWidth:
-					if value != 0: # Nothing in the middle, so cannot work if value !=0. If value = 0, no further constraints.
-						self.model.AddBoolAnd([varBitmap[varTrack][0],varBitmap[varTrack][0].Not()]).OnlyEnforceIf(varBitmap[varTrack])
-				else:
-					self.model.Add(sum(self.cellValues[rFirst+k*vStep][cFirst+k*hStep] for k in range(self.boardWidth - allowableDigits[j],allowableDigits[i])) == value).OnlyEnforceIf(varBitmap[varTrack])
-				varTrack = varTrack + 1
+		if value == 0:
+			self.model.Add(self.cellValues[rFirst][cFirst] + self.cellValues[rLast][cLast] == self.boardWidth)
+		else:
+			allowableDigits = [x for x in self.digits if x >= 1 and x <=self.boardWidth]
+			varBitmap = self.__varBitmap('BattlefieldRow{:d}Col{:d}RC{:d}'.format(row,col,rc),len(allowableDigits)*(len(allowableDigits)-1))
+			
+			varTrack = 0
+			for i in range(len(allowableDigits)):
+				for j in range(len(allowableDigits)):
+					if i == j: continue
+					self.model.Add(self.cellValues[rFirst][cFirst] == allowableDigits[i]).OnlyEnforceIf(varBitmap[varTrack])
+					self.model.Add(self.cellValues[rLast][cLast] == allowableDigits[j]).OnlyEnforceIf(varBitmap[varTrack])
+					if (allowableDigits[i]+allowableDigits[j]) < self.boardWidth:
+						# Add up gap between
+						self.model.Add(sum(self.cellValues[rFirst+k*vStep][cFirst+k*hStep] for k in range(allowableDigits[i],self.boardWidth - allowableDigits[j])) == value).OnlyEnforceIf(varBitmap[varTrack])
+					elif (allowableDigits[i]+allowableDigits[j]) == self.boardWidth:
+						if value != 0: # Nothing in the middle, so cannot work if value !=0. If value = 0, no further constraints.
+							self.model.AddBoolAnd([varBitmap[varTrack][0],varBitmap[varTrack][0].Not()]).OnlyEnforceIf(varBitmap[varTrack])
+					else:
+						self.model.Add(sum(self.cellValues[rFirst+k*vStep][cFirst+k*hStep] for k in range(self.boardWidth - allowableDigits[j],allowableDigits[i])) == value).OnlyEnforceIf(varBitmap[varTrack])
+					varTrack = varTrack + 1
 				
 	def setPositionSum(self,row1,col1,rc,value1,value2):
 		# row,col are the coordinates of the cell next to the clues
@@ -3771,6 +3769,7 @@ class sudoku:
 		if self.isKropkiNegative is True: self.__applyKropkiNegative()
 		if self.isXVNegative is True: self.__applyXVNegative()
 		if self.isXVXVNegative is True: self.__applyXVXVNegative()
+		if self.isXYDifferenceNegative is True: self.__applyXYDifferenceNegative()
 		if self.isEntropyQuadNegative is True: self.__applyEntropyQuadNegative()
 		if self.isEntropyBattenburgNegative is True: self.__applyEntropyBattenburgNegative()
 		if self.isFriendlyNegative is True: self.__applyFriendlyNegative()
@@ -3794,11 +3793,16 @@ class sudoku:
 				print('Solution found!')
 				self.printCurrentSolution()
 
+	def preparePrintVariables(self):
+		consolidatedCellValues = []
+		for tempArray in self.cellValues:
+			consolidatedCellValues = consolidatedCellValues + tempArray
+		return consolidatedCellValues
+	
 	def countSolutions(self,printAll = False,debug = False,test=False):
 		self.applyNegativeConstraints()
 		self.solver = cp_model.CpSolver()
-		consolidatedCellValues = []
-		for tempArray in self.cellValues: consolidatedCellValues = consolidatedCellValues + tempArray
+		consolidatedCellValues = self.preparePrintVariables()
 		if debug is True:
 			solution_printer = SolutionPrinter(self.allVars,self.boardWidth)
 		else:	
@@ -3902,33 +3906,39 @@ class sudoku:
 		# string is used to label the variables
 		# Implements model constraints to ensure "extra"
 		
-		n = math.ceil(math.log(num,2))
-		bits = []
-		for i in range(n):
-			bits.append(self.model.NewBoolVar(string + 'BM{:d}'.format(i)))
-		
-		# Create full array of first n-1 variables. We need them all.
-		var = [[bits[0]],[bits[0].Not()]]
-		for i in range(1,n-1):
-			for j in range(len(var)):
-				var.append(var[j] + [bits[i].Not()])
-				var[j].append(bits[i])
-		
-		# We repeat the same procedure, except when we are done, instead of appending new variable lists.
-		# we create constraints to ensure these cases cannot happen
-		
-		if (num > 2):
-			for j in range(len(var)):
-				if len(var) < num:
-					var.append(var[j] + [bits[-1].Not()])
-				else:
-					# This ensures an unused combination of variables cannot occur
-					#self.model.AddBoolAnd([bits[-1]]).OnlyEnforceIf(var[j] + [bits[-1].Not()])
-					self.model.AddBoolAnd(var[j] + [bits[-1]]).OnlyEnforceIf(var[j] + [bits[-1].Not()])
-				
-				# Either way append to existing lists
-				var[j].append(bits[-1])
+		if num == 1:
+			# We just create a single variable that is always true
+			bits = [self.model.NewBoolVar(string+'BM0')]
+			self.model.AddBoolAnd(bits[0]).OnlyEnforceIf(bits[0].Not())
+			var = [[bits[0]]]
+		else:
+			n = math.ceil(math.log(num,2))
+			bits = []
+			for i in range(n):
+				bits.append(self.model.NewBoolVar(string + 'BM{:d}'.format(i)))
 			
+			# Create full array of first n-1 variables. We need them all.
+			var = [[bits[0]],[bits[0].Not()]]
+			for i in range(1,n-1):
+				for j in range(len(var)):
+					var.append(var[j] + [bits[i].Not()])
+					var[j].append(bits[i])
+			
+			# We repeat the same procedure, except when we are done, instead of appending new variable lists.
+			# we create constraints to ensure these cases cannot happen
+			
+			if (num > 2):
+				for j in range(len(var)):
+					if len(var) < num:
+						var.append(var[j] + [bits[-1].Not()])
+					else:
+						# This ensures an unused combination of variables cannot occur
+						#self.model.AddBoolAnd([bits[-1]]).OnlyEnforceIf(var[j] + [bits[-1].Not()])
+						self.model.AddBoolAnd(var[j] + [bits[-1]]).OnlyEnforceIf(var[j] + [bits[-1].Not()])
+					
+					# Either way append to existing lists
+					var[j].append(bits[-1])
+				
 		return var
 		
 	def __procCell(self,cell):
@@ -3983,6 +3993,9 @@ class quattroQuadri(sudoku):
 		
 		self.isXVXVInitialized = False
 		self.isXVXVNegative = False
+		
+		self.isXYDifferenceInitialized = False
+		self.isXYDifferenceNegative = False
 		
 		self.isEntropyQuadInitialized = False
 		self.isEntropyQuadNegative = False
@@ -4056,30 +4069,6 @@ class quattroQuadri(sudoku):
 		inlist = self.__procCellList(inlist)
 		self.regions.append(inlist)
 		self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in self.regions[-1]])
-		self.model.Add(sum(self.doubleInt[x[0]][x[1]] for x in inlist) == 1)	# Ensure one doubler per region
-
-	def printCurrentSolution(self):
-		dW = max([len(str(x)) for x in self.digits])
-		colorama.init()
-		for i in range(self.boardWidth):
-			for j in range(self.boardWidth):
-				if self.solver.Value(self.doubleInt[i][j]) == 1: # This one is doubled!
-					print(Fore.RED + '{:d}'.format(self.solver.Value(self.baseValues[i][j])).rjust(dW) + Fore.RESET,end = " ")
-				else:
-					print('{:d}'.format(self.solver.Value(self.baseValues[i][j])).rjust(dW),end = " ")
-			print()
-		print()
-		
-	def testStringSolution(self):
-		testString = ''
-		for i in range(self.boardWidth):
-			for j in range(self.boardWidth):
-				if self.solver.Value(self.doubleInt[i][j]) == 1: # This one is doubled!
-					testString = testString + '*{:d}*'.format(self.solver.Value(self.baseValues[i][j]))
-				else:
-					testString = testString + '{:d}'.format(self.solver.Value(self.baseValues[i][j]))
-		return testString
-
 
 class cellTransformSudoku(sudoku):
 	"""A class used to implement doubler puzzles. A doubler puzzle has a doubler in each row, column and region. Moreover, each digit is doubled exactly one time. The digit entered is used to determine normal Sudoku contraints, i.e., one of each digit per row, column and region. But for each other constraint, its value needs to be doubled. There are optional parameters to modify the operation from doubling to an arbitrary ratio and/or shift."""	
@@ -4109,6 +4098,9 @@ class cellTransformSudoku(sudoku):
 		
 		self.isXVXVInitialized = False
 		self.isXVXVNegative = False
+		
+		self.isXYDifferenceInitialized = False
+		self.isXYDifferenceNegative = False
 		
 		self.isEntropyQuadInitialized = False
 		self.isEntropyQuadNegative = False
@@ -4357,6 +4349,14 @@ class cellTransformSudoku(sudoku):
 			print('Possible values for cell {:d},{:d}: '.format(row+1,col+1) + ''.join(good))
 		else:
 			return good
+			
+	def preparePrintVariables(self):
+		consolidatedCellValues = []
+		for tempArray in self.baseValues:
+			consolidatedCellValues = consolidatedCellValues + tempArray
+		for tempArray in self.doubleInt:
+			consolidatedCellValues = consolidatedCellValues + tempArray
+		return consolidatedCellValues
 
 class doublerSudoku(cellTransformSudoku):
 
@@ -4443,6 +4443,9 @@ class japaneseSumSudoku(sudoku):
 		
 		self.isXVXVInitialized = False
 		self.isXVXVNegative = False
+		
+		self.isXYDifferenceInitialized = False
+		self.isXYDifferenceNegative = False
 		
 		self.isEntropyQuadInitialized = False
 		self.isEntropyQuadNegative = False		
@@ -4682,6 +4685,14 @@ class japaneseSumSudoku(sudoku):
 					print('{:d}'.format(self.solver.Value(self.cellValues[i][j])).rjust(dW),end = " ")
 			print()
 		print()
+		
+	def preparePrintVariables(self):
+		consolidatedCellValues = []
+		for tempArray in self.cellValues:
+			consolidatedCellValues = consolidatedCellValues + tempArray
+		for tempArray in self.cellShaded:
+			consolidatedCellValues = consolidatedCellValues + tempArray
+		return consolidatedCellValues
 
 class doubleDoku(sudoku):
 	"""A class used to implement DoubleDoku puzzles, where boxes 5/6/8/9 of puzzle 1 are boxes 1/2/4/5 of puzzle 2"""
@@ -4930,6 +4941,9 @@ class schroedingerCellSudoku(sudoku):
 		
 		self.isXVXVInitialized = False
 		self.isXVXVNegative = False
+		
+		self.isXYDifferenceInitialized = False
+		self.isXYDifferenceNegative = False
 		
 		self.isEntropyQuadInitialized = False
 		self.isEntropyQuadNegative = False
@@ -5932,6 +5946,9 @@ class scarySudoku(sudoku):
 		
 		self.isXVXVInitialized = False
 		self.isXVXVNegative = False
+		
+		self.isXYDifferenceInitialized = False
+		self.isXYDifferenceNegative = False
 		
 		self.isEntropyQuadInitialized = False
 		self.isEntropyQuadNegative = False

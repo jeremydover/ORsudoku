@@ -23,7 +23,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setDoubleXSum(1,5,1,72)
 		p.setDoubleXSum(2,1,0,73)
 		
-		self.assertEqual(p.findSolution(test=True),'341879652829651437657423891136592784598714326472368915283146579965237148714985263','Failed XX-Sums')
+		self.assertEqual(p.countSolutions(test=True),'1:341879652829651437657423891136592784598714326472368915283146579965237148714985263','Failed XX-Sums')
 		
 if __name__ == '__main__':
     unittest.main()

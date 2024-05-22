@@ -17,7 +17,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setXVVArray([161,171,330,370,411,451,680,730,880])
 		p.setXVXArray([231,250,431,491,541,611,651,661,670,681,820,840,950])
 			
-		self.assertEqual(p.findSolution(test=True),'735812496429673158861459237214538679386927541957164823192346785673285914548791362','Failed The Mandalorian Sudoku')
+		self.assertEqual(p.countSolutions(test=True),'1:735812496429673158861459237214538679386927541957164823192346785673285914548791362','Failed The Mandalorian Sudoku')
 		
 if __name__ == '__main__':
     unittest.main()
