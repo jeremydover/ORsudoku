@@ -1,4 +1,8 @@
-5/22/24	
+5/22/24
+	Added support for Extended Whispers Lines, which generalize and implement Run On Nabner and Entropic Whispers Lines.
+	Added test cases.
+	
+5/21/24	
 	Added support for negative constraint for XY Differences, and added a test case.
 	Updated sandwich sum code to fix issue which was actually occurring in #57. Test for MRE Swap also migrated to countSolutions.
 	Did some cleanup in Battlefield constraint code, though this did not resolve issue #57.

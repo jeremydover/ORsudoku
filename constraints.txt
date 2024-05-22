@@ -49,6 +49,7 @@ Dutch Whispers Lines - see Whispers Lines
 Either-Or
 Entropic Lines
 Entropic Mirror - see Diagonal Mirrors
+Entropic Whispers Lines - see Extended Whispers Lines
 Entropki Dots (same/different entropy classes)
 Entropy (see Global Entropy)
 Entropy Battenburg (on a 2x2, no pair of same entropic cells are adjacent)
@@ -56,6 +57,7 @@ Entropy Quads (partial Entropy, asserts Entropy on an individual 2x2)
 Equiparity/Uniparity Cages - see More-Odd-Than-Even Cages
 Even Max Quads - see Quad Max Values
 Even-Odd
+Extended Whispers Lines
 Extra Regions - see irregular Sudoku
 Fast Thermos - see Thermos
 First-Seen Parity/Entropy/Modular
@@ -153,6 +155,7 @@ Reverse X-Sums - see X-Sums
 Rossini Clues
 Rotational Pairs - see Gurth's Symmetric Placement
 Run-On Renban Lines - see Renban Lines
+Run-On Nabner Lines - see Extended Whispers Lines
 Samurai Sudoku
 Sandwich Sums
 Scary Cells
@@ -659,6 +662,24 @@ setEvenOddArray(list): create multipl parity constraints
 setOddEvenArray(list): create multipl parity constraints
   list: list of cellEO specifications; see setEvenOdd
   
+Extended Whispers Lines
+-----------------------
+setMinExtendedWhispersLine(list,difference,reach): set contraint that cells at most reach cells apart on the line given by list differ by at least difference
+	list: list of cell specifications
+	difference: minimum difference between "close" cells
+	reach: number of adjacent cells on line defining "close"
+	
+setMaxExtendedWhispersLine(list,difference,reach): set contraint that cells at most reach cells apart on the line given by list differ by at most difference
+	list: list of cell specifications
+	difference: maximum difference between "close" cells
+	reach: number of adjacent cells on line defining "close"
+
+setEntropicWhispersLine(list): line where cells at most two cells apart along the line differ by at least 3
+	list: list of cell specifications
+	
+setRunOnNabnerLine(list): line where cells at most three cells apart along the line differ by at least 2; this is equivalent to the definition of a run-on nabner line analogous to a run-on renban line, as it assures that no two cells along any stretch of 5 in a line are consecutive
+	list: list of cell specifications
+
 First-Seen Clues
 ----------------
 First-seen clues indicate the first value with a given property seen from outside the grid

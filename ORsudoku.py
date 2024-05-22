@@ -3410,13 +3410,10 @@ class sudoku:
 	def setMissingThermo(self,inlist,slow=False):
 		self.setThermo(inlist,slow,True)
 		
-	def setvariableLengthThermo(self,bulb,nextCell,slow=False,reflective=False):
-		b = self.procCell(bulb)
-		n = self.procCell(nextCell)
-		
-		
-		
-			
+#	def setvariableLengthThermo(self,bulb,nextCell,slow=False,reflective=False):
+#		b = self.procCell(bulb)
+#		n = self.procCell(nextCell)
+					
 	def setCountTheOddsLine(self,inlist):
 		if self.isParity is False:
 			self.__setParity()
@@ -3526,7 +3523,7 @@ class sudoku:
 				self.model.Add(self.cellValues[inlist[i-j][0]][inlist[i-j][1]]-self.cellValues[inlist[i][0]][inlist[i][1]] < n)
 					
 	def setMinWhispersLine(self,inlist,value):
-		# Sets a whispers line where the minimum difference between two cells on the line is value
+		# Sets a whispers line where the minimum difference between two adjacent cells on the line is value
 		inlist = self.__procCellList(inlist)
 		for j in range(len(inlist)-1):
 			bit = self.model.NewBoolVar('MaxWhisperBiggerRow{:d}Col{:d}'.format(inlist[j][0],inlist[j][1]))
@@ -3534,7 +3531,7 @@ class sudoku:
 			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] <= -1*value).OnlyEnforceIf(bit.Not())
 	
 	def setMaxWhispersLine(self,inlist,value):
-		# Sets a whispersline where the maximum difference between two cells on the line is value
+		# Sets a whispersline where the maximum difference between two adjacent cells on the line is value
 		inlist = self.__procCellList(inlist)
 		for j in range(len(inlist)-1):
 			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] <= value)
@@ -3548,6 +3545,30 @@ class sudoku:
 			
 	def setChineseWhispersLine(self,inlist):
 		self.setMaxWhispersLine(inlist,2)
+		
+	def setMinExtendedWhispersLine(self,inlist,difference,reach):
+		# Sets a whispers line where the minimum difference between two cells at most reach apart on the line is value 
+		inlist = self.__procCellList(inlist)
+		for j in range(len(inlist)-1):
+			for k in range(1,min(reach+1,len(inlist)-j)):
+				bit = self.model.NewBoolVar('MinExtendedWhisperBiggerRow{:d}Col{:d}'.format(inlist[j][0],inlist[j][1]))
+				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+k][0]][inlist[j+k][1]] >= difference).OnlyEnforceIf(bit)
+				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+k][0]][inlist[j+k][1]] <= -1*difference).OnlyEnforceIf(bit.Not())
+				
+	def setMaxExtendedWhispersLine(self,inlist,difference,reach):
+		# Sets a whispers line where the maximum difference between two cells at most reach apart on the line is value 
+		inlist = self.__procCellList(inlist)
+		for j in range(len(inlist)-1):
+			for k in range(1,min(reach+1,len(inlist)-j)):
+				bit = self.model.NewBoolVar('MaxExtendedWhisperBiggerRow{:d}Col{:d}'.format(inlist[j][0],inlist[j][1]))
+				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+k][0]][inlist[j+k][1]] <= difference).OnlyEnforceIf(bit)
+				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+k][0]][inlist[j+k][1]] >= -1*difference).OnlyEnforceIf(bit.Not())
+				
+	def setRunOnNabnerLine(self,inlist):
+		self.setMinExtendedWhispersLine(inlist,2,3)
+		
+	def setEntropicWhispersLine(self,inlist):
+		self.setMinExtendedWhispersLine(inlist,3,2)
 			
 	def setEntropicLine(self,inlist):
 		inlist = self.__procCellList(inlist)
