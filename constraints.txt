@@ -141,7 +141,7 @@ Quad Max Arrows
 Quad Max Parity Values - see Odd Max Values
 Quad Max Values
 Quad Sums (one digit on a quad is the sum of the three others)
-Quadro (no 2x2 in grid has all even or all odd digits)
+Quadro (no 2x2 in grid has all even or all odd digits) - see Parity Quads
 QuattroQuadri
 Ratio Pairs - see Kropki and Kropki pairs
 Region Sum Lines (sum of all cells along a line in a region is fixed)
@@ -1154,6 +1154,13 @@ setAntiParityQuadArray(list): creates multiple anti-parity quad constraints
   
 setParityQuadNegative(): specify that all cells not specifically designated with parity quads do NOT satisfy the parity quad constraint, i.e., all cells must be either odd or even
 
+setParityQuadExclusions(list): sets a list of numbers of *odd* digits not permitted in a 2x2
+	list: list of integers defining numbers of forbidden odd digits in a 2x2. Default is [0,4]. Calling the function with no arguments sets the forbidden values back to the default.
+
+All parity quads added subsequently to these calls will use the new values, without changing constraints already entered. HOWEVER, if a negative constraint is applied, it will ALWAYS use the final list of exclusions to apply the negative constraint against.
+	
+setQuadro(): assert that all 2x2 quads are parity quads; with default settings, sets to the traditional definition of no 2x2 quad having all even or all odd digits
+
 Parity Snakes
 -------------
 setParitySnake(row1,col1,row2,col2,parity): asserts that there exists a path of constant parity from ro1,col1 to row2,col2
@@ -1222,10 +1229,6 @@ setQuadSum(cell): assert that one of the digits in a quad is the sum of the othe
   
 setQuadSumArray(list): set multiple quad sum constraints
   list: list of cell specifications
-  
-Quadro
-------
-setQuadro(): assert that no 2x2 quad has all even or all odd digits (see Parity Quads)
 
 QuattroQuadri
 -------------

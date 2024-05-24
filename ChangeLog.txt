@@ -1,3 +1,7 @@
+5/24/2024
+	Added support for Regionometers, including test case.
+	Updated parity quad code to allow different numbers of disallowed odd/evens per 2x2 quad. Added test case.
+
 5/22/24
 	Added support for Extended Whispers Lines, which generalize and implement Run On Nabner and Entropic Whispers Lines.
 	Added test cases.

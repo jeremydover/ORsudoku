@@ -199,6 +199,7 @@ class sudoku:
 		
 		self.isParityQuadInitialized = False
 		self.isParityQuadNegative = False
+		self.parityQuadExcluded = [0,4]
 		
 		self.isParity = False
 		self.isEntropy = False
@@ -3059,8 +3060,8 @@ class sudoku:
 		if self.isParity is False:
 			self.__setParity()
 		
-		self.model.Add(sum(self.cellParity[row+i][col+j] for i in range(2) for j in range(2)) > 0)
-		self.model.Add(sum(self.cellParity[row+i][col+j] for i in range(2) for j in range(2)) < 4)
+		for k in self.parityQuadExcluded:
+			self.model.Add(sum(self.cellParity[row+i][col+j] for i in range(2) for j in range(2)) != k)
 
 	def setParityQuadArray(self,inlist):
 		for x in inlist: self.setParityQuad(x)
@@ -3081,9 +3082,9 @@ class sudoku:
 		if self.isParity is False:
 			self.__setParity()
 			
-		c = self.model.NewBoolVar('AntiParityQuad')
-		self.model.Add(sum(self.cellParity[row+i][col+j] for i in range(2) for j in range(2)) == 0).OnlyEnforceIf(c)
-		self.model.Add(sum(self.cellParity[row+i][col+j] for i in range(2) for j in range(2)) == 4).OnlyEnforceIf(c.Not())
+		varBitmap = self.__varBitmap('AntiParityQuad',len(self.parityQuadExcluded))
+		for k in range(len(self.parityQuadExcluded)):
+			self.model.Add(sum(self.cellParity[row+i][col+j] for i in range(2) for j in range(2)) == self.parityQuadExcluded[k]).OnlyEnforceIf(varBitmap[k])
 				
 	def setAntiParityQuadArray(self,inlist):
 		for x in inlist: self.setAntiParityQuad(x)
@@ -3094,6 +3095,9 @@ class sudoku:
 				if (i,j) not in self.parityQuadCells:
 					self.setAntiParityQuad(i,j)
 					
+	def setParityQuadExclusions(self,inlist=[0,4]):
+		self.parityQuadExcluded = inlist
+	
 	def setEntropyBattenburg(self,row,col=-1):
 		if col == -1:
 			(row,col) = self.__procCell(row)
@@ -3656,6 +3660,30 @@ class sudoku:
 		baseSum = sum(sumSets[0])
 		for i in range(1,len(sumSets)):
 			self.model.Add(sum(sumSets[i]) == baseSum)
+			
+	def setRegionometer(self,inlist):
+		# Region boundaries break the line into segments, and the sum on each segment must increase from one end to the other
+		inlist = self.__procCellList(inlist)
+		
+		# Code to create the segment sums is directly stolen from RegionSegmentSumLines
+		sumSets = []
+		currentRegionStart = 0
+		for i in range(len(self.regions)):
+			if len({inlist[0]} & set(self.regions[i])) > 0: currentRegion = i
+		for j in range(1,len(inlist)):
+			for i in range(len(self.regions)):
+				if len({inlist[j]} & set(self.regions[i])) > 0: thisRegion = i
+			if thisRegion != currentRegion:
+				sumSets.append([self.cellValues[x[0]][x[1]] for x in inlist[currentRegionStart:j]])
+				currentRegionStart = j
+				currentRegion = thisRegion
+		# Need to do it again since the last segment is left in the queue.	
+		sumSets.append([self.cellValues[x[0]][x[1]] for x in inlist[currentRegionStart:]])
+
+		bit = self.model.NewBoolVar('RegionmeterEnd')
+		for i in range(0,len(sumSets)-1):
+			self.model.Add(sum(sumSets[i]) < sum(sumSets[i+1])).OnlyEnforceIf(bit)
+			self.model.Add(sum(sumSets[i]) > sum(sumSets[i+1])).OnlyEnforceIf(bit.Not())
 
 	def setDoublingLine(self,inlist):
 		# Every digit that appears on a doubling line appears exactly twice
@@ -4032,6 +4060,7 @@ class quattroQuadri(sudoku):
 		
 		self.isParityQuadInitialized = False
 		self.isParityQuadNegative = False
+		self.parityQuadExcluded = [0,4]
 		
 		self.isParity = False
 		self.isEntropy = False
@@ -4137,6 +4166,7 @@ class cellTransformSudoku(sudoku):
 		
 		self.isParityQuadInitialized = False
 		self.isParityQuadNegative = False
+		self.parityQuadExcluded = [0,4]
 		
 		self.isParity = False
 		self.isEntropy = False
@@ -4482,6 +4512,7 @@ class japaneseSumSudoku(sudoku):
 		
 		self.isParityQuadInitialized = False
 		self.isParityQuadNegative = False
+		self.parityQuadExcluded = [0,4]
 		
 		self.isParity = False
 		self.isEntropy = False
@@ -4980,6 +5011,7 @@ class schroedingerCellSudoku(sudoku):
 		
 		self.isParityQuadInitialized = False
 		self.isParityQuadNegative = False
+		self.parityQuadExcluded = [0,4]
 		
 		self.isParity = False
 		self.isEntropy = False
@@ -5985,6 +6017,7 @@ class scarySudoku(sudoku):
 		
 		self.isParityQuadInitialized = False
 		self.isParityQuadNegative = False
+		self.parityQuadExcluded = [0,4]
 		
 		self.isParity = False
 		self.isEntropy = False
