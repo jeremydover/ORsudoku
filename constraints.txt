@@ -165,6 +165,7 @@ Shaken Clone Regions - see Clone Regions
 Shift Lines
 Skyscrapers
 Skyscraper Sums - see Skyscrapers
+Slingshots
 Slow Thermometers (see Thermometers)
 Sum Dots (see Killer Cages)
 Sum Sandwiches
@@ -782,8 +783,7 @@ setRotationalPairs(): assert the rotational pairs contraint: each digit has a pa
 Indexing (159)
 --------------
 ****NOTE****
-There is something about the indexing code that the underlying SAT solver does not like. Be wary of trying to gather
-all solutions.
+Older versions of OR Tools had a bug (https://github.com/google/or-tools/issues/3670) which caused the same solution to be reported multiple times. This has been fixed as of version 9.6.
 
 setIndexRow(row,neg=False,inlist=[]): set an index row, namely one which indicates the position of the digit corresponding to the row within some subset of columns
   row: the row (1-9) used as an index. By default, all column positions index
@@ -794,7 +794,7 @@ setIndexRow(row,neg=False,inlist=[]): set an index row, namely one which indicat
 setIndexColumn(row,neg=False,inlist=[]): set an index column. See setIndexRow for details of the mechanics
   Example: The traditional 159 ruleset is implemented with the calls:
   setIndexColumn(1)
-  setIndexcolumn(5)
+  setIndexColumn(5)
   setIndexColumn(9)
   
 Irregular Sudoku
@@ -1433,6 +1433,13 @@ setSkyscraperSum(row,col,rc,value): sets a skyscraper sum constraint, specifying
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: the sum of digits that can be seen
   
+Slingshots
+----------
+setSlingshot(row,col,tail,head): assert that the digit pointed to by tail from (row,col) is equal to a cell pointed at by head, where the distance to this second occurrence is the digit in the cell (row,col)
+  row,col: The coordinates of the cell in which the slingshot arrow lies
+  tail: the direction in which the tail of the arrow points; use class variables Up, Down, Left, Right
+  head: the direction in which the head of the arrow points; use class variables Up, Down, Left, Right
+
 Sum Sandwiches
 --------------
 setSumSandwich(row,col,rc,values,neg=False): sets a sum sandwich - in a row/column, each value in values is the sum of its neighbors, e.g., the 9 in that row/column must be between two digits that sum to 9

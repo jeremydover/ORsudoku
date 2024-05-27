@@ -1215,6 +1215,46 @@ class sudoku:
 		for i in range(len(digits)):
 			self.model.Add(sum([digitInts[i] for i in range(len(digits))]) == digits[i]).OnlyEnforceIf(varBitmap[i])
 			self.model.Add(self.cellValues[row][col] == digits[i]).OnlyEnforceIf(varBitmap[i])
+
+
+	def setSlingshot(self,row1,col1,tail,head):
+		# Asserts that the digit in the tail direction from cell (row,col) appears in in the direction of the head, where the distance is given by the digit in (row,col)
+		
+		row = row1-1
+		col = col1-1
+		
+		# Find variable that must be matched
+		if tail == self.Up:
+			matchVar = self.cellValues[row-1][col]
+		elif tail == self.Down:
+			matchVar = self.cellValues[row+1][col]
+		elif tail == self.Left:
+			matchVar = self.cellValues[row][col-1]
+		else:
+			matchVar = self.cellValues[row][col+1]
+		
+		# Figure parameters for placement direction
+		if head == self.Up:
+			cand = row
+			hStep = 0
+			vStep = -1
+		elif head == self.Down:
+			cand = self.boardWidth - row - 1
+			hStep = 0
+			vStep = 1
+		elif head == self.Left:
+			cand = col
+			hStep = -1
+			vStep = 0
+		else:
+			cand = self.boardWidth - col - 1
+			hStep = 1
+			vStep = 0
+		
+		varBitmap = self.__varBitmap('DifferentNeighborsRow{:d}Col{:d}'.format(row,col),cand)
+		for i in range(1,cand+1):
+			self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] == matchVar).OnlyEnforceIf(varBitmap[i-1])
+			self.model.Add(self.cellValues[row][col] == i).OnlyEnforceIf(varBitmap[i-1])
 			
 ####Multi-cell constraints
 	def setFortress(self,inlist):
