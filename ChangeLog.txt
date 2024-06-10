@@ -1,3 +1,6 @@
+6/10/24 bis
+	Added additional JSS test case
+
 6/10/2024
 	Migrated Japanese Sum Sudoku support to a separate file.
 	Completely re-did JSS algorithm:
