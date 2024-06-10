@@ -38,7 +38,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setNumberedRoom(8,1,p.Row,7)
 		p.setNumberedRoom(9,1,p.Row,4)
 		
-		self.assertEqual(p.countSolutions(test=True),'1:89374562*1*5216*3*98747*4*628153996*7*124358432*5*98716158376*9*4231985*2*4672749631*8*5*6*85417293','Failed Elevator Down')
+		self.assertEqual(p.countSolutions(test=True),'1:893745621521639874746281539967124358432598716158376942319852467274963185685417293000000001000010000010000000001000000000100000000000100000001000000000010100000000','Failed Elevator Down')
 		
 if __name__ == '__main__':
     unittest.main()

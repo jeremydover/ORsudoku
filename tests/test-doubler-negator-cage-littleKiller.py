@@ -23,7 +23,9 @@ class TestPuzzle(unittest.TestCase):
 		p.setCage([11,12,21,22,23],0)
 		p.setCage([89,98,99],0)
 		
-		self.assertEqual(p.countSolutions(test=True),'1:2*7*935186451684972*3*843*6*7219539*1*2845766247*9*5381758163*2*4996251*8*437*4*359276181874369*5*2','Failed Double Negative')
+		self.assertEqual(p.countSolutions(test=True),'1:279351864516849723843672195391284576624795381758163249962518437435927618187436952010000000000000001000100000001000000000010000000000100000001000100000000000000010','Failed Double Negative')
 		
 if __name__ == '__main__':
     unittest.main()
+	
+	

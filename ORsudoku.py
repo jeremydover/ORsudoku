@@ -37,17 +37,18 @@ class SolutionPrinter(cp_model.CpSolverSolutionCallback):
 		cntr = 0
 				
 		if self.__testMode is True:
-			## This is a hack to detect if we got transform variables
-			if len(self.__variables) > self.__boardWidth**2:
-				thisSolution = ''
-				for i in range(self.__boardWidth**2):
-					if self.Value(self.__variables[i+self.__boardWidth**2]) > 0:
-						thisSolution += '*'+str(self.Value(self.__variables[i]))+'*'
-					else:
-						thisSolution += str(self.Value(self.__variables[i]))
-				self.__testStringArray.append(thisSolution)
-			else:
-				self.__testStringArray.append(''.join(map(str,[self.Value(v) for v in self.__variables])))
+		#	## This is a hack to detect if we got transform variables
+		#	if len(self.__variables) > self.__boardWidth**2:
+		#		thisSolution = ''
+		#		for i in range(self.__boardWidth**2):
+		#			if self.Value(self.__variables[i+self.__boardWidth**2]) > 0:
+		#				thisSolution += '*'+str(self.Value(self.__variables[i]))+'*'
+		#			else:
+		#				thisSolution += str(self.Value(self.__variables[i]))
+		#		self.__testStringArray.append(thisSolution)
+		#	else:
+		#		self.__testStringArray.append(''.join(map(str,[self.Value(v) for v in self.__variables])))
+			self.__testStringArray.append(''.join(map(str,[self.Value(v) for v in self.__variables])))
 		
 		elif self.__printAll is True:
 			if self.__debug is False:
@@ -3866,7 +3867,7 @@ class sudoku:
 		if self.isConsecutiveQuadNegative is True: self.__applyConsecutiveQuadNegative()
 		if self.isParityQuadNegative is True: self.__applyParityQuadNegative()
 
-	def findSolution(self,test=False):
+	def findSolution(self,test=False,debug=False):
 		self.applyNegativeConstraints()
 		self.solver = cp_model.CpSolver()
 		consolidatedCellValues = []
@@ -4506,286 +4507,6 @@ class affineTransformSudoku(cellTransformSudoku):
 	def transformDoublerValue(self,value):
 		return {self.ratio*value+self.shift}
 		
-class japaneseSumSudoku(sudoku):
-	"""A class used to implement Japanese Sum puzzles."""
-	
-	def __init__(self,boardSizeRoot,irregular=None,digitSet=None):
-		self.boardSizeRoot = boardSizeRoot
-		self.boardWidth = boardSizeRoot*boardSizeRoot
-
-		self.isBattenburgInitialized = False
-		self.isBattenburgNegative = False
-		
-		self.isKropkiInitialized = False
-		self.isKropkiNegative = False
-		self.kropkiDiff = 1
-		self.kropkiRatio = 2
-		
-		self.isFriendlyInitialized = False
-		self.isFriendlyNegative = False
-		
-		self.isRossiniInitialized = False
-		self.isRossiniNegative = False
-		self.rossiniLength = -1
-		self.outsideLength = -1
-		
-		self.isXVInitialized = False
-		self.isXVNegative = False
-		
-		self.isXVXVInitialized = False
-		self.isXVXVNegative = False
-		
-		self.isXYDifferenceInitialized = False
-		self.isXYDifferenceNegative = False
-		
-		self.isEntropyQuadInitialized = False
-		self.isEntropyQuadNegative = False		
-		
-		self.isModularQuadInitialized = False
-		self.isModularQuadNegative = False
-
-		self.isEntropyBattenburgInitialized = False
-		self.isEntropyBattenburgNegative = False
-		
-		self.isConsecutiveQuadInitialized = False
-		self.isConsecutiveQuadNegative = False
-		
-		self.isParityQuadInitialized = False
-		self.isParityQuadNegative = False
-		self.parityQuadExcluded = [0,4]
-		
-		self.isParity = False
-		self.isEntropy = False
-		self.isModular = False
-		self.isFullRank = False
-		self.isPrimality = False
-		
-		if digitSet is None:
-			self.digits = {x for x in range(1,self.boardWidth+1)}
-		else:
-			self.digits = digitSet
-		self.maxDigit = max(self.digits)
-		self.minDigit = min(self.digits)
-		self.digitRange = self.maxDigit - self.minDigit
-
-		self.model = cp_model.CpModel()
-		self.cellValues = []
-		
-		# Create the variables containing the cell values
-		for rowIndex in range(self.boardWidth):
-			tempArray = []
-			for colIndex in range(self.boardWidth):
-				tempCell = self.model.NewIntVar(self.minDigit,self.maxDigit,'cellValue{:d}{:d}'.format(rowIndex,colIndex))
-				if (self.maxDigit - self.minDigit) >= self.boardWidth:	#Digit set is not continguous, so force values
-					self.model.AddAllowedAssignments([tempCell],[(x,) for x in digitSet])
-				tempArray.append(tempCell)
-			self.cellValues.insert(rowIndex,tempArray)
-			
-		# Create rules to ensure rows and columns have no repeats
-		for rcIndex in range(self.boardWidth):
-			self.model.AddAllDifferent([self.cellValues[rcIndex][crIndex] for crIndex in range(self.boardWidth)]) 	# Rows
-			self.model.AddAllDifferent([self.cellValues[crIndex][rcIndex] for crIndex in range(self.boardWidth)]) 	# Columns
-
-		# Now deal with regions. Default to boxes...leaving stub for irregular Sudoku for now
-		self.regions = []
-		if irregular is None:
-			self._sudoku__setBoxes()
-			
-		# Finally, create array of shading Booleans to determine which cells are shaded.
-		self.cellShaded = []
-		
-		for rowIndex in range(self.boardWidth):
-			tempArray = []
-			for colIndex in range(self.boardWidth):
-				tempArray.append(self.model.NewBoolVar('cellShaded{:d}{:d}'.format(rowIndex,colIndex)))
-			self.cellShaded.insert(rowIndex,tempArray)
-			
-	def setJapaneseSum(self,row1,col1,rc,value):
-		# row,col are the coordinates of the cell next to the clue
-		# rc is whether things are row/column
-		# value is a list of sums of unshaded cells that need to be achieved. Use 0 for ?, cluing that a sum exists but is not given
-		
-		# Convert from 1-base to 0-base
-		row = row1 - 1
-		col = col1 - 1
-		hStep = 0 if rc == sudoku.Col else 1
-		vStep = 0 if rc == sudoku.Row else 1
-		
-		# Need variables to determine if the left/top cell is shaded, and if right/bottom cell is shaded, since that affects the combinatorics
-		ltShaded = self.model.NewBoolVar('JapaneseSumLTRow{:d}Col{:d}'.format(row,col))
-		rbShaded = self.model.NewBoolVar('JapaneseSumRBRow{:d}Col{:d}'.format(row,col))
-		
-		# First let's deal with the case where both ends are unshaded. It's easiest to see the combinatorics with examples:
-		# One clue:    .........
-		# Two clues:   ...xxx...
-		# Three clues: ..x...x..
-		# Four clues:  .x..x.xx.
-		# Five clues:  .x.x.x.x.
-		# The important thing to look at is the *changes* between shaded and unshded in these cases:
-		# One clue: 0
-		# Two clues: 2
-		# Three clues: 4
-		# Four clues: 6
-		# Five clues: 8
-		# So by engineering induction, the number of changes is 2*(# clues) - 2.
-		# In theory, any combination of changes could lead to a possible solution, so we need to look at Binomial(boardWidth-1,2*(# clues)-2), since there
-		# are boardWidth - 1 inter-cell gaps where a change can take place.
-		
-		if len(value) == 1 or (len(value) == (self.boardWidth+1)//2 and self.boardWidth%2 == 1):	# Hack since if there is only one combination varBitmap throws an error
-			varBitmap = [[]]
-		elif len(value) < (self.boardWidth+1)//2:
-			varBitmap = self._sudoku__varBitmap('JapaneseSumRow{:d}Col{:d}RC{:d}'.format(row,col,rc),math.comb(self.boardWidth-1,2*len(value)-2))
-			# Need to force these variables to a single value in the other cases
-			self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf([ltShaded,rbShaded])
-			self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf([ltShaded,rbShaded.Not()])
-			self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf([ltShaded.Not(),rbShaded])
-		else: # Do the die here, since if this case can't work, the others definitely can't
-			print ("Japanese Sum in row {:d} column {:d} cannot be achieved in this grid size")
-			sys.exit()
-
-		cI = CombinationIterator(self.boardWidth-2,2*len(value)-2)
-		comb = cI.getNext()
-		varTrack = 0
-		while comb is not None:
-			shade = False
-			unShadeIndex = 0
-			ind = [-1] + comb + [self.boardWidth-1]
-			for i in range(len(ind)-1):
-				for j in range(ind[i]+1,ind[i+1]+1):
-					if shade is True:
-						self.model.AddBoolAnd([self.cellShaded[row+j*vStep][col+j*hStep]]).OnlyEnforceIf(varBitmap[varTrack] + [ltShaded.Not(),rbShaded.Not()])
-					else:
-						self.model.AddBoolAnd([self.cellShaded[row+j*vStep][col+j*hStep].Not()]).OnlyEnforceIf(varBitmap[varTrack] + [ltShaded.Not(),rbShaded.Not()])
-				if shade is not True:
-					if value[unShadeIndex] > 0:
-						self.model.Add(sum(self.cellValues[row+j*vStep][col+j*hStep] for j in range(ind[i]+1,ind[i+1]+1)) == value[unShadeIndex]).OnlyEnforceIf(varBitmap[varTrack] + [ltShaded.Not(),rbShaded.Not()])
-					unShadeIndex = unShadeIndex + 1
-				shade = not shade
-			varTrack = varTrack + 1
-			comb = cI.getNext()
-
-		# Now the other cases. If just one end cell is shaded, we need to add one more change. If both unshaded, we add two more changes.
-		# But other than that it should just be copy and paste. Part of me feels like I should functionize this instead of just copying. Nah...
-		
-		# ltShaded, rb not
-		if len(value) <= self.boardWidth//2:
-			if len(value) == self.boardWidth//2 and self.boardWidth%2 == 0:
-				varBitmap = [[]]
-			else:
-				varBitmap = self._sudoku__varBitmap('JapaneseSumRow{:d}Col{:d}RC{:d}'.format(row,col,rc),math.comb(self.boardWidth-1,2*len(value)-1))
-				# Need to force these variables to a single value in the other cases
-				self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf([ltShaded,rbShaded])
-				self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf([ltShaded.Not(),rbShaded.Not()])
-				self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf([ltShaded.Not(),rbShaded])
-			cI = CombinationIterator(self.boardWidth-2,2*len(value)-1)
-			comb = cI.getNext()
-			varTrack = 0
-			while comb is not None:
-				shade = True			# Note: we start shaded
-				unShadeIndex = 0
-				ind = [-1] + comb + [self.boardWidth-1]
-				for i in range(len(ind)-1):
-					for j in range(ind[i]+1,ind[i+1]+1):
-						if shade is True:
-							self.model.AddBoolAnd([self.cellShaded[row+j*vStep][col+j*hStep]]).OnlyEnforceIf(varBitmap[varTrack] + [ltShaded,rbShaded.Not()])
-						else:
-							self.model.AddBoolAnd([self.cellShaded[row+j*vStep][col+j*hStep].Not()]).OnlyEnforceIf(varBitmap[varTrack] + [ltShaded,rbShaded.Not()])
-					if shade is not True:
-						if value[unShadeIndex] > 0:
-							self.model.Add(sum(self.cellValues[row+j*vStep][col+j*hStep] for j in range(ind[i]+1,ind[i+1]+1)) == value[unShadeIndex]).OnlyEnforceIf(varBitmap[varTrack] + [ltShaded,rbShaded.Not()])
-						unShadeIndex = unShadeIndex + 1
-					shade = not shade
-				varTrack = varTrack + 1
-				comb = cI.getNext()
-
-			# rbShaded, lt not
-			if len(value) == self.boardWidth//2 and self.boardWidth%2 == 0:
-				varBitmap = [[]]
-			else:
-				varBitmap = self._sudoku__varBitmap('JapaneseSumRow{:d}Col{:d}RC{:d}'.format(row,col,rc),math.comb(self.boardWidth-1,2*len(value)-1))
-				# Need to force these variables to a single value in the other cases
-				self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf([ltShaded,rbShaded])
-				self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf([ltShaded,rbShaded.Not()])
-				self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf([ltShaded.Not(),rbShaded.Not()])
-			cI = CombinationIterator(self.boardWidth-2,2*len(value)-1)
-			comb = cI.getNext()
-			varTrack = 0
-			while comb is not None:
-				shade = False			# Note: we start unshaded
-				unShadeIndex = 0
-				ind = [-1] + comb + [self.boardWidth-1]
-				for i in range(len(ind)-1):
-					for j in range(ind[i]+1,ind[i+1]+1):
-						if shade is True:
-							self.model.AddBoolAnd([self.cellShaded[row+j*vStep][col+j*hStep]]).OnlyEnforceIf(varBitmap[varTrack] + [ltShaded.Not(),rbShaded])
-						else:
-							self.model.AddBoolAnd([self.cellShaded[row+j*vStep][col+j*hStep].Not()]).OnlyEnforceIf(varBitmap[varTrack] + [ltShaded.Not(),rbShaded])
-					if shade is not True:
-						if value[unShadeIndex] > 0:
-							self.model.Add(sum(self.cellValues[row+j*vStep][col+j*hStep] for j in range(ind[i]+1,ind[i+1]+1)) == value[unShadeIndex]).OnlyEnforceIf(varBitmap[varTrack] + [ltShaded.Not(),rbShaded])
-						unShadeIndex = unShadeIndex + 1
-					shade = not shade
-				varTrack = varTrack + 1
-				comb = cI.getNext()
-		else:
-			# These cases can't be realized...kill them
-			self.model.AddBoolAnd([rbShaded]).OnlyEnforceIf([ltShaded,rbShaded.Not()])
-			self.model.AddBoolAnd([ltShaded]).OnlyEnforceIf([ltShaded.Not(),rbShaded])
-
-		# Both shaded
-		if len(value) <= (self.boardWidth-1)//2:
-			if len(value) == (self.boardWidth-1)//2 and self.boardWidth%2 == 1:
-				varBitmap = [[]]
-			else:
-				varBitmap = self._sudoku__varBitmap('JapaneseSumRow{:d}Col{:d}RC{:d}'.format(row,col,rc),math.comb(self.boardWidth-1,2*len(value)))
-				# Need to force these variables to a single value in the other cases
-				self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf([ltShaded.Not(),rbShaded.Not()])
-				self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf([ltShaded,rbShaded.Not()])
-				self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf([ltShaded.Not(),rbShaded.Not()])
-			cI = CombinationIterator(self.boardWidth-2,2*len(value))
-			comb = cI.getNext()
-			varTrack = 0
-			while comb is not None:
-				shade = True			# Note: we start unshaded
-				unShadeIndex = 0
-				ind = [-1] + comb + [self.boardWidth-1]
-				for i in range(len(ind)-1):
-					for j in range(ind[i]+1,ind[i+1]+1):
-						if shade is True:
-							self.model.AddBoolAnd([self.cellShaded[row+j*vStep][col+j*hStep]]).OnlyEnforceIf(varBitmap[varTrack] + [ltShaded,rbShaded])
-						else:
-							self.model.AddBoolAnd([self.cellShaded[row+j*vStep][col+j*hStep].Not()]).OnlyEnforceIf(varBitmap[varTrack] + [ltShaded,rbShaded])
-					if shade is not True:
-						if value[unShadeIndex] > 0:
-							self.model.Add(sum(self.cellValues[row+j*vStep][col+j*hStep] for j in range(ind[i]+1,ind[i+1]+1)) == value[unShadeIndex]).OnlyEnforceIf(varBitmap[varTrack] + [ltShaded,rbShaded])
-						unShadeIndex = unShadeIndex + 1
-					shade = not shade
-				varTrack = varTrack + 1
-				comb = cI.getNext()
-		else:
-			# This case can't be realized...kill it
-			self.model.AddBoolAnd([rbShaded.Not()]).OnlyEnforceIf([ltShaded,rbShaded])
-					
-	def printCurrentSolution(self):
-		colorama.init()
-		dW = max([len(str(x)) for x in self.digits])
-		for i in range(self.boardWidth):
-			for j in range(self.boardWidth):
-				if self.solver.Value(self.cellShaded[i][j]) == 1: # This one is shaded
-					print(Fore.BLACK + Back.WHITE + '{:d}'.format(self.solver.Value(self.cellValues[i][j])).rjust(dW) + Fore.RESET + Back.RESET,end = " ")
-				else:
-					print('{:d}'.format(self.solver.Value(self.cellValues[i][j])).rjust(dW),end = " ")
-			print()
-		print()
-		
-	def preparePrintVariables(self):
-		consolidatedCellValues = []
-		for tempArray in self.cellValues:
-			consolidatedCellValues = consolidatedCellValues + tempArray
-		for tempArray in self.cellShaded:
-			consolidatedCellValues = consolidatedCellValues + tempArray
-		return consolidatedCellValues
-
 class doubleDoku(sudoku):
 	"""A class used to implement DoubleDoku puzzles, where boxes 5/6/8/9 of puzzle 1 are boxes 1/2/4/5 of puzzle 2"""
 
