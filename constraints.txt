@@ -827,10 +827,11 @@ p = japaneseSumSudoku(boardSizeRoot,numberOfColors,irregular,digitSet)
 	digitSet - allows setting with an alternate digit set.
 
 In this class, you can use the following method to set constraints
-setJapaneseSum(row,col,rc,value): sets a Japanese sum constraint
+setJapaneseSum(row,col,rc,value,includeColors): sets a Japanese sum constraint
   row,col: The coordinates of the cell containing the clue, i.e. the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: A list of values representing the sums in a clue. If there is only one color, this list can be given as a list of integers, e.g., [2,5,17]. However, if multiple colors are used, the list elements should be tuples (sum,color), where the sum is the sum of digits in the shaded group, and color is the color. Colors are given as integers starting at 1 (internally, unshaded is color 0, but it has special rules).
+  includeColors: A list of color values (integers 1..numberOfColors) which must appear in the row/col
   
   Ambiguous clues *are* supported: if a clue is given with a sum of zero, then the total sum of the shaded group is not checked. If a clue is given with a color of zero, then there must be a shaded group with the given sum, but the color is not checked. If both sum and color a zero, there must be another shaded group, but sum and color are unchecked.
   
@@ -842,6 +843,30 @@ Then, you can set your color map as in this example:
 p.setColorMap([(Fore.WHITE,Back.CYAN),(Fore.BLACK,Back.WHITE),(Fore.BLACK,Back.GREEN),(Fore.WHITE,Back.BLACK)])
 
 In this example, the *unshaded* cells will be white numbers on a cyan background. Color 1 will be black digits on a white background, etc.
+
+This class supports several assertions that can be used for lookahead checking:
+
+assertShaded(cell): asserts that an individual cell must be shaded, without specifying color
+	cell: single cell specification
+
+assertShadedArray(list): asserts that a list of cells is shaded, without specifying colors
+	list: list of cell specifications
+	
+asserUnshaded(cell): asserts that an individual cell must not be shaded
+	cell: single cell specification
+
+assertShadedArray(list): asserts that a list of cells is unshaded
+	list: list of cell specifications
+	
+assertColor(cellC): asserts that a cell is shaded with a specific color
+	cellC: extended cell specification that includes row,col,integer color
+	
+assertFixedColorArray(list,color): asserts that a list of cells are all colored color
+	list: list of cell specifications
+	color: integer denoting a single color
+
+assertColorArray(list): a list of color assertions	
+	list: a list of cellC specfications, see assertColor above
 
 Keypad King Lines
 -----------------

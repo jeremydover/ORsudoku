@@ -1,3 +1,9 @@
+6/11/2024
+	Fixed bug in new JSS code that was causing multiple solutions.
+	Added support to allow a list of colors to be forced in a row/col, without specifying which group has which color
+	Added assertions of shading/unshading/coloring to support lookahead for setting
+	Added new test cases.
+
 6/10/24 bis
 	Added additional JSS test case
 

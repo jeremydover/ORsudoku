@@ -118,7 +118,7 @@ class japaneseSumSudoku(sudoku):
 			self.cellShaded.insert(rowIndex,tempArray)
 			self.cellColor.insert(rowIndex,tempColorArray)
 			
-	def setJapaneseSum(self,row1,col1,rc,value):
+	def setJapaneseSum(self,row1,col1,rc,value,includeColors=[]):
 		# row,col are the coordinates of the cell next to the clue
 		# rc is whether things are row/column
 		# value is a list of sums of unshaded cells that need to be achieved. Use 0 for ?, cluing that a sum exists but is not given
@@ -192,14 +192,66 @@ class japaneseSumSudoku(sudoku):
 			for i in range(self.boardWidth):
 				if thisColor > 0:
 					self.model.Add(self.cellColor[row+i*vStep][col+i*hStep] == thisColor).OnlyEnforceIf(varBitmap[i])
+				else:
+					self.model.AddBoolAnd(self.cellShaded[row+i*vStep][col+i*hStep]).OnlyEnforceIf(varBitmap[i])
 				self.model.AddBoolAnd(EOR[i]).OnlyEnforceIf(varBitmap[i])
 				self.model.Add(RN[i] == j+1).OnlyEnforceIf(varBitmap[i])
 				if thisSum > 0:
 					self.model.Add(RSTF[i] == thisSum).OnlyEnforceIf(varBitmap[i])
 		
+		# If we have a list of colors that must be included, ensure that some region has that color
+		for j in range(len(includeColors)):
+			colorVars = [self.model.NewBoolVar('JSScolor') for i in range(self.boardWidth)]
+			for i in range(self.boardWidth):
+				self.model.Add(self.cellColor[row+i*vStep][col+i*hStep] == includeColors[j]).OnlyEnforceIf(colorVars[i])
+				self.model.Add(self.cellColor[row+i*vStep][col+i*hStep] != includeColors[j]).OnlyEnforceIf(colorVars[i].Not())
+			self.model.AddBoolOr(colorVars)
+		
 		# Finally, we need to ensure there are no extra regions. The RN sequence is strictly increasing, so RN[self.boardWidth-1] is the number of shaded regions in the clue
 		self.model.Add(RN[self.boardWidth-1] == len(value))
 
+	def __assertShadedCell(self,row,col=-1,color=-1):
+		if col == -1:
+			args = self._sudoku__procCell(row)
+			row = args[0]
+			col = args[1]
+			if len(args) > 2:
+				color = args[2]
+		
+		self.model.AddBoolAnd(self.cellShaded[row][col])
+		if color > 0:
+			self.model.Add(self.cellColor[row][col] == color)
+			
+	def assertShaded(self,row,col=-1):
+		self.__assertShadedCell(row,col)
+		
+	def assertShadedArray(self,inlist):
+		for x in inlist:
+			self.assertShaded(x)
+			
+	def assertUnshaded(self,row,col=-1):
+		if col == -1:
+			(row,col) = self._sudoku__procCell(row)
+			
+		self.model.AddBoolAnd(self.cellShaded[row][col].Not())
+		
+	def assertUnshadedArray(self,inlist):
+		for x in inlist:
+			self.assertUnshaded(x)
+			
+	def assertColor(self,row,col=-1,color=-1):
+		self.__assertShadedCell(row,col,color)
+		
+	def assertFixedColorArray(self,inlist,color):
+		inlist = self._sudoku__procCellList(inlist)
+		for x in inlist:
+			self.assertColor(x[0],x[1],color)
+			
+	def assertColorArray(self,inlist):
+		inlist = self._sudoku__procCellList(inlist)
+		for x in inlist:
+			self.assertColor(x[0],x[1],x[2])
+	
 	def printCurrentSolution(self):
 		colorama.init()
 		dW = max([len(str(x)) for x in self.digits])
