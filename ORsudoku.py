@@ -3909,11 +3909,11 @@ class sudoku:
 			self.model.AddAllDifferent([self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(len(inlist))])
 			for x in range(len(inlist)):
 				for y in range(x+1,len(inlist)):
-					marker1 = self.model.NewIntVar(self.minDigit*self.digitRange+self.minDigit,self.maxDigit*self.digitRange+self.maxDigit,"variableName")
-					self.model.Add(marker1 == self.cellValues[inlist[x][0]][inlist[x][1]]*self.digitRange+self.cellValues[inlist[y][0]][inlist[y][1]])
+					marker1 = self.model.NewIntVar(self.minDigit*(self.digitRange+1)+self.minDigit,self.maxDigit*(self.digitRange+1)+self.maxDigit,"variableName")
+					self.model.Add(marker1 == self.cellValues[inlist[x][0]][inlist[x][1]]*(self.digitRange+1)+self.cellValues[inlist[y][0]][inlist[y][1]])
 					allPairMarkers.append(marker1)
-					marker2 = self.model.NewIntVar(self.minDigit*self.digitRange+self.minDigit,self.maxDigit*self.digitRange+self.maxDigit,"variableName")
-					self.model.Add(marker2 == self.cellValues[inlist[y][0]][inlist[y][1]]*self.digitRange+self.cellValues[inlist[x][0]][inlist[x][1]])
+					marker2 = self.model.NewIntVar(self.minDigit*(self.digitRange+1)+self.minDigit,self.maxDigit*(self.digitRange+1)+self.maxDigit,"variableName")
+					self.model.Add(marker2 == self.cellValues[inlist[y][0]][inlist[y][1]]*(self.digitRange+1)+self.cellValues[inlist[x][0]][inlist[x][1]])
 					allPairMarkers.append(marker2)
 		self.model.AddAllDifferent(allPairMarkers)
 		
