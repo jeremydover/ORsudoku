@@ -1,3 +1,8 @@
+9/4/2024
+	Added support for Unique Pairs Lines, a set of lines where each line has no repeats, and the set of digits on any pair of lines have a most one common digit. Constraint due to Paletron...thanks!
+	Added support for cell index lines, a set of lines which index a set of cells, in different rows, columns, and having different digits, such that read one direction or the other, the line indexes a row/column/value triple. Constraint due to KenGlue...thanks!
+	Updated zone constraint to allow inclusion of nulls, i.e. digits which cannot appear in the zone.
+	
 6/11/2024
 	Fixed bug in new JSS code that was causing multiple solutions.
 	Added support to allow a list of colors to be forced in a row/col, without specifying which group has which color

@@ -18,6 +18,7 @@ Bent Diagonals - see XSudoku
 Between Lines
 Block Cages
 Capsules
+Cell Index Lines
 Cell Transform Sudoku
 Chinese Whispers Lines - see Whispers Lines
 Clock Lines
@@ -173,6 +174,7 @@ Thermometers
 Triple Tabs
 Unicorn Digits
 Uniparity/Equiparity Cages - see More-Odd-Than-Even Cages
+Unique Pairs Lines
 Vaults
 Weak Palindrome Lines
 Windoku
@@ -366,6 +368,11 @@ Capsules
 --------
 setCapsule(inlist): creates a capsule, i.e., a region with the same number of even and odd digits. See also More-Odd-Than-Even cages
   list: list of cell specifications
+
+Cell Index Lines
+----------------
+setCellIndexLines(inlist): creates a set of lines, each of length three, where each line indexes (see Indexing) a cell in the grid. From one end of the line, which can be either end, the line reads row/column/value. Moreover, the cells thus indexed are all in different rows, different columns, and contain different digits.
+  inlist: list OF LISTS of cell specifications, each list is a line
 
 Cell Transform Sudoku
 ---------------------
@@ -1536,6 +1543,11 @@ Up and Down Lines
 setUpAndDownLine(inlist): sets an up and down line constraint; cells must alternately increase and decrease
   inlist: list of cell specifications
   
+Unique Pairs Lines
+------------------
+setUniquePairsLines(inlist): creates a set of lines such that each line has no repeats, and no pair of lines in the set have more than one digit in common
+  inlist: list of lists of cell specifications, so a list of lines
+
 Weak Palindrome Lines
 ---------------------
 setWeakPalindromeLine(list): creates a weak palindrome line constraint: instead of matching digits, palindromic positions must match on parity and magnitude (1-4 vs. 5-9)
@@ -1686,8 +1698,9 @@ setZipperLine(list): for an odd length, the sum of the cells equidistant from th
 
 Zones
 -----
-setZone(list,values): sets a zone, i.e., a set of cells and a list of values such that each value must appear in the zone, *including repeats*
+setZone(list,values,nulls): sets a zone, i.e., a set of cells and a list of values such that each value must appear in the zone, *including repeats*
   list: list of cell specifications
-  values: list of values to appear in the zone
+  values: list of values to appear in the zone, which may include repeats
+  nulls: a set of digits which may not appear in the zone.
   
 Note that this method can be used to implement look-and-say cages as well, just by interpreting the clue string as a list of values, e.g. 27 becomes [7,7]

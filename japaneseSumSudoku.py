@@ -21,6 +21,9 @@ class japaneseSumSudoku(sudoku):
 		self.isBattenburgInitialized = False
 		self.isBattenburgNegative = False
 		
+		self.isJSSBattenburgInitialized = False
+		self.isJSSBattenburgNegative = False
+		
 		self.isKropkiInitialized = False
 		self.isKropkiNegative = False
 		self.kropkiDiff = 1
@@ -209,7 +212,7 @@ class japaneseSumSudoku(sudoku):
 		
 		# Finally, we need to ensure there are no extra regions. The RN sequence is strictly increasing, so RN[self.boardWidth-1] is the number of shaded regions in the clue
 		self.model.Add(RN[self.boardWidth-1] == len(value))
-
+		
 	def __assertShadedCell(self,row,col=-1,color=-1):
 		if col == -1:
 			args = self._sudoku__procCell(row)
@@ -252,6 +255,57 @@ class japaneseSumSudoku(sudoku):
 		for x in inlist:
 			self.assertColor(x[0],x[1],x[2])
 	
+	def setJSSBattenburg(self,row,col=-1):
+		if col == -1:
+			(row,col) = self.__procCell(row)
+		if self.isJSSBattenburgInitialized is not True:
+			self.jssBattenburgCells = [(row,col)]
+			self.isJSSBattenburgInitialized = True
+		else:
+			self.jssBattenburgCells.append((row,col))
+			
+		self.model.Add(self.cellColor[row][col] != self.cellColor[row][col+1])
+		self.model.Add(self.cellColor[row][col] == self.cellColor[row+1][col+1])
+		self.model.Add(self.cellColor[row+1][col] == self.cellColor[row][col+1])
+				
+	def setJSSBattenburgArray(self,cells):
+		for x in cells: self.setJSSBattenburg(x)
+			
+	def setJSSBattenburgNegative(self):
+		if self.isJSSBattenburgInitialized is not True:
+			self.jssBattenburgCells = []
+			self.isJSSBattenburgInitialized = True
+		self.isJSSBattenburgNegative = True
+		
+	def setJSSAntiBattenburg(self,row,col=-1):
+		if col == -1:
+			(row,col) = self.__procCell(row)
+		# No need to set battenburgInitialized...if we call negative later, this will just be duplicated.
+		bit1 = self.model.NewBoolVar('AntiJSSBattenburgMainDiagonalTestRow{:d}Col{:d}'.format(row,col))
+		bit2 = self.model.NewBoolVar('AntiJSSBattenburgOffDiagonalTestRow{:d}Col{:d}'.format(row,col))
+		bit3 = self.model.NewBoolVar('AntiJSSBattenburgAllSameColorTestRow{:d}Col{:d}'.format(row,col))	
+		self.model.Add(self.cellColor[row][col] != self.cellColor[row+1][col+1]).OnlyEnforceIf(bit1)
+		self.model.Add(self.cellColor[row][col] == self.cellColor[row+1][col+1]).OnlyEnforceIf(bit1.Not())
+		self.model.Add(self.cellColor[row][col+1] != self.cellColor[row+1][col]).OnlyEnforceIf(bit2)
+		self.model.Add(self.cellColor[row][col+1] == self.cellColor[row+1][col]).OnlyEnforceIf(bit2.Not())
+		self.model.Add(self.cellColor[row][col] == self.cellColor[row+1][col]).OnlyEnforceIf(bit3)
+		self.model.Add(self.cellColor[row][col] != self.cellColor[row+1][col]).OnlyEnforceIf(bit3.Not())
+		self.model.AddBoolOr([bit1,bit2,bit3])
+		
+	def setAntiJSSBattenburgArray(self,cells):
+		for x in cells: self.setJSSAntiBattenburg(x)
+		
+	def __applyJSSBattenburgNegative(self):
+		for i in range(self.boardWidth-1):
+			for j in range(self.boardWidth-1):
+				if (i,j) not in self.jssBattenburgCells:
+					self.setJSSAntiBattenburg(i,j)
+
+	def applyNegativeConstraints(self):
+		# We are overloading this method for the JSS class to add JSS specific negative constraints
+		if self.isJSSBattenburgNegative is True: self.__applyJSSBattenburgNegative()
+		super().applyNegativeConstraints()
+		
 	def printCurrentSolution(self):
 		colorama.init()
 		dW = max([len(str(x)) for x in self.digits])

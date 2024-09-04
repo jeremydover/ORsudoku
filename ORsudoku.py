@@ -37,17 +37,6 @@ class SolutionPrinter(cp_model.CpSolverSolutionCallback):
 		cntr = 0
 				
 		if self.__testMode is True:
-		#	## This is a hack to detect if we got transform variables
-		#	if len(self.__variables) > self.__boardWidth**2:
-		#		thisSolution = ''
-		#		for i in range(self.__boardWidth**2):
-		#			if self.Value(self.__variables[i+self.__boardWidth**2]) > 0:
-		#				thisSolution += '*'+str(self.Value(self.__variables[i]))+'*'
-		#			else:
-		#				thisSolution += str(self.Value(self.__variables[i]))
-		#		self.__testStringArray.append(thisSolution)
-		#	else:
-		#		self.__testStringArray.append(''.join(map(str,[self.Value(v) for v in self.__variables])))
 			self.__testStringArray.append(''.join(map(str,[self.Value(v) for v in self.__variables])))
 		
 		elif self.__printAll is True:
@@ -1777,7 +1766,7 @@ class sudoku:
 			for y in adjCells:
 				self.model.Add(self.cellValues[x[0]][x[1]] != self.cellValues[y[0]][y[1]])
 
-	def setZone(self,inlist,values):
+	def setZone(self,inlist,values,nulls={}):
 		# A zone is an area with potentially repeating values; the clue is a list of digits that must appear in the zone
 		inlist = self.__procCellList(inlist)
 		for x in set(values):
@@ -1793,6 +1782,20 @@ class sudoku:
 				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] != x).OnlyEnforceIf(c.Not())
 				
 			self.model.Add(sum(xVars) == values.count(x))
+			
+		for x in nulls:
+			xVars = []
+			for i in range(len(inlist)):
+				c = self.model.NewBoolVar('ZoneR{:d}C{:d}V{:d}'.format(inlist[i][0],inlist[i][1],x))
+				# Tie Boolean to integer so we can count instances
+				cI = self.model.NewIntVar(0,1,'ZoneIntR{:d}C{:d}V{:d}'.format(inlist[i][0],inlist[i][1],x))
+				self.model.Add(cI == 1).OnlyEnforceIf(c)
+				self.model.Add(cI == 0).OnlyEnforceIf(c.Not())
+				xVars.append(cI)
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] == x).OnlyEnforceIf(c)
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] != x).OnlyEnforceIf(c.Not())
+				
+			self.model.Add(sum(xVars) == 0)
 			
 	def setOrderSumCages(self,inlist,slow=False,repeat=False):
 		# A list of cages whose sum increases based on the order in the list
@@ -3848,7 +3851,52 @@ class sudoku:
 		for i in range(len(inlist)):
 			self.model.Add(mySum == 2*self.cellValues[inlist[i][0]][inlist[i][1]]).OnlyEnforceIf(vars[i])
 		self.model.AddBoolOr(vars)
-			
+		
+	def setUniquePairsLines(self,listOfLists):
+		allPairMarkers = []
+		for inlist in listOfLists:
+			inlist = self.__procCellList(inlist)
+			self.model.AddAllDifferent([self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(len(inlist))])
+			for x in range(len(inlist)):
+				for y in range(x+1,len(inlist)):
+					marker1 = self.model.NewIntVar(self.minDigit*self.digitRange+self.minDigit,self.maxDigit*self.digitRange+self.maxDigit,"variableName")
+					self.model.Add(marker1 == self.cellValues[inlist[x][0]][inlist[x][1]]*self.digitRange+self.cellValues[inlist[y][0]][inlist[y][1]])
+					allPairMarkers.append(marker1)
+					marker2 = self.model.NewIntVar(self.minDigit*self.digitRange+self.minDigit,self.maxDigit*self.digitRange+self.maxDigit,"variableName")
+					self.model.Add(marker2 == self.cellValues[inlist[y][0]][inlist[y][1]]*self.digitRange+self.cellValues[inlist[x][0]][inlist[x][1]])
+					allPairMarkers.append(marker2)
+		self.model.AddAllDifferent(allPairMarkers)
+		
+	def setCellIndexLines(self,listOfLists):
+		endBools = []
+		for thislist in listOfLists:
+			inlist = self.__procCellList(thislist)
+			rowBitmap = self.__varBitmap('CellLine',self.boardWidth)
+			colBitmap = self.__varBitmap('CellLine',self.boardWidth)
+			endBool = self.model.NewBoolVar('CellLine')
+			endBools.append(endBool)
+			for j in range(self.boardWidth):
+				self.model.Add(self.cellValues[inlist[1][0]][inlist[1][1]] == j+1).OnlyEnforceIf(colBitmap[j])
+				for i in range(self.boardWidth):
+					self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] == i+1).OnlyEnforceIf(rowBitmap[i]+[endBool])
+					self.model.Add(self.cellValues[inlist[2][0]][inlist[2][1]] == i+1).OnlyEnforceIf(rowBitmap[i]+[endBool.Not()])
+					self.model.Add(self.cellValues[i][j] == self.cellValues[inlist[2][0]][inlist[2][1]]).OnlyEnforceIf(rowBitmap[i]+colBitmap[j]+[endBool])
+					self.model.Add(self.cellValues[i][j] == self.cellValues[inlist[0][0]][inlist[0][1]]).OnlyEnforceIf(rowBitmap[i]+colBitmap[j]+[endBool.Not()])
+
+		for i in range(len(listOfLists)):
+			iInlist = self.__procCellList(listOfLists[i])
+			for j in range(i+1,len(listOfLists)):
+				jInlist = self.__procCellList(listOfLists[j])
+				self.model.Add(self.cellValues[iInlist[1][0]][iInlist[1][1]] != self.cellValues[jInlist[1][0]][jInlist[1][1]])
+				self.model.Add(self.cellValues[iInlist[0][0]][iInlist[0][1]] != self.cellValues[jInlist[0][0]][jInlist[0][1]]).OnlyEnforceIf([endBools[i],endBools[j]])
+				self.model.Add(self.cellValues[iInlist[2][0]][iInlist[2][1]] != self.cellValues[jInlist[2][0]][jInlist[2][1]]).OnlyEnforceIf([endBools[i],endBools[j]])
+				self.model.Add(self.cellValues[iInlist[2][0]][iInlist[2][1]] != self.cellValues[jInlist[0][0]][jInlist[0][1]]).OnlyEnforceIf([endBools[i].Not(),endBools[j]])
+				self.model.Add(self.cellValues[iInlist[0][0]][iInlist[0][1]] != self.cellValues[jInlist[2][0]][jInlist[2][1]]).OnlyEnforceIf([endBools[i].Not(),endBools[j]])
+				self.model.Add(self.cellValues[iInlist[2][0]][iInlist[2][1]] != self.cellValues[jInlist[2][0]][jInlist[2][1]]).OnlyEnforceIf([endBools[i].Not(),endBools[j].Not()])
+				self.model.Add(self.cellValues[iInlist[0][0]][iInlist[0][1]] != self.cellValues[jInlist[0][0]][jInlist[0][1]]).OnlyEnforceIf([endBools[i].Not(),endBools[j].Not()])
+				self.model.Add(self.cellValues[iInlist[2][0]][iInlist[2][1]] != self.cellValues[jInlist[0][0]][jInlist[0][1]]).OnlyEnforceIf([endBools[i],endBools[j].Not()])
+				self.model.Add(self.cellValues[iInlist[0][0]][iInlist[0][1]] != self.cellValues[jInlist[2][0]][jInlist[2][1]]).OnlyEnforceIf([endBools[i],endBools[j].Not()])
+				
 ####Model solving
 	def applyNegativeConstraints(self):
 		# This method is used to prepare the model for solution. If negative constraints have been set, i.e. all items not marked
@@ -4160,6 +4208,40 @@ class quattroQuadri(sudoku):
 		inlist = self.__procCellList(inlist)
 		self.regions.append(inlist)
 		self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in self.regions[-1]])
+		
+	def setEntropicKnightTour(self):
+		tourRow = [self.model.NewIntVar(0,6,'') for i in range(36)]
+		tourCol = [self.model.NewIntVar(0,6,'') for i in range(36)]
+		
+		for i in range(35):
+			# Ensure all cells in tour are different
+			for j in range(i+1,35):
+				self.model.Add(6*tourRow[i]+tourCol[i] != 6*tourRow[j]+tourCol[j])
+			
+			# Ensure next cell is knight move. 8 possibilities, so 3 variables
+			r1c2 = self.model.NewBoolVar('')
+			rpm = self.model.NewBoolVar('')
+			cpm = self.model.NewBoolVar('')
+			self.model.Add(tourRow[(i+1) % 36] == tourRow[i]+1).OnlyEnforceIf([r1c2,rpm])
+			self.model.Add(tourRow[(i+1) % 36] == tourRow[i]-1).OnlyEnforceIf([r1c2,rpm.Not()])
+			self.model.Add(tourRow[(i+1) % 36] == tourRow[i]+2).OnlyEnforceIf([r1c2.Not(),rpm])
+			self.model.Add(tourRow[(i+1) % 36] == tourRow[i]-2).OnlyEnforceIf([r1c2.Not(),rpm.Not()])
+			self.model.Add(tourCol[(i+1) % 36] == tourCol[i]+2).OnlyEnforceIf([r1c2,cpm])
+			self.model.Add(tourCol[(i+1) % 36] == tourCol[i]-2).OnlyEnforceIf([r1c2,cpm.Not()])
+			self.model.Add(tourCol[(i+1) % 36] == tourCol[i]+1).OnlyEnforceIf([r1c2.Not(),cpm])
+			self.model.Add(tourCol[(i+1) % 36] == tourCol[i]-1).OnlyEnforceIf([r1c2.Not(),cpm.Not()])
+			
+		# Now the ugly part: ensuring entropic
+		self._sudoku__setEntropy()
+		for k in range(36):
+			varBitmap = self._sudoku__varBitmap('',36)
+			varTrack = 0
+			for i in range(6):
+				for j in range(6):
+					self.model.Add(tourRow[k] == i).OnlyEnforceIf(varBitmap[varTrack])
+					self.model.Add(tourCol[k] == j).OnlyEnforceIf(varBitmap[varTrack])
+					self.model.Add(self.cellEntropy[i][j] == (varTrack % 3)).OnlyEnforceIf(varBitmap[varTrack])
+					varTrack = varTrack + 1
 
 class cellTransformSudoku(sudoku):
 	"""A class used to implement doubler puzzles. A doubler puzzle has a doubler in each row, column and region. Moreover, each digit is doubled exactly one time. The digit entered is used to determine normal Sudoku contraints, i.e., one of each digit per row, column and region. But for each other constraint, its value needs to be doubled. There are optional parameters to modify the operation from doubling to an arbitrary ratio and/or shift."""	
