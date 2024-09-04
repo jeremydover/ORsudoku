@@ -1,3 +1,7 @@
+9/4/2024 bis
+	Added alias for Look-And-Say Cages that parses the typical clue string, and creates the appropriate zone.
+	Added support for psycho look-and-say cages. Thanks to The Book Wyrm for the inspiration and initial ideas on coding.
+
 9/4/2024
 	Added support for Unique Pairs Lines, a set of lines where each line has no repeats, and the set of digits on any pair of lines have a most one common digit. Constraint due to Paletron...thanks!
 	Added support for cell index lines, a set of lines which index a set of cells, in different rows, columns, and having different digits, such that read one direction or the other, the line indexes a row/column/value triple. Constraint due to KenGlue...thanks!

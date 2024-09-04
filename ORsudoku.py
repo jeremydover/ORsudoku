@@ -1797,6 +1797,56 @@ class sudoku:
 				
 			self.model.Add(sum(xVars) == 0)
 			
+	def setLookAndSayCage(self,inlist,value):
+		# A look and say is basically a zone, possibly with nulls. Just need to parse the string and pass to setZone
+		s = list(value)
+		values=[]
+		nulls=set()
+		while len(s) > 0:
+			count = int(s.pop(0))
+			value = int(s.pop(0))
+			if count == 0:
+				nulls.add(value)
+			else:
+				values = values + [value for i in range(count)]
+		self.setZone(inlist,values,nulls)
+		
+	def setPsychoLookAndSayCage(self,inlist,value):
+		inlist = self.__procCellList(inlist)
+		# First use the copied psycho code to get a list of variables to which the psycho cage actually refers
+		refDigits = []
+		for i in range(len(inlist)):
+			relRow = inlist[i][0] % 3
+			relCol = inlist[i][1] % 3
+			varBitmap = self.__varBitmap('PsychoKillerRow{:d}Col{:d}'.format(inlist[i][0],inlist[i][1]),self.boardWidth)
+			c = self.model.NewIntVar(1,self.boardWidth,'PKRefDigit')
+			for j in range(self.boardWidth):
+				refRow = 3*(j//3) + relRow
+				refCol = 3*(j%3) + relCol
+				self.model.Add(c == self.cellValues[refRow][refCol]).OnlyEnforceIf(varBitmap[j])
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] == j+1).OnlyEnforceIf(varBitmap[j])
+			refDigits.append(c)
+		
+		# Now, we need to count digits amongst these referred variables. We copy the look-and-say parsing code to get a value and its number of appearances.
+		s = list(value)
+		while len(s) > 0:
+			count = int(s.pop(0))
+			x = int(s.pop(0))
+			
+			# Now we should be able to copy the cell counting code from zones to get us home.
+			xVars = []
+			for i in range(len(refDigits)):
+				c = self.model.NewBoolVar('PsychoLookAndSayR{:d}C{:d}V{:d}'.format(inlist[i][0],inlist[i][1],x))
+				# Tie Boolean to integer so we can count instances
+				cI = self.model.NewIntVar(0,1,'PsychoLookAndSayIntR{:d}C{:d}V{:d}'.format(inlist[i][0],inlist[i][1],x))
+				self.model.Add(cI == 1).OnlyEnforceIf(c)
+				self.model.Add(cI == 0).OnlyEnforceIf(c.Not())
+				xVars.append(cI)
+				self.model.Add(refDigits[i] == x).OnlyEnforceIf(c)
+				self.model.Add(refDigits[i] != x).OnlyEnforceIf(c.Not())
+				
+			self.model.Add(sum(xVars) == count)
+			
 	def setOrderSumCages(self,inlist,slow=False,repeat=False):
 		# A list of cages whose sum increases based on the order in the list
 		inlist = list(map(self.__procCellList,inlist))

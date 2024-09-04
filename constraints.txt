@@ -132,6 +132,7 @@ Parity Quads (2x2 regions which contain both parities)
 Parity Snakes
 Pencilmarks
 Psycho Killer Cages - see Killer Cages
+Psycho Look-And-Say Cages - see Zones
 Pointing Arrows - see Arrows
 Pointing Differents
 Position Sums
@@ -1703,4 +1704,10 @@ setZone(list,values,nulls): sets a zone, i.e., a set of cells and a list of valu
   values: list of values to appear in the zone, which may include repeats
   nulls: a set of digits which may not appear in the zone.
   
-Note that this method can be used to implement look-and-say cages as well, just by interpreting the clue string as a list of values, e.g. 27 becomes [7,7]
+setLookAndSayCage(list,string): sets a look-and-say cage, where the string is the cage clue as written. So, "0123" will ensure the cage includes no 1s and exactly two threes
+  list: list of cell specifications
+  string: string of integers describing cell contents. Must be even length.
+  
+setPsychoLookAndSayCage(list,string): elements of the cage *provide a reference* to the digit in the same relative position in the box indicated by the cage element. The look-and-say string provides a verbal description of the contents of the referred cells.
+  list: list of cell specifications of cells in the cage
+  string: string of integers describing referred cell contents. Must be even length.
