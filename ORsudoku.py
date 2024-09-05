@@ -3980,6 +3980,7 @@ class sudoku:
 			if self.solveStatus == cp_model.OPTIMAL:
 				print('Solution found!')
 				self.printCurrentSolution()
+			return self.solveStatus
 
 	def preparePrintVariables(self):
 		consolidatedCellValues = []

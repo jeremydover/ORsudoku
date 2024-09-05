@@ -1,3 +1,6 @@
+9/5/2024
+	Added code to have findSolution return the solver status when not in test mode.
+
 9/4/2024 bis
 	Added alias for Look-And-Say Cages that parses the typical clue string, and creates the appropriate zone.
 	Added support for psycho look-and-say cages. Thanks to The Book Wyrm for the inspiration and initial ideas on coding.
