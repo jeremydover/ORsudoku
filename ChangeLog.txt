@@ -1,3 +1,6 @@
+10/1/2024
+	Added test case for full rank and parity party
+
 9/5/2024
 	Added code to have findSolution return the solver status when not in test mode.
 
