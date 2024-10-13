@@ -3946,6 +3946,23 @@ class sudoku:
 				self.model.Add(self.cellValues[iInlist[0][0]][iInlist[0][1]] != self.cellValues[jInlist[0][0]][jInlist[0][1]]).OnlyEnforceIf([endBools[i].Not(),endBools[j].Not()])
 				self.model.Add(self.cellValues[iInlist[2][0]][iInlist[2][1]] != self.cellValues[jInlist[0][0]][jInlist[0][1]]).OnlyEnforceIf([endBools[i],endBools[j].Not()])
 				self.model.Add(self.cellValues[iInlist[0][0]][iInlist[0][1]] != self.cellValues[jInlist[2][0]][jInlist[2][1]]).OnlyEnforceIf([endBools[i],endBools[j].Not()])
+
+	def setSplitPeaLine(self,inlist):
+		inlist = self.__procCellList(inlist)
+		endSame = self.model.NewBoolVar('SplitPeaLine')
+		firstTens = self.model.NewBoolVar('SplitPeaLine')
+		firstEnd = self.cellValues[inlist[0][0]][inlist[0][1]]
+		lastEnd = self.cellValues[inlist[len(inlist)-1][0]][inlist[len(inlist)-1][1]]
+		lineSum = sum(self.cellValues[inlist[i][0]][inlist[i][1]] for i in range(1,len(inlist)-1))
+		
+		self.model.Add(firstEnd == lastEnd).OnlyEnforceIf(endSame)
+		self.model.Add(lineSum == 10*firstEnd+lastEnd).OnlyEnforceIf(endSame)
+		self.model.AddBoolAnd(firstTens).OnlyEnforceIf(endSame) # Force other bool to be true...not needed in this case
+		
+		self.model.Add(firstEnd != lastEnd).OnlyEnforceIf(endSame.Not())
+		self.model.Add(lineSum == 10*firstEnd+lastEnd).OnlyEnforceIf([endSame.Not(),firstTens])
+		self.model.Add(lineSum == firstEnd+10*lastEnd).OnlyEnforceIf([endSame.Not(),firstTens.Not()])
+		
 				
 ####Model solving
 	def applyNegativeConstraints(self):

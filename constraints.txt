@@ -169,6 +169,8 @@ Skyscrapers
 Skyscraper Sums - see Skyscrapers
 Slingshots
 Slow Thermometers (see Thermometers)
+Split Pea Lines
+Split Pill Lines - see Split Pea Lines
 Sum Dots (see Killer Cages)
 Sum Sandwiches
 Thermometers
@@ -1486,6 +1488,11 @@ setSlingshot(row,col,tail,head): assert that the digit pointed to by tail from (
   row,col: The coordinates of the cell in which the slingshot arrow lies
   tail: the direction in which the tail of the arrow points; use class variables Up, Down, Left, Right
   head: the direction in which the head of the arrow points; use class variables Up, Down, Left, Right
+
+Split Pea Lines
+---------------
+setSplitPeaLine(inlist): the sum of the interior cells on the line is equal to some concatenation of the first digit and last digit of the line, where either may be the tens digit
+  inlist: list of cell specifications
 
 Sum Sandwiches
 --------------
