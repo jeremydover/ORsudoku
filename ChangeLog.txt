@@ -1,3 +1,8 @@
+12/28/2024
+	Updated position sum constraint to allow only one of position sum or value sum to be clued.
+	Updated documentation for Search Nine clues to indicate that a set of digits can be pointed to by an arrow.
+	Added test cases.
+
 10/13/2024
 	Added support for split pea/split pill lines
 

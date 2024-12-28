@@ -2379,11 +2379,11 @@ class sudoku:
 						self.model.Add(sum(self.cellValues[rFirst+k*vStep][cFirst+k*hStep] for k in range(self.boardWidth - allowableDigits[j],allowableDigits[i])) == value).OnlyEnforceIf(varBitmap[varTrack])
 					varTrack = varTrack + 1
 				
-	def setPositionSum(self,row1,col1,rc,value1,value2):
+	def setPositionSum(self,row1,col1,rc,positionSum=None,valueSum=None):
 		# row,col are the coordinates of the cell next to the clues
 		# rc is whether things are row/column
-		# value1 is the sum of the first two cells in the row/column
-		# value2 is the sum of the cells which the first two cells index
+		# positionSum is the sum of the first two cells in the row/column
+		# valueSum is the sum of the cells which the first two cells index
 		
 		# Convert from 1-base to 0-base
 		row = row1 - 1
@@ -2400,8 +2400,10 @@ class sudoku:
 				if i == j: continue
 				self.model.Add(self.cellValues[row][col] == allowableDigits[i]).OnlyEnforceIf(varBitmap[varTrack])
 				self.model.Add(self.cellValues[row+vStep][col+hStep] == allowableDigits[j]).OnlyEnforceIf(varBitmap[varTrack])
-				self.model.Add(self.cellValues[row][col] + self.cellValues[row+vStep][col+hStep] == value1).OnlyEnforceIf(varBitmap[varTrack])
-				self.model.Add(self.cellValues[row+(allowableDigits[i]-1)*vStep][col+(allowableDigits[i]-1)*hStep] + self.cellValues[row+(allowableDigits[j]-1)*vStep][col+(allowableDigits[j]-1)*hStep] == value2).OnlyEnforceIf(varBitmap[varTrack])
+				if positionSum is not None:
+					self.model.Add(self.cellValues[row][col] + self.cellValues[row+vStep][col+hStep] == positionSum).OnlyEnforceIf(varBitmap[varTrack])
+				if valueSum is not None:
+					self.model.Add(self.cellValues[row+(allowableDigits[i]-1)*vStep][col+(allowableDigits[i]-1)*hStep] + self.cellValues[row+(allowableDigits[j]-1)*vStep][col+(allowableDigits[j]-1)*hStep] == valueSum).OnlyEnforceIf(varBitmap[varTrack])
 				varTrack = varTrack + 1
 
 	def __setDigitsInBlock(self,inlist,values):

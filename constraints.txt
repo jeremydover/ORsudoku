@@ -1235,11 +1235,11 @@ setPointingDifferents(row1,col1,row2,col2,value): asserts that there are only va
 
 Position Sums
 -------------
-setPositionSum(row,col,rc,value1,values2): set a position sum, namely giving the sum (value1) of the first two cells adjacent to the clue (determined by row,col) and the sum of the two cells indexed by the first two cells in the column.
+setPositionSum(row,col,rc,positionSum,valueSum): set a position sum, namely giving the sum (positionSum) of the first two cells adjacent to the clue (determined by row,col) and the sum (valueSum) of the two cells indexed by the first two cells in the column. Neither positionSum nor valueSum is required, and only one can be given.
   row,col: The coordinates of the cell containing the cell next to which the clue values sit
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
-  value1: The sum of the first two cells from the clue direction
-  value2: The sume of the cells indexed by the first two cells from the clue direction (see Indexing)
+  positionSum: The sum of the first two cells from the clue direction
+  valueSum: The sume of the cells indexed by the first two cells from the clue direction (see Indexing)
 
 Quadruple
 ---------
@@ -1463,7 +1463,7 @@ Search Nine
 setSearchNine(row,col,uldr,digit): Arrow gives direction, cell value a distance to a cell with value digit.
   row,col: The coordinates of the cell in which the clue values sit
   uldr: Determines if the arrow points Up/Down/Left/Right...use class variables Up, Down, Left, and Right
-  digit: The value of the digit pointed to; optional, defaults to 9
+  digit: The value of the digit pointed to; optional, defaults to 9. Note: digit can be a *list*, if an arrow must point to one of several possible digits.
   
 Shift Lines
 -----------
