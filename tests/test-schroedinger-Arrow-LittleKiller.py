@@ -1,5 +1,5 @@
 import unittest
-import ORsudoku
+from schroedingerSudoku import schroedingerCellSudoku
   
 class TestPuzzle(unittest.TestCase):
 	# Puzzle: Schrödinger's Arrows
@@ -8,7 +8,7 @@ class TestPuzzle(unittest.TestCase):
 	# Constraints tested: schroedingerCellSudoku, setArrow, setLittleKiller
 	
 	def test_puzzle(self):
-		p = ORsudoku.schroedingerCellSudoku(3)
+		p = schroedingerCellSudoku(3)
 		p.setLittleKiller(1,1,2,2,84)
 		p.setLittleKiller(1,2,2,1,3)
 		p.setLittleKiller(1,8,2,9,5)

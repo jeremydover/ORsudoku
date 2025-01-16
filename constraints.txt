@@ -381,22 +381,27 @@ Cell Transform Sudoku
 ---------------------
 Inspired by the doubler rules invented by zetamath. Grid is as normal, but one cell in each row, column and region is transformed when used in other constraints. To model cell transform contraints requires use of a different class:
 
-p = ORsudoku.cellTransformSudoku(boardSizeRoot,canRepeatDigits,irregular,digitSet)
+from cellTransformSudoku import cellTransformSudoku
+p = cellTransformSudoku(boardSizeRoot,canRepeatDigits,irregular,digitSet)
   All three parameters are optional:
   canRepeatDigits: if canRepeatDigits is True, then the constraint that the base digits of all transformed cells need to be distinct is waived. Default is False
   irregular and digitSet are settable just like the regular Sudoku class
 
 By default the cellTransformSudoku class just implements Doubler Sudoku. Doubler Sudoku can also be initialized with:
-p = ORsudoku.doublerSudoku(boardSizeRoot,canRepeatDigits,irregular,digitSet)
+from cellTransformSudoku import doublerSudoku
+p = doublerSudoku(boardSizeRoot,canRepeatDigits,irregular,digitSet)
 
 To implement other rulesets, one needs additional classes:
 
+from cellTransformSudoku import negatorSudoku
 negatorSudoku(boardSizeRoot,canRepeatDigits,irregular,digitSet)
   Just like doubler Sudoku, but the designated cells are negated, not doubled
   
+from cellTransformSudoku import doubleOrNothingSudoku
 doubleOrNothingSudoku(boardSizeRoot,canRepeatDigits,irregular,digitSet)
   The designated cells are either doubled, or count as zero, in other constraints. Note: this behavior is consistent; each cell is either doubled or nothing, and does not vary depending on which constraint is applied.
   
+from cellTransformSudoku import affineTransformSudoku
 affineTransformSudoku(boardSizeRoot,ratio,shift,canRepeatDigits,irregular,digitSet)
   The parameters ratio and shift are required, and the transformed digits count as ratio*value+shift to all constraints.
   Doubler Sudoku is the same as affineTransformSudoku(3,2,0)
@@ -548,7 +553,8 @@ DoubleDoku
 ----------
 To model a DoubleDoku puzzle, you must use the class doubleDoku, e.g.
 
-p = ORsudoku.doubleDoku(boardSizeRoot)
+from multiSudoku import doubleDoku
+p = doubleDoku(boardSizeRoot)
 
 The sub-Sudoku puzzles are labelled:
 1
@@ -1283,14 +1289,15 @@ QuattroQuadri
 -------------
 To model a QuattroQuadri, you must use the class quattroQuadri, e.g.
 
-p = ORsudoku.quattroQuadri(boardSizeRoot,gridSize,irregular,digitSet)
+from quattroQuadri import quattroQuadri
+p = quattroQuadri(boardSizeRoot,gridSize,irregular,digitSet)
 	Assuming standard square regions, boardSizeRoot is the number of rows/columns in each region, and grid size is number of regions in each row/column of the grid. So a standard QuattroQuadri would have boardSizeRoot = 3 and gridSize = 2. These are the defaults, and need not be given in the declaration.
 	
 	irregular allows the possibility of setting irregular regions. Set to True and use the setRegion method to define regions. Default is False.
 	
 	digitSet is the set of digits allowed. Default is {1,2,3,4,5,6,7,8,9}.
 	
-	So a standard QuattroQuadri puzzle can be defined via p = ORsudoku.quattroQuadri(), with no options set.
+	So a standard QuattroQuadri puzzle can be defined via p = quattroQuadri(), with no options set.
 
 Region Sum Lines
 ----------------
@@ -1341,7 +1348,8 @@ Samurai Sudoku
 --------------
 To model a Samurai Sudoku puzzle, you must use the class samuraiSudoku, e.g.
 
-p = ORsudoku.samuraiSudoku(boardSizeRoot)
+from multiSudoku import samuraiSudoku
+p = samuraiSudoku(boardSizeRoot)
 
 The 5 sub-Sudoku puzzles are labelled
 1 2
@@ -1377,11 +1385,12 @@ setScary(row,col,diff): set a scary cell, i.e. a cell all of whose neighbors (or
   diff: Optional, default = 3...sets the difference required for neighboring cells of a scary cell
   
 There is a grid-wide version of scary cells that asserts there is a scary cell in each row, column and region. Use:
-p = ORsudoku.scarySudoku
+from scarySudoku import scarySudoku
+p = scarySudoku()
 The arguments to this constructor are the same as for sudoku, except for the additional parameters:
   diff: Optional, default = 3, sets the difference between scary cells and their neighbors
   noDiag: Optional, default is False, asserts there are no scary cells on the same diagonal (anti-queen)
-  allDifferent: Optional, default is Fase, asserts that the digits in scary cells are all different
+  allDifferent: Optional, default is False, asserts that the digits in scary cells are all different
 
 Schrödinger Cell Sudoku
 -----------------------
@@ -1389,10 +1398,11 @@ Allows creation of puzzles with Schrödinger cells. An additional digit (usually
 
 To model a Schrödinger Cell Sudoku puzzle, you must use the class schroedingerCellSudoku, e.g.
 
-p = ORsudoku.schroedingerCellSudoku(boardSizeRoot)
+from schroedingerSudoku import schroedingerCellSudoku
+p = schroedingerCellSudoku(boardSizeRoot)
 
   Note: the conventions around how S-cells interact with constraints are not standardized, so this attempts to be flexible. Particular issues:
-  1. Constraints such as extra regions and X sudoku normally elide the difference about whether all the digits in the area are the same, or whether all digits appear; these are equivalent in normal Sudoku. Here, the default behavior is to assume all digits appear, which forces an S-cell. However, but setting the "allDigits=False" flag in some some method calls, this behavior can be suppressed, and these constraints will only enforce that all digits are different.
+  1. Constraints such as extra regions and X sudoku normally elide the difference about whether all the digits in the area are the same, or whether all digits appear; these are equivalent in normal Sudoku. Here, the default behavior is to assume all digits appear, which forces an S-cell. However, by setting the "allDigits=False" flag in some some method calls, this behavior can be suppressed, and these constraints will only enforce that all digits are different.
   2. Constraints which use addition are fairly consistent that, when used as a summand, both digits of an S-cell should be added to the total. However, with conditions such as arrow clues, it is not obvious what to do if the target sum is an S-cell. By default, this code assumes that such a target sum CANNOT be an S-cell, since the sum assertion cannot possibly be true for both values. However, some puzzles assert that the sum of the Schrödinger cell digits should be the target sum, and this behavior is support with the "sSum=True" flag.
 
   Implemented Constraints

@@ -1,5 +1,5 @@
 import unittest
-import ORsudoku
+from cellTransformSudoku import negatorSudoku
   
 class TestPuzzle(unittest.TestCase):
 	# Puzzle: Elevator Down
@@ -8,7 +8,7 @@ class TestPuzzle(unittest.TestCase):
 	# Constraints tested: negatorSudoku, setNumberedRoom
 	
 	def test_puzzle(self):
-		p = ORsudoku.negatorSudoku(3)
+		p = negatorSudoku(3)
 		p.setNumberedRoom(1,1,p.Col,2)
 		p.setNumberedRoom(1,2,p.Col,8)
 		p.setNumberedRoom(1,3,p.Col,6)

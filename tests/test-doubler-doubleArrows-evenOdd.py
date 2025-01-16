@@ -1,5 +1,5 @@
 import unittest
-import ORsudoku
+from cellTransformSudoku import doublerSudoku
   
 class TestPuzzle(unittest.TestCase):
 	# Puzzle: Double, Double
@@ -8,7 +8,7 @@ class TestPuzzle(unittest.TestCase):
 	# Constraints tested: setDoubleArrow, setEven, doublerSudoku
 	
 	def test_puzzle(self):
-		p = ORsudoku.doublerSudoku(3)
+		p = doublerSudoku(3)
 		p.setEven(45)
 		p.setDoubleArrow([23,12,11,22,31,32])
 		p.setDoubleArrow([32,42,52,62])

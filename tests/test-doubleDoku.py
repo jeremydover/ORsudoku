@@ -1,5 +1,5 @@
 import unittest
-import ORsudoku
+from multiSudoku import doubleDoku
   
 class TestPuzzle(unittest.TestCase):
 	# Puzzle: Multi-Sudoku No. 90166
@@ -8,7 +8,7 @@ class TestPuzzle(unittest.TestCase):
 	# Constraints tested: doubleDoku, setDoubleDokuConstraint
 	
 	def test_puzzle(self):
-		p = ORsudoku.doubleDoku(3)
+		p = doubleDoku(3)
 		p.setDoubleDokuConstraint(1,'GivenArray',[121,175,218,266,313,357,368,461,555,589,639,692,733,746,797,816,862,938,959])
 		p.setDoubleDokuConstraint(2,'GivenArray',[287,296,389,575,681,698,768,814,827,936,963,972])
 				

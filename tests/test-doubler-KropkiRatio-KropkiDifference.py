@@ -1,5 +1,5 @@
 import unittest
-import ORsudoku
+from cellTransformSudoku import doublerSudoku
   
 class TestPuzzle(unittest.TestCase):
 	# Puzzle: Zeta and Kappa
@@ -8,7 +8,7 @@ class TestPuzzle(unittest.TestCase):
 	# Constraints tested: setKropkiRatio,setKropkiDifference,doubler
 	
 	def test_puzzle(self):
-		p = ORsudoku.doublerSudoku(3)
+		p = doublerSudoku(3)
 		p.setKropkiDifference(5)
 		p.setKropkiRatio(3)
 		p.setKropkiWhiteArray([110,120,341,381,441,450,460,561,610,640,661,711,791,830])

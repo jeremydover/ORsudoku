@@ -1,5 +1,5 @@
 import unittest
-import ORsudoku
+from cellTransformSudoku import negatorSudoku
   
 class TestPuzzle(unittest.TestCase):
 	# Puzzle: -X Sums
@@ -8,7 +8,7 @@ class TestPuzzle(unittest.TestCase):
 	# Constraints tested: negatorSudoku, setXSum
 	
 	def test_puzzle(self):
-		p = ORsudoku.negatorSudoku(3)
+		p = negatorSudoku(3)
 		p.setXSum(1,1,p.Row,43)
 		p.setXSum(1,9,p.Row,8)
 		p.setXSum(7,1,p.Row,43)

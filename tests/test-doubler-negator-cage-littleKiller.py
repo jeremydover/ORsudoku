@@ -1,5 +1,5 @@
 import unittest
-import ORsudoku
+from cellTransformSudoku import affineTransformSudoku
   
 class TestPuzzle(unittest.TestCase):
 	# Puzzle: Double Negative
@@ -8,7 +8,7 @@ class TestPuzzle(unittest.TestCase):
 	# Constraints tested: affineTransformSudoku, setCage, setLittleKiller
 	
 	def test_puzzle(self):
-		p = ORsudoku.affineTransformSudoku(3,-2,0)
+		p = affineTransformSudoku(3,-2,0)
 		p.setLittleKiller(1,1,2,2,0)
 		p.setLittleKiller(1,2,2,3,0)
 		p.setLittleKiller(2,1,3,2,0)
