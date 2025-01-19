@@ -1,3 +1,8 @@
+1/18/2025
+	Major re-factor of code into multiple files. Ideally no impact to functionality.
+	Added support for equal sum cages.
+	Added test cases.
+
 1/16/2025
 	Moved quattroQuadri class to its own file, updated documentation, test case and change log to support.
 	Moved cellTransformSudoku (doublers, negators, etc.) classes to their own file, updated documentation, test cases and change log to support.

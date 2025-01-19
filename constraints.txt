@@ -55,6 +55,7 @@ Entropki Dots (same/different entropy classes)
 Entropy (see Global Entropy)
 Entropy Battenburg (on a 2x2, no pair of same entropic cells are adjacent)
 Entropy Quads (partial Entropy, asserts Entropy on an individual 2x2)
+Equal Sum Cages
 Equiparity/Uniparity Cages - see More-Odd-Than-Even Cages
 Even Max Quads - see Quad Max Values
 Even-Odd
@@ -656,6 +657,11 @@ setAntiModularQuadArray(list): creates multiple anti-entropy quad constraints
   list: a list of cell specifications
   
 setModularQuadNegative(): specify that all cells not specifically designated with entropy quads do NOT satisfy the entropy quad constraint, i.e., some entropic rank will be missing around each quad which is not an entropy quad
+
+Equal Sum Cages
+---------------
+setEqualSumCages(inlist): asserts that the sum of the digits in each specified cage is the same
+  inlist: a list OF LISTS of cell specifications
 
 Even-Odd
 --------

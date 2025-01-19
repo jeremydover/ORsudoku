@@ -459,6 +459,14 @@ def setKnappDanebenCage(self,inlist,value):
 	c = self.model.NewBoolVar('KnappDaneben')
 	self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in inlist) == value+1).OnlyEnforceIf(c)
 	self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in inlist) == value-1).OnlyEnforceIf(c.Not())
+	
+def setEqualSumCages(self,inlist):
+	# A list of lists of cells, such that the sum of cells in each list is the same
+	thisList = self._procCellList(inlist[0])
+	baseSum = sum(self.cellValues[x[0]][x[1]] for x in thisList)
+	for i in range(1,len(inlist)):
+		thisList = self._procCellList(inlist[1])
+		self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in thisList) == baseSum)
 
 def setCapsule(self,inlist):
 	# A capsule has the same number of even and odd digits
