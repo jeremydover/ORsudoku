@@ -17,6 +17,7 @@ Before Nine - see Sandwich Sums
 Bent Diagonals - see XSudoku
 Between Lines
 Block Cages
+Bust
 Capsules
 Cell Index Lines
 Cell Transform Sudoku
@@ -30,6 +31,7 @@ Consecutive Quads
 Corner/Edge Clues
 Count the Odds Lines
 Counting Circles
+Crust Sandwich - see Sandwich Sums
 Cupid Clues
 David and Goliath Pairs
 Descriptive Pairs
@@ -164,6 +166,7 @@ Sandwich Sums
 Scary Cells
 Schrödinger Cell Sudoku
 Search Nine
+Sequence Lines
 Shaken Clone Regions - see Clone Regions
 Shift Lines
 Skyscrapers
@@ -368,6 +371,14 @@ setBlockCage(list,values): creates a block cage, that is an list of cells and a 
   list: list of cell specifications
   values: a list of values...if unambiguous the punctuation can be omitted, so that [1,2,3,9] and 1239 can both be entered as a value list
 
+Bust
+----
+setBust(row,col,rc,value,targetSum=21): creates a bust constraint, which is the number of cells it takes, reading from the clue, for the total sum to exceed the targetSum value (default 21)
+  row,col: The coordinates of the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  value: number of cells from clue whose sum first exceeds the given sum
+  targetSum: the target value to exceed, default 21
+
 Capsules
 --------
 setCapsule(inlist): creates a capsule, i.e., a region with the same number of even and odd digits. See also More-Odd-Than-Even cages
@@ -407,6 +418,15 @@ affineTransformSudoku(boardSizeRoot,ratio,shift,canRepeatDigits,irregular,digitS
   The parameters ratio and shift are required, and the transformed digits count as ratio*value+shift to all constraints.
   Doubler Sudoku is the same as affineTransformSudoku(3,2,0)
   Negator Sudoku is the same as affineTransformSudoku(3,-1,0)
+  
+Special methods for Cell Transform Sudoku
+setTransform(cell): asserts that a particular cell is a transform cell
+  cell: cell specification
+  
+setNotTransform(cell): asserts that a particular cell is not a transform cell
+  cell: cell specification
+  
+setTransformAntiKing(): asserts that two transform cells may not be within a king's move of each other, i.e. not diagonally adjacent
 
 Clock Lines
 -----------
@@ -722,7 +742,7 @@ setFirstSeenModular(row,col,rc,value): asserts the first digit with the same mod
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: first value equal to 0/1/2 mod 3 seen in the row/column
 
-Forbidden Conseuctive Sums
+Forbidden Consecutive Sums
 --------------------------
 setNoConsecutiveSum(list): asserts that no pair of adjacent cells can have digits that sum to a value in the list
   list: list of forbidden sum values
@@ -1383,6 +1403,19 @@ setOpenfacedSandwichSum(row,col,rc,value,digit): set an open-face sandwich sum c
   digit (optional): The sandwich digit. Optional, defaults to 9.
   
 setBeforeNine(row,col,rc,value): an alias for Openfaced sandwich sums, with sandwich digit 9
+
+Another option for sandwiches is to have sepcially designated "crust cells", subject to topological conditions (typically two per row/column/box) where
+sandwich sum is defined as being between the two crusts. Crust sandwich requires use of a different class, like so:
+
+from crustSandwichSudoku import crustSandwichSudoku
+p = crustSandwichSudoku(boardSizeRoot,enforceRegions=True,includeCrust=False)
+  Each row and column must have exactly two crust cells. By default, each region(box) will have two crust cells as well, but this restriction 
+  can be relaxed by setting enforceRegions to False. As in regular sandwich rules, the sandwich sum by default does not include the crust digits,
+  but this can also be relaxed by setting includeCrust to True. This class also inherits the irregular and digitSet parameters, which may be used
+  to define irregular regions and alternate digit sets. It might even work.
+  
+To set a crust sandwich clue, the normal setSandwichSum call as above can be used. There is an additional method:
+setCrustHasLength(): asserts that one of the crust digits must equal the number of cells in the sandwich for each sandwich
   
 Scary Cells
 -----------
@@ -1454,6 +1487,8 @@ p = schroedingerCellSudoku(boardSizeRoot)
     cell: rowcol or (row,col) cell specification
 	
   setIsNotSCellArray(list): set a list of cell specifications to not be Schrödinger cells
+  
+  setSchroedingerAntiKing(): asserts that no two Schrödinger cells are a king's move from each other, i.e. not diagonally adjacent
 
 There is an alternative class for Schrödinger sudoku, called superpositionSudoku. In this instance, the constraints are defined to be more akin to classic superposition, where either value can be used, and thus the values are never added or averaged. Each independently needs to be able to satisfy the constraint, perhaps with help from other S-cells. So for example, an arrow constraint with bulb 5/7 and arrow cells 2 and 3/5 would be legal, since 5,2,3 is a valid solution, as is 7,2,5. For another example, a Renban line could be 48,5,6,7, since either the 4 or 8 could pair with the other three digits, but 45,6,7,8 is not legal, since 4,6,7,8 is not a set of consecutive digits. On the gripping hand, 38,47,5,6 IS a legal renban assignment, since 3456 is legal, and 8756 is also legal. So not every combination of S-cell values needs to be legal, just at least one legal assignment for each value in each S-cell.
 
@@ -1481,6 +1516,11 @@ setSearchNine(row,col,uldr,digit): Arrow gives direction, cell value a distance 
   uldr: Determines if the arrow points Up/Down/Left/Right...use class variables Up, Down, Left, and Right
   digit: The value of the digit pointed to; optional, defaults to 9. Note: digit can be a *list*, if an arrow must point to one of several possible digits.
   
+Sequence Lines
+--------------
+setSequenceLine(inlist): digits on a sequence line form an arithmetic sequence (same difference) from one end to the other
+  inlist: list of cell specifications
+
 Shift Lines
 -----------
 setShiftLine(inlist): sets a shift line constraint; like a palindrome, but one side is uniformly one larger than the other

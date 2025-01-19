@@ -360,6 +360,13 @@ class schroedingerCellSudoku(sudoku):
 			for j in range(1,self.boardWidth):
 				self.model.AddAllDifferent([self.cellValues[i][j],self.cellValues[i+1][j-1],self.sCellValues[i][j],self.sCellValues[i+1][j-1]])
 
+	def setSchroedingerAntiKing(self):
+		# Asserts that no two S-cells can be a king's move apart, i.e. not diagonally adjacent
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				diagNeighbors = {(i-1,j-1),(i-1,j+1),(i+1,j-1),(i+1,j+1)} & {(k,m) for k in range(self.boardWidth) for m in range(self.boardWidth)}
+				self.model.AddBoolAnd([self.sCell[x[0]][x[1]].Not() for x in diagNeighbors]).OnlyEnforceIf(self.sCell[i][j])
+
 	def setAntiKnight(self):
 		for i in range(self.boardWidth):
 			for j in range(self.boardWidth):

@@ -204,6 +204,13 @@ class cellTransformSudoku(sudoku):
 			(row,col,value) = self._procCell(row)
 		self.model.Add(self.baseValues[row][col] == value)
 		
+	def setTransformAntiKing(self):
+		# Asserts that no two transform cells can be a king's move apart, i.e. not diagonally adjacent
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				diagNeighbors = {(i-1,j-1),(i-1,j+1),(i+1,j-1),(i+1,j+1)} & {(k,m) for k in range(self.boardWidth) for m in range(self.boardWidth)}
+				self.model.AddBoolAnd([self.double[x[0]][x[1]].Not() for x in diagNeighbors]).OnlyEnforceIf(self.double[i][j])
+		
 	def printCurrentSolution(self):
 		dW = max([len(str(x)) for x in self.digits])
 		colorama.init()

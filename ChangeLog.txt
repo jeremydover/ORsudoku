@@ -1,3 +1,10 @@
+1/19/2025
+	Added anti-king support for Schrödinger cells and transform cells (doublers), asserting that the modified cells are not diagonally adjacent.
+	Added support and test case for crust sandwiches.
+	Added support and test case for bust constraints. (h/t clover!)
+	Added support and test case for sequence lines.
+	Added additional test cases.
+
 1/18/2025
 	Major re-factor of code into multiple files. Ideally no impact to functionality.
 	Added support for equal sum cages.

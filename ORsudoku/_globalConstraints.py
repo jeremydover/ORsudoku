@@ -374,8 +374,8 @@ def setGlobalNeighborSum(self,sums=[],exceptions=[]):
 				gnsvars.append(cOn)
 			self.model.AddBoolOr(gnsvars).OnlyEnforceIf(exVars[len(exceptions)])
 			
-def setGlobalNeighbourSum(self):
-	self.setGlobalNeighborSum()
+def setGlobalNeighbourSum(self,sums=[],exceptions=[]):
+	self.setGlobalNeighborSum(sums,exceptions)
 
 def setGlobalEntropy(self):
 	self.setEntropyQuadArray([(i,j) for i in range(1,self.boardWidth) for j in range(1,self.boardWidth)])

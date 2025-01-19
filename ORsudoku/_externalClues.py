@@ -830,3 +830,12 @@ def setPointingDifferents(self,row1,col1,row2,col2,value):
 	# Note: we're keeping cells one-based, since we're passing to another function
 	cells = list({(row1+vStep*k,col1+hStep*k) for k in range(self.boardWidth)} & {(i,j) for i in range(1,self.boardWidth+1) for j in range(1,self.boardWidth+1)})
 	self.setDigitCountCage(cells,value)
+	
+def setBust(self,row1,col1,rc,value,targetSum=21):
+	row = row1 - 1
+	col = col1 - 1
+	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
+	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
+	
+	self.model.Add(sum(self.cellValues[row+j*vStep][col+j*hStep] for j in range(value-1)) <= targetSum)
+	self.model.Add(sum(self.cellValues[row+j*vStep][col+j*hStep] for j in range(value)) > targetSum)

@@ -563,3 +563,9 @@ def setSplitPeaLine(self,inlist):
 	self.model.Add(firstEnd != lastEnd).OnlyEnforceIf(endSame.Not())
 	self.model.Add(lineSum == 10*firstEnd+lastEnd).OnlyEnforceIf([endSame.Not(),firstTens])
 	self.model.Add(lineSum == firstEnd+10*lastEnd).OnlyEnforceIf([endSame.Not(),firstTens.Not()])
+	
+def setSequenceLine(self,inlist):
+	inlist = self._procCellList(inlist)
+	for i in range(1,len(inlist)):
+		self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]]-self.cellValues[inlist[i-1][0]][inlist[i-1][1]] == self.cellValues[inlist[1][0]][inlist[1][1]]-self.cellValues[inlist[0][0]][inlist[0][1]])
+		
