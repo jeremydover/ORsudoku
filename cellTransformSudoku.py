@@ -184,24 +184,24 @@ class cellTransformSudoku(sudoku):
 				
 	def setRegion(self,inlist):
 		# Allow setting of irregular regions
-		inlist = self.__procCellList(inlist)
+		inlist = self._procCellList(inlist)
 		self.regions.append(inlist)
 		self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in self.regions[-1]])
 		self.model.Add(sum(self.doubleInt[x[0]][x[1]] for x in inlist) == 1)	# Ensure one doubler per region
 				
 	def setTransform(self,row,col=-1):
 		if col == -1:
-			(row,col) = self._sudoku__procCell(row)
+			(row,col) = self._procCell(row)
 		self.model.AddBoolAnd([self.double[row][col]])
 	
 	def setNotTransform(self,row,col=-1):
 		if col == -1:
-			(row,col) = self._sudoku__procCell(row)
+			(row,col) = self._procCell(row)
 		self.model.AddBoolAnd([self.double[row][col].Not()])
 	
 	def setGiven(self,row,col=-1,value=-1):
 		if col == -1:
-			(row,col,value) = self._sudoku__procCell(row)
+			(row,col,value) = self._procCell(row)
 		self.model.Add(self.baseValues[row][col] == value)
 		
 	def printCurrentSolution(self):
@@ -252,7 +252,7 @@ class cellTransformSudoku(sudoku):
 	def addExcludedDigit(self,row,col=-1,value=-1):
 		# Strictly for listing candidates, sets a value that has been excluded from a cell
 		if col == -1:
-			(row,col,value) = self._sudoku__procCell(row)
+			(row,col,value) = self._procCell(row)
 		self.candTests[row][col][value-1] = False
 		
 	def addExcludedDigitArray(self,list):
@@ -260,7 +260,7 @@ class cellTransformSudoku(sudoku):
 	
 	def listCellCandidates(self,row,col=-1,quiet=False):
 		if col == -1:
-			(row,col) = self._sudoku__procCell(row)
+			(row,col) = self._procCell(row)
 			
 		good = []
 		digitList = list(self.baseDigits)

@@ -191,7 +191,7 @@ class japaneseSumSudoku(sudoku):
 			
 			# OK, we're also going to add ambiguity in here. If thisSum==0, we're not actually enforcing any specific sum, just a color, and vice versa
 			
-			varBitmap = self._sudoku__varBitmap('JSS',self.boardWidth)
+			varBitmap = self._varBitmap('JSS',self.boardWidth)
 			for i in range(self.boardWidth):
 				if thisColor > 0:
 					self.model.Add(self.cellColor[row+i*vStep][col+i*hStep] == thisColor).OnlyEnforceIf(varBitmap[i])
@@ -215,7 +215,7 @@ class japaneseSumSudoku(sudoku):
 		
 	def __assertShadedCell(self,row,col=-1,color=-1):
 		if col == -1:
-			args = self._sudoku__procCell(row)
+			args = self._sudoku_procCell(row)
 			row = args[0]
 			col = args[1]
 			if len(args) > 2:
@@ -234,7 +234,7 @@ class japaneseSumSudoku(sudoku):
 			
 	def assertUnshaded(self,row,col=-1):
 		if col == -1:
-			(row,col) = self._sudoku__procCell(row)
+			(row,col) = self._sudoku_procCell(row)
 			
 		self.model.AddBoolAnd(self.cellShaded[row][col].Not())
 		
@@ -246,18 +246,18 @@ class japaneseSumSudoku(sudoku):
 		self.__assertShadedCell(row,col,color)
 		
 	def assertFixedColorArray(self,inlist,color):
-		inlist = self._sudoku__procCellList(inlist)
+		inlist = self._sudoku_procCellList(inlist)
 		for x in inlist:
 			self.assertColor(x[0],x[1],color)
 			
 	def assertColorArray(self,inlist):
-		inlist = self._sudoku__procCellList(inlist)
+		inlist = self._sudoku_procCellList(inlist)
 		for x in inlist:
 			self.assertColor(x[0],x[1],x[2])
 	
 	def setJSSBattenburg(self,row,col=-1):
 		if col == -1:
-			(row,col) = self.__procCell(row)
+			(row,col) = self._procCell(row)
 		if self.isJSSBattenburgInitialized is not True:
 			self.jssBattenburgCells = [(row,col)]
 			self.isJSSBattenburgInitialized = True
@@ -279,7 +279,7 @@ class japaneseSumSudoku(sudoku):
 		
 	def setJSSAntiBattenburg(self,row,col=-1):
 		if col == -1:
-			(row,col) = self.__procCell(row)
+			(row,col) = self._procCell(row)
 		# No need to set battenburgInitialized...if we call negative later, this will just be duplicated.
 		bit1 = self.model.NewBoolVar('AntiJSSBattenburgMainDiagonalTestRow{:d}Col{:d}'.format(row,col))
 		bit2 = self.model.NewBoolVar('AntiJSSBattenburgOffDiagonalTestRow{:d}Col{:d}'.format(row,col))

@@ -195,7 +195,7 @@ class schroedingerCellSudoku(sudoku):
 				
 	def setRegion(self,inlist):
 		# Allow setting of irregular regions
-		inlist = self.__procCellList(inlist)
+		inlist = self._procCellList(inlist)
 		self.regions.append(inlist)
 		self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in inlist])
 		self.model.Add(sum(self.sCellInt[x[0]][x[1]] for x in inlist) == 1)	# Ensure one S-cell per region
@@ -276,7 +276,7 @@ class schroedingerCellSudoku(sudoku):
 		
 	def listCellCandidates(self,row,col=-1,quiet=False):
 		if col == -1:
-			(row,col) = self.__procCell(row)
+			(row,col) = self._procCell(row)
 			
 		good = []
 		sCell = False
@@ -433,7 +433,7 @@ class schroedingerCellSudoku(sudoku):
 				self.model.AddBoolAnd([cs]).OnlyEnforceIf(c.Not())
 				
 	def setGiven(self,spec):
-		T = self._sudoku__procCell(spec)
+		T = self._procCell(spec)
 		row = T[0]
 		col = T[1]
 		values = [T[i] for i in range(2,len(T))]
@@ -453,7 +453,7 @@ class schroedingerCellSudoku(sudoku):
 	
 	def setIsSCell(self,row,col=-1):
 		if col == -1:
-			(row,col) = self._sudoku__procCell(row)
+			(row,col) = self._procCell(row)
 		self.model.AddBoolAnd([self.sCell[row][col]])
 	
 	def setIsSCellArray(self,list):
@@ -461,7 +461,7 @@ class schroedingerCellSudoku(sudoku):
 		
 	def setIsNotSCell(self,row,col=-1):
 		if col == -1:
-			(row,col) = self._sudoku__procCell(row)
+			(row,col) = self._procCell(row)
 		self.model.AddBoolAnd([self.sCell[row][col].Not()])
 		
 	def setIsNotSCellArray(self,list):
@@ -469,7 +469,7 @@ class schroedingerCellSudoku(sudoku):
 
 	def setEvenOdd(self,row,col=-1,parity=-1):
 		if col == -1:
-			(row,col,parity) = self.__procCell(row)
+			(row,col,parity) = self._procCell(row)
 		if self.isParity is False:
 			self.__setParity()
 		self.model.Add(self.cellParity[row][col] == parity)
@@ -480,7 +480,7 @@ class schroedingerCellSudoku(sudoku):
 
 	def setMinMaxCell(self,row,col=-1,minmax=-1):
 		if col == -1:
-			(row,col,minmax) = self.__procCell(row)
+			(row,col,minmax) = self._procCell(row)
 		if row > 0:
 			self.model.Add(self.cellValues[row][col] < self.cellValues[row-1][col]) if minmax == 0 else self.model.Add(self.cellValues[row][col] > self.cellValues[row-1][col])
 			self.model.Add(self.sCellValues[row][col] < self.cellValues[row-1][col]).OnlyEnforceIf(self.sCell[row][col]) if minmax == 0 else self.model.Add(self.sCellValues[row][col] > self.cellValues[row-1][col]).OnlyEnforceIf(self.sCell[row][col])
@@ -500,7 +500,7 @@ class schroedingerCellSudoku(sudoku):
 		
 	def setKropkiWhite(self,row,col=-1,hv=-1):
 		if col == -1:
-			(row,col,hv) = self._sudoku__procCell(row)
+			(row,col,hv) = self._procCell(row)
 		if self.isKropkiInitialized is not True:
 			self.kropkiCells = [(row,col,hv)]
 			self.isKropkiInitialized = True
@@ -528,7 +528,7 @@ class schroedingerCellSudoku(sudoku):
 		
 	def setKropkiBlack(self,row,col=-1,hv=-1):
 		if col == -1:
-			(row,col,hv) = self._sudoku__procCell(row)
+			(row,col,hv) = self._procCell(row)
 		if self.isKropkiInitialized is not True:
 			self.kropkiCells = [(row,col,hv)]
 			self.isKropkiInitialized = True
@@ -559,7 +559,7 @@ class schroedingerCellSudoku(sudoku):
 		
 	def setXVV(self,row,col=-1,hv=-1):
 		if col == -1:
-			(row,col,hv) = self._sudoku__procCell(row)
+			(row,col,hv) = self._procCell(row)
 		if self.isXVInitialized is not True:
 			self.xvCells = [(row,col,hv)]
 			self.isXVInitialized = True
@@ -571,7 +571,7 @@ class schroedingerCellSudoku(sudoku):
 		
 	def setXVX(self,row,col=-1,hv=-1):
 		if col == -1:
-			(row,col,hv) = self._sudoku__procCell(row)
+			(row,col,hv) = self._procCell(row)
 		if self.isXVInitialized is not True:
 			self.xvCells = [(row,col,hv)]
 			self.isXVInitialized = True
@@ -583,13 +583,13 @@ class schroedingerCellSudoku(sudoku):
 
 	def setAntiXV(self,row,col=-1,hv=-1):
 		if col == -1:
-			(row,col,hv) = self.__procCell(row)
+			(row,col,hv) = self._procCell(row)
 		self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] + sCellSums[row][col] + self.sCellSums[row+hv][col+(1-hv)] != 5)
 		self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] + sCellSums[row][col] + self.sCellSums[row+hv][col+(1-hv)] != 10)
 	
 	def setXVXVV(self,row,col=-1,hv=-1):
 		if col == -1:
-			(row,col,hv) = self._sudoku__procCell(row)
+			(row,col,hv) = self._procCell(row)
 		if self.isXVXVInitialized is not True:
 			self.xvxvCells = [(row,col,hv)]
 			self.isXVXVInitialized = True
@@ -603,7 +603,7 @@ class schroedingerCellSudoku(sudoku):
 		
 	def setXVXVX(self,row,col=-1,hv=-1):
 		if col == -1:
-			(row,col,hv) = self._sudoku__procCell(row)
+			(row,col,hv) = self._procCell(row)
 		if self.isXVXVInitialized is not True:
 			self.xvxvCells = [(row,col,hv)]
 			self.isXVXVInitialized = True
@@ -618,7 +618,7 @@ class schroedingerCellSudoku(sudoku):
 	def setNeighborSum(self,row,col=-1,sSum=False):
 		# Cell whose value is the sum of its orthogonally adjacent neighbors
 		if col == -1:
-			(row,col) = self._sudoku__procCell(row)
+			(row,col) = self._procCell(row)
 		sCells = [self.cellValues[row+k][col+m] for k in [-1,0,1] for m in [-1,0,1] if abs(k) != abs(m) and row+k >= 0 and row+k < self.boardWidth and col+m >= 0 and col+m < self.boardWidth] + [self.sCellSums[row+k][col+m] for k in [-1,0,1] for m in [-1,0,1] if abs(k) != abs(m) and row+k >= 0 and row+k < self.boardWidth and col+m >= 0 and col+m < self.boardWidth]
 		
 		self.model.Add(sum(sCells) == self.cellValues[row][col]+self.sCellSums[row][col])
@@ -630,12 +630,12 @@ class schroedingerCellSudoku(sudoku):
 	
 	def setNeighbourSum(self,row,col=-1,sSum=False):
 		if col == -1:
-			(row,col) = self._sudoku__procCell(row)
+			(row,col) = self._procCell(row)
 		self.setNeighborSum(row,col,sSum)
 			
 	def setFriendly(self,row,col=-1):
 		if col == -1:
-			(row,col) = self._sudoku__procCell(row)
+			(row,col) = self._procCell(row)
 			
 		if self.isFriendlyInitialized is not True:
 			self.friendlyCells = [(row,col)]
@@ -673,18 +673,18 @@ class schroedingerCellSudoku(sudoku):
 		self.model.AddBoolAnd([rowSMatch,colSMatch,boxSMatch]).OnlyEnforceIf(self.sCell[row][col].Not())
 		
 	def setCage(self,inlist,value = None):
-		inlist = self._sudoku__procCellList(inlist)
+		inlist = self._procCellList(inlist)
 		self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in inlist] + [self.sCellValues[x[0]][x[1]] for x in inlist])
 		if value is not None:
 			self.model.Add(sum([self.cellValues[x[0]][x[1]] for x in inlist] + [self.sCellSums[x[0]][x[1]] for x in inlist]) == value)
 			
 	def setRepeatingCage(self,inlist,value):
-		inlist = self._sudoku__procCellList(inlist)
+		inlist = self._procCellList(inlist)
 		self.model.Add(sum([self.cellValues[x[0]][x[1]] for x in inlist] + [self.sCellSums[x[0]][x[1]] for x in inlist]) == value)
 		
 	def setBlockCage(self,inlist,values):
 		# A block cage is an area with a list of values that cannot appear in that area
-		inlist = self.__procCellList(inlist)
+		inlist = self._procCellList(inlist)
 		if isinstance(values,list):
 			myValues = values
 		else:
@@ -756,7 +756,7 @@ class schroedingerCellSudoku(sudoku):
 			self.model.AddBoolAnd([bit]).OnlyEnforceIf(self.sCell[row+(allowableDigits[i]-1)*vStep][col+(allowableDigits[i]-1)*hStep].Not())
 			
 	def setRenbanLine(self,inlist):
-		inlist = self._sudoku__procCellList(inlist)
+		inlist = self._procCellList(inlist)
 		# First the easy part: ensure all of the digits are different. The unassigned S-Cells will not get in the way, and we want to ensure the assigned ones are different from the regular cell values. So this is safe regardless of which are the S-cells
 		self.model.AddAllDifferent([self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(len(inlist))] + [self.sCellValues[inlist[j][0]][inlist[j][1]] for j in range(len(inlist))])
 		
@@ -775,20 +775,20 @@ class schroedingerCellSudoku(sudoku):
 					self.model.Add(x-y < len(varList)).OnlyEnforceIf(varBitmap[i])
 					
 	def setArrow(self,inlist,sSum=False):
-		inlist = self._sudoku__procCellList(inlist)
+		inlist = self._procCellList(inlist)
 		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] + self.sCellSums[inlist[0][0]][inlist[0][1]] == sum([self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(1,len(inlist))] + [self.sCellSums[inlist[j][0]][inlist[j][1]] for j in range(1,len(inlist))]))
 		if sSum is False:
 			self.model.AddBoolAnd([self.sCell[inlist[0][0]][inlist[0][1]].Not()])
 			
 	def setDoubleArrow(self,inlist,sSum=False):
-		inlist = self._sudoku__procCellList(inlist)
+		inlist = self._procCellList(inlist)
 		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] + self.sCellSums[inlist[0][0]][inlist[0][1]] + self.cellValues[inlist[-1][0]][inlist[-1][1]] + self.sCellSums[inlist[-1][0]][inlist[-1][1]] == sum([self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(1,len(inlist)-1)] + [self.sCellSums[inlist[j][0]][inlist[j][1]] for j in range(1,len(inlist)-1)]))
 		if sSum is False:
 			self.model.AddBoolAnd([self.sCell[inlist[0][0]][inlist[0][1]].Not()])
 			self.model.AddBoolAnd([self.sCell[inlist[-1][0]][inlist[-1][1]].Not()])
 			
 	def setThermo(self,inlist):
-		inlist = self._sudoku__procCellList(inlist)
+		inlist = self._procCellList(inlist)
 		for j in range(len(inlist)-1):
 			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] < self.cellValues[inlist[j+1][0]][inlist[j+1][1]])
 			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] < self.sCellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(self.sCell[inlist[j+1][0]][inlist[j+1][1]])
@@ -796,7 +796,7 @@ class schroedingerCellSudoku(sudoku):
 			self.model.Add(self.sCellValues[inlist[j][0]][inlist[j][1]] < self.sCellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf([self.sCell[inlist[j][0]][inlist[j][1]],self.sCell[inlist[j+1][0]][inlist[j+1][1]]])
 			
 	def setSlowThermo(self,inlist):
-		inlist = self._sudoku__procCellList(inlist)
+		inlist = self._procCellList(inlist)
 		for j in range(len(inlist)-1):
 			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] <= self.cellValues[inlist[j+1][0]][inlist[j+1][1]])
 			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] <= self.sCellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(self.sCell[inlist[j+1][0]][inlist[j+1][1]])
@@ -804,7 +804,7 @@ class schroedingerCellSudoku(sudoku):
 			self.model.Add(self.sCellValues[inlist[j][0]][inlist[j][1]] <= self.sCellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf([self.sCell[inlist[j][0]][inlist[j][1]],self.sCell[inlist[j+1][0]][inlist[j+1][1]]])
 			
 	def setBetweenLine(self,inlist):
-		inlist = self._sudoku__procCellList(inlist)
+		inlist = self._procCellList(inlist)
 		c = self.model.NewBoolVar('BetweenRow{:d}Col{:d}ToRow{:d}Col{:d}'.format(inlist[0][0],inlist[0][1],inlist[-1][0],inlist[-1][1]))
 		
 		# Case c true: first element of line is largest. In the S-cell case, the Schroedinger value is always larger than the normal value, so if the constraint is met with respect to the cell value, it will also be met with respect to the S-value. So as long as the cell value is greater than the other end (and its potential S-cell, which we need to control for), we're OK.
@@ -832,7 +832,7 @@ class schroedingerCellSudoku(sudoku):
 			
 	def setVault(self,inlist):
 		# Digits in a vault cannot appear in any cell outside the vault but orthogonally adjacent ot a cell in it.
-		inlist = self._sudoku__procCellList(inlist)
+		inlist = self._procCellList(inlist)
 		adjCells = set()
 		for i in range(len(inlist)):
 			adjCells = adjCells.union({(inlist[i][0],inlist[i][1]-1),(inlist[i][0],inlist[i][1]+1),(inlist[i][0]+1,inlist[i][1]),(inlist[i][0]-1,inlist[i][1])})
@@ -848,7 +848,7 @@ class schroedingerCellSudoku(sudoku):
 	def setParityLine(self,inlist):
 		if self.isParity is False:
 			self.__setParity()
-		inlist = self._sudoku__procCellList(inlist)
+		inlist = self._procCellList(inlist)
 		for j in range(len(inlist)):
 			self.model.Add(self.cellParity[inlist[j][0]][inlist[j][1]] == self.sCellParity[inlist[j][0]][inlist[j][1]])
 		
@@ -856,7 +856,7 @@ class schroedingerCellSudoku(sudoku):
 			self.model.Add(self.cellParity[inlist[j][0]][inlist[j][1]] != self.cellParity[inlist[j+1][0]][inlist[j+1][1]])
 
 	def setRegionSumLine(self,inlist):
-		inlist = self._sudoku__procCellList(inlist)
+		inlist = self._procCellList(inlist)
 		sumSets = []
 		for region in self.regions:
 			tempSum = [self.cellValues[x[0]][x[1]] + self.sCellSums[x[0]][x[1]] for x in set(region) & set(inlist)]
@@ -870,7 +870,7 @@ class schroedingerCellSudoku(sudoku):
 		# This is used for variants where the sums for each segment of the line have the same sum
 		# in each region. If a line enters a region twice, each segment must have the same sum as all
 		# other segments...the visits do not aggregate
-		inlist = self._sudoku__procCellList(inlist)
+		inlist = self._procCellList(inlist)
 		sumSets = []
 		currentRegionStart = 0
 		for i in range(len(self.regions)):
@@ -895,7 +895,7 @@ class superpositionSudoku(schroedingerCellSudoku):
 	   
 	def __setSuperpositionArrow(self,inlist,singleDouble):
 		# Single/double determines if this is a single or double arrow
-		inlist = self._sudoku__procCellList(inlist)
+		inlist = self._procCellList(inlist)
 		# This is really effin' complicated, so I want to write down how I plan to do it.
 		# Step 1: Break into cases based on where the Schroedinger cells are on the line. I thought I couldn't do this with
 		#         varBitmap, but I can since I'm going to be reusing my case variables.
@@ -975,7 +975,7 @@ class superpositionSudoku(schroedingerCellSudoku):
 						self.model.Add(m + k != 15)
 
 	def setRenbanLine(self,inlist):
-		inlist = self._sudoku__procCellList(inlist)
+		inlist = self._procCellList(inlist)
 		# First the easy part: ensure all of the digits are different. The unassigned S-Cells will not get in the way, and we want to ensure the assigned ones are different from the regular cell values. So this is safe regardless of which are the S-cells
 		self.model.AddAllDifferent([self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(len(inlist))] + [self.sCellValues[inlist[j][0]][inlist[j][1]] for j in range(len(inlist))])
 		
