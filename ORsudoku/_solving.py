@@ -153,7 +153,7 @@ def listCandidates(self):
 def addExcludedDigit(self,row,col=-1,value=-1):
 	# Strictly for listing candidates, sets a value that has been excluded from a cell
 	if col == -1:
-		(row,col,value) = self.__procCell(row)
+		(row,col,value) = self._procCell(row)
 	digitList = list(self.digits)
 	self.candTests[row][col][digitList.index(value)] = False
 	
@@ -162,7 +162,7 @@ def addExcludedDigitArray(self,list):
 
 def listCellCandidates(self,row,col=-1,quiet=False):
 	if col == -1:
-		(row,col) = self.__procCell(row)
+		(row,col) = self._procCell(row)
 		
 	good = []
 	digitList = list(self.digits)

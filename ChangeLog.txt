@@ -1,3 +1,8 @@
+1/19/2025 bis
+	Fixed syntax error in _solving module for listCandidates solving method.
+	Updated setNearestNeighbors method to accept a single direction as an int, instead of a list with a single int.
+	Added additional test cases.
+
 1/19/2025
 	Added anti-king support for Schrödinger cells and transform cells (doublers), asserting that the modified cells are not diagonally adjacent.
 	Added support and test case for crust sandwiches.

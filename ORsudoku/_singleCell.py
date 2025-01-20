@@ -247,6 +247,8 @@ def setCupid(self,row1,col1,row2,col2):
 def setNearestNeighbor(self,row1,col1,pointers):
 	row = row1 - 1
 	col = col1 - 1
+	if type(pointers) is int:
+		pointers = [pointers]
 	allNeighbors = {(row+i,col+j) for i in [-1,0,1] for j in [-1,0,1] if abs(i) != abs(j)} & {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)}
 	vDict = {}
 	for x in allNeighbors:

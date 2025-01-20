@@ -1108,7 +1108,7 @@ Nearest Neighbor
 ----------------
 setNearestNeighbor(row,col,pointers): arrows in a cell point to the orthogonal neighbor that has the closest digit; multiple arrows may occur if two or more neighbors are equidistant
 	row,col: the cell in question
-	pointers: a *list* of directions: use class variables Up, Down, Left and Right
+	pointers: a single direction, or a list of directions: use class variables Up, Down, Left and Right
 
 Neighbor Sums
 -------------
