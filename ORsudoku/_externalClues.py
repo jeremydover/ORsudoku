@@ -332,6 +332,10 @@ def setOutside(self,row1,col1,rc,valueList):
 	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
 	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
 	
+	if 'Outside' not in self._constraintInitialized:
+		self._constraintInitialized.append('Outside')
+		self.outsideLength = -1
+
 	if self.outsideLength == -1:
 		# Clue is based on the region
 		candCells = {(row+i*vStep,col+i*hStep) for i in range(self.boardWidth)}
@@ -353,6 +357,10 @@ def setOutsideDiagonal(self,row1,col1,row2,col2,valueList):
 	hStep = col2 - col1
 	vStep = row2 - row1
 	
+	if 'Outside' not in self._constraintInitialized:
+		self._constraintInitialized.append('Outside')
+		self.outsideLength = -1
+		
 	if self.outsideLength == -1:
 		# Clue is based on the region
 		candCells = {(row+i*vStep,col+i*hStep) for i in range(self.boardWidth)}
@@ -366,6 +374,8 @@ def setOutsideDiagonal(self,row1,col1,row2,col2,valueList):
 	self._setDigitsInBlock(clueCells,valueList)
 
 def setOutsideLength(self,value):
+	if 'Outside' not in self._constraintInitialized:
+		self._constraintInitialized.append('Outside')
 	self.outsideLength = value
 
 def setCornerEdge(self,box1,ce,valueList):
@@ -399,9 +409,10 @@ def setRossini(self,row1,col1,udlr):
 	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
 	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
 
-	if self.isRossiniInitialized is not True:
+	if 'Rossini' not in self._constraintInitialized:
+		self.rossiniLength = -1
 		self.rossiniCells = [(row,col,rc)]
-		self.isRossiniInitialized = True
+		self._constraintInitialized.append('Rossini')
 	else:
 		self.rossiniCells.append((row,col,rc))
 	
@@ -427,13 +438,17 @@ def setRossini(self,row1,col1,udlr):
 			self.model.Add(clueCells[i] < clueCells[i+1])
 			
 def setRossiniLength(self,value):
+	if 'Rossini' not in self._constraintInitialized:
+		self.rossiniCells = [(row,col,rc)]
+		self._constraintInitialized.append('Rossini')
 	self.rossiniLength = value
 
 def setRossiniNegative(self):
-	if self.isRossiniInitialized is not True:
-		self.rossiniCells = []
-		self.isRossiniInitialized = True
-	self.isRossiniNegative = True
+	if 'Rossini' not in self._constraintInitialized:
+		self.rossiniLength = -1
+		self.rossiniCells = [(row,col,rc)]
+		self._constraintInitialized.append('Rossini')
+	self._constraintNegative.append('Rossini')
 	
 def _applyRossiniNegative(self):
 	for i in range(0,self.boardWidth,self.boardWidth-1):	# Gives two values 0 and self.boardWidth-1...picks top/bottom , left/right

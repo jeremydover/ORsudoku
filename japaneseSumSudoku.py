@@ -18,49 +18,8 @@ class japaneseSumSudoku(sudoku):
 		self.nColors = numberOfColors
 		self.colorMap = [(Fore.WHITE,Back.BLACK),(Fore.BLACK,Back.WHITE),(Fore.BLACK,Back.RED),(Fore.WHITE,Back.BLUE),(Fore.BLACK,Back.MAGENTA),(Fore.BLACK,Back.YELLOW),(Fore.BLACK,Back.CYAN),(Fore.WHITE,Back.GREEN)]
 
-		self.isBattenburgInitialized = False
-		self.isBattenburgNegative = False
-		
-		self.isJSSBattenburgInitialized = False
-		self.isJSSBattenburgNegative = False
-		
-		self.isKropkiInitialized = False
-		self.isKropkiNegative = False
-		self.kropkiDiff = 1
-		self.kropkiRatio = 2
-		
-		self.isFriendlyInitialized = False
-		self.isFriendlyNegative = False
-		
-		self.isRossiniInitialized = False
-		self.isRossiniNegative = False
-		self.rossiniLength = -1
-		self.outsideLength = -1
-		
-		self.isXVInitialized = False
-		self.isXVNegative = False
-		
-		self.isXVXVInitialized = False
-		self.isXVXVNegative = False
-		
-		self.isXYDifferenceInitialized = False
-		self.isXYDifferenceNegative = False
-		
-		self.isEntropyQuadInitialized = False
-		self.isEntropyQuadNegative = False		
-		
-		self.isModularQuadInitialized = False
-		self.isModularQuadNegative = False
-
-		self.isEntropyBattenburgInitialized = False
-		self.isEntropyBattenburgNegative = False
-		
-		self.isConsecutiveQuadInitialized = False
-		self.isConsecutiveQuadNegative = False
-		
-		self.isParityQuadInitialized = False
-		self.isParityQuadNegative = False
-		self.parityQuadExcluded = [0,4]
+		self._constraintInitialized = []
+		self._constraintNegative = []
 		
 		self.isParity = False
 		self.isEntropy = False
@@ -258,9 +217,9 @@ class japaneseSumSudoku(sudoku):
 	def setJSSBattenburg(self,row,col=-1):
 		if col == -1:
 			(row,col) = self._procCell(row)
-		if self.isJSSBattenburgInitialized is not True:
-			self.jssBattenburgCells = [(row,col)]
-			self.isJSSBattenburgInitialized = True
+		if 'JSSBattenburg' not in self._constraintInitialized:
+			self.jssBattenburgCells = []
+			self._constraintInitialized.append('JSSBattenburg')
 		else:
 			self.jssBattenburgCells.append((row,col))
 			
@@ -272,10 +231,10 @@ class japaneseSumSudoku(sudoku):
 		for x in cells: self.setJSSBattenburg(x)
 			
 	def setJSSBattenburgNegative(self):
-		if self.isJSSBattenburgInitialized is not True:
+		if 'JSSBattenburg' not in self._constraintInitialized:
 			self.jssBattenburgCells = []
-			self.isJSSBattenburgInitialized = True
-		self.isJSSBattenburgNegative = True
+			self._constraintInitialized.append('JSSBattenburg')
+		self._constraintNegative.append('JSSBattenburg')
 		
 	def setJSSAntiBattenburg(self,row,col=-1):
 		if col == -1:
@@ -301,11 +260,6 @@ class japaneseSumSudoku(sudoku):
 				if (i,j) not in self.jssBattenburgCells:
 					self.setJSSAntiBattenburg(i,j)
 
-	def applyNegativeConstraints(self):
-		# We are overloading this method for the JSS class to add JSS specific negative constraints
-		if self.isJSSBattenburgNegative is True: self.__applyJSSBattenburgNegative()
-		super().applyNegativeConstraints()
-		
 	def printCurrentSolution(self):
 		colorama.init()
 		dW = max([len(str(x)) for x in self.digits])

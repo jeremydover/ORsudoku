@@ -157,6 +157,7 @@ Repeating Arrows - see Arrows
 Repelling Digits
 Reverse Numbered Rooms - see Numbered Rooms
 Reverse X-Sums - see X-Sums
+Roman Sums - see XV/XV Pairs
 Rossini Clues
 Rotational Pairs - see Gurth's Symmetric Placement
 Run-On Renban Lines - see Renban Lines
@@ -973,11 +974,18 @@ setKropkiArray(list): creates multiple Kropki dots
   
 setAntiKropki(cellHV): asserts that the digits are neither consecutive or in a 2-to-1 ratio by default...uses kropkiDifference and kropkiRatio if these have been changed
 	cellHV: an extended cell specification which adds the hv parameter: dot is on the right side if H, or on the bottom if V.
+setAntiKropkiWhite(cellHV): same, but for white dots only
+setAntiKropkiBlack(cellHV): same, but for black dots only
 
 setAntiKropkiArray(list): creates multiple anti-Kropki constraints
   list: list of cellHV specifications, see setKropkiWhite
+setAntiKropkiWhiteArray(list): same, but for white dots only
+setAntiKropkiBlackArray(list): same, but for black dots only
   
 setKropkiNegative(): implements true Kropki rules with a negative constraint
+setKropkiWhiteNegative(): sets a negative constraint on only white Kropki dots
+setKropkiBlackNegative(): sets a negative constraint on only black Kropki dots
+Note: this is probably a super edge case, but a 1/2 pair can be either a white or block dot. If you define a black dot in a puzzle with a negative constraint on white dots, then the black dot CAN be a 1/2, despite there being no white dot there. If this is not desired behavior, then just exclude 1s from both cells with setPencilmarks(). Problem solved. As inelegantly, but easily, as possible.
 
 To change the values used for difference for white dots, and ratio for black dots, you can use the following methods:
 setKropkiDifference(value)
@@ -1182,7 +1190,7 @@ setParindromeLine(list): creates a parindrome line constraint, where only parity
   
 Parity Count Lines
 ------------------
-setParityLine(list): creates a parity count line constraint (inspired by Richard Stolk https://logic-masters.de/Raetselportal/Raetsel/zeigen.php?id=000B15, endpoints contain the number of odd/even digits along the line, in some order))
+setParityCountLine(list): creates a parity count line constraint (inspired by Richard Stolk https://logic-masters.de/Raetselportal/Raetsel/zeigen.php?id=000B15, endpoints contain the number of odd/even digits along the line, in some order))
   list: a list of cell specifications
   
 Parity Dots
@@ -1689,7 +1697,7 @@ setXVV(cellHV): creates a V clue
 setXVX(cellHV): creates an X clue
   cellHV: an extended cell specification which adds the hv parameter: clue is on the right side if H, or on the bottom if V. All parameters can be given in a tuple, but shorthand is possible, appending 0 to a cell spec to indicate horizontal and 1 to indicate vertical.
   Example: 251, '251' and (2,5,p.Vert) all specify an X clue on the bottom edge of cell 2,5
-  
+
 setXVVArray(list): creates multiple V clues
   list: list of cellHV specifications, see setXVV
 
@@ -1700,13 +1708,52 @@ setXVArray(list): creates multiple X/V clues
   list: list of cellHVXV specifications, which include a cell spec, the HV spec as given in setXVV, and a XV spec, specifying the type of clue. When given as a tuple, the X and V variables can be used to specify X/V clues. Shorthand is possible, with V being 0 and X 1.
   Example: 1701 incidates an X (1 XV spec is fourth) on the right edge (0 HV spec is third) of cell 1,7 (17 cell spec is first). This can also be written as the tuple (1,7,p.Horz,p.X)
   
+setAntiXVV(cellHV): asserts that a pair of cells cannot add to 5
+	cellHV: an extended cell specification which adds the hv parameter: clue is on the right side if H, or on the bottom if V.
+
+setAntiXVX(cellHV): asserts that a pair of cells cannot add to 10
+	cellHV: an extended cell specification which adds the hv parameter: clue is on the right side if H, or on the bottom if V. 
+	
 setAntiXV(cellHV): asserts that a pair of cells cannot add to either 5 or 10
 	cellHV: an extended cell specification which adds the hv parameter: clue is on the right side if H, or on the bottom if V. 
-  
-setAntiXVArray(list): creates multiple anti-XV clues
-  list: list of cellHV specifications, see setXVV
 
-setXVNegative(): implements negative constraint
+setAntiXVVArray(list): creates multiple anti-V clues
+  list: list of cellHV specifications
+
+setAntiXVXArray(list): creates multiple anti-X clues
+  list: list of cellHV specifications
+
+setAntiXVArray(list): creates multiple anti-XV clues
+  list: list of cellHV specifications
+
+setXVVNegative(): implements negative constraint, all pairs not marked with another Roman numeral cannot sum to 5
+
+setXVXNegative(): implements negative constraint, all pairs not marked with another Roman numeral cannot sum to 10
+
+setXVNegative(): implements negative constraint, all pairs not marked with another Roman numeral cannot sum to 5 or 10
+
+Roman sums are similar to XV, but can use any set of numbers.
+
+setRomanSum(cellHV#): creates a "Roman numeral"-clue for an arbitrary value
+  cellHV#: an extended cell specification which adds the hv parameter and value parameters.
+
+setRomanSumArray(list): create multiple Roman sum clues
+  list: list of cellHV# specifications, see setRomanSum
+
+setAntiRomanSum(cellHV#): creates a negative assertion of a specific sum value, so that the sum may NOT equal that value
+  cellHV#: see above
+  
+setAntiRomanSumArray(list): create multiple setAntiRomanSum constraints
+  list: list of cellHV# specifications
+
+setAntiRomanSums(cellHV): creates a negative assertion that the sum of the clued cells cannot be any number already used in a Roman Sum clue, or specified in the negative constraint (see below)
+  cellHV: an extended cell specification which adds the hv parameter: clue is on the right side if H, or on the bottom if V. 
+
+setAntiRomanSumsArray(list): create multiple setAntiRomanSums constraints
+  list: list of cellHV specifications
+  
+setRomanSumNegative(list): implements negative constraint, all pairs not marked with a Roman numeral can sum to any value used in a clue, or to any additional value provided in list
+  list: list of forbidden sum values
 
 XVXV
 ----

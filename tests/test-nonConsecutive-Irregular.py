@@ -9,7 +9,7 @@ class TestPuzzle(unittest.TestCase):
 	
 	def test_puzzle(self):
 		p = ORsudoku.sudoku(3)
-			p = ORsudoku.sudoku(3,irregular=True)
+		p = ORsudoku.sudoku(3,irregular=True)
 		p.setRegion([41,31,21,11,12,13,14,15,25])
 		p.setRegion([16,17,18,26,27,28,36,37,38])
 		p.setRegion([19,29,39,47,48,49,57,58,59])

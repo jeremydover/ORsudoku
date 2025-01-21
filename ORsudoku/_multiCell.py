@@ -13,14 +13,26 @@ def setFortress(self,inlist):
 		if x[1] < self.boardWidth-1 and (x[0],x[1]+1) not in inlist:
 			self.model.Add(self.cellValues[x[0]][x[1]] > self.cellValues[x[0]][x[1]+1])
 			
+def _initializeKropkiWhite(self):
+	if 'KropkiWhite' not in self._constraintInitialized:
+		self._constraintInitialized.append('KropkiWhite')
+		self.kropkiDiff = 1
+		if 'KropkiBlack' not in self._constraintInitialized:
+			self.kropkiCells = []
+
+def _initializeKropkiBlack(self):
+	if 'KropkiBlack' not in self._constraintInitialized:
+		self._constraintInitialized.append('KropkiBlack')
+		self.kropkiRatio = 2
+		if 'KropkiWhite' not in self._constraintInitialized:
+			self.kropkiCells = []
+
 def setKropkiWhite(self,row,col=-1,hv=-1):
 	if col == -1:
 		(row,col,hv) = self._procCell(row)
-	if self.isKropkiInitialized is not True:
-		self.kropkiCells = [(row,col,hv)]
-		self.isKropkiInitialized = True
-	else:
-		self.kropkiCells.append((row,col,hv))
+	self._initializeKropkiWhite()
+	self.kropkiCells.append((row,col,hv))
+	
 	# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
 	bit = self.model.NewBoolVar('KropkiWhiteBiggerDigitRow{:d}Col{:d}HV{:d}'.format(row,col,hv))
 	self.allVars.append(bit)
@@ -30,11 +42,9 @@ def setKropkiWhite(self,row,col=-1,hv=-1):
 def setKropkiBlack(self,row,col=-1,hv=-1):
 	if col == -1:
 		(row,col,hv) = self._procCell(row)
-	if self.isKropkiInitialized is not True:
-		self.kropkiCells = [(row,col,hv)]
-		self.isKropkiInitialized = True
-	else:
-		self.kropkiCells.append((row,col,hv))
+	self._initializeKropkiBlack()
+	self.kropkiCells.append((row,col,hv))
+	
 	# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
 	bit = self.model.NewBoolVar('KropkiBlackBiggerDigitRow{:d}Col{:d}HV{:d}'.format(row,col,hv))
 	self.allVars.append(bit)
@@ -44,11 +54,10 @@ def setKropkiBlack(self,row,col=-1,hv=-1):
 def setKropkiGray(self,row,col=-1,hv=-1):
 	if col == -1:
 		(row,col,hv) = self._procCell(row)
-	if self.isKropkiInitialized is not True:
-		self.kropkiCells = [(row,col,hv)]
-		self.isKropkiInitialized = True
-	else:
-		self.kropkiCells.append((row,col,hv))
+	self._initializeKropkiWhite()
+	self._initializeKropkiBlack()
+	self.kropkiCells.append((row,col,hv))
+		
 	# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
 	bit1 = self.model.NewBoolVar('KropkiGrayBiggerDigitRow{:d}Col{:d}HV{:d}'.format(row,col,hv))
 	bit2 = self.model.NewBoolVar('KropkiGrayBlackWhiteRow{:d}Col{:d}HV{:d}'.format(row,col,hv))
@@ -80,67 +89,109 @@ def setKropkiArray(self,cells):
 		else:
 			self.setKropkiGray(x[0],x[1],x[2])
 
+def setKropkiWhiteNegative(self):
+	self._initializeKropkiWhite()
+	self._constraintNegative.append('KropkiWhite')
+
+def setKropkiBlackNegative(self):
+	self._initializeKropkiBlack()
+	self._constraintNegative.append('KropkiBlack')
+
 def setKropkiNegative(self):
-	if self.isKropkiInitialized is not True:
-		self.kropkiCells = []
-		self.isKropkiInitialized = True
-	self.isKropkiNegative = True
+	self.setKropkiWhiteNegative()
+	self.setKropkiBlackNegative()
 	
-def setAntiKropki(self,row,col=-1,hv=-1):
+def setAntiKropkiWhite(self,row,col=-1,hv=-1):
 	if col == -1:
 		(row,col,hv) = self._procCell(row)
+	self._initializeKropkiWhite()
+
 	self.model.Add(self.cellValues[row][col] - self.cellValues[row+hv][col+(1-hv)] != self.kropkiDiff)
 	self.model.Add(self.cellValues[row][col] - self.cellValues[row+hv][col+(1-hv)] != -1*self.kropkiDiff)
+
+def setAntiKropkiBlack(self,row,col=-1,hv=-1):
+	if col == -1:
+		(row,col,hv) = self._procCell(row)
+	self._initializeKropkiBlack()
+
 	self.model.Add(self.cellValues[row][col] != self.kropkiRatio*self.cellValues[row+hv][col+(1-hv)])
 	self.model.Add(self.kropkiRatio*self.cellValues[row][col] != self.cellValues[row+hv][col+(1-hv)])
-	
-def setAntiKropkiArray(self,cells):
-	for x in cells: self.setAntiKropki(x)
 
-def _applyKropkiNegative(self):
+def setAntiKropki(self,row,col=-1,hv=-1):
+	self.setAntiKropkiWhite(row,col,hv)
+	self.setAntiKropkiBlack(row,col,hv)
+
+def setAntiKropkiWhiteArray(self,cells):
+	for x in cells: self.setAntiKropkiWhite(x)
+
+def setAntiKropkiBlackArray(self,cells):
+	for x in cells: self.setAntiKropkiBlack(x)
+
+def setAntiKropkiArray(self,cells):
+	for x in cells:
+		self.setAntiKropkiWhite(x)
+		self.setAntiKropkiBlack(x)
+
+def _applyKropkiWhiteNegative(self):
 	for i in range(self.boardWidth):
 		for j in range(self.boardWidth):
 			if i < 8 and (i,j,1) not in self.kropkiCells:
-				self.setAntiKropki(i,j,1)
+				self.setAntiKropkiWhite(i,j,1)
 			if j < 8 and (i,j,0) not in self.kropkiCells:
-				self.setAntiKropki(i,j,0)
+				self.setAntiKropkiWhite(i,j,0)
+
+def _applyKropkiBlackNegative(self):
+	for i in range(self.boardWidth):
+		for j in range(self.boardWidth):
+			if i < 8 and (i,j,1) not in self.kropkiCells:
+				self.setAntiKropkiBlack(i,j,1)
+			if j < 8 and (i,j,0) not in self.kropkiCells:
+				self.setAntiKropkiBlack(i,j,0)
 
 def setKropkiDifference(self,diff=1):
 	# Sets the difference used in all subseqequent white Kropki dots
+	self._initializeKropkiWhite()
 	self.kropkiDiff = diff
 	
 def setKropkiRatio(self,ratio=2):
 	# Sets the ratio used in all subseqequent black Kropki dots
+	self._initializeKropkiBlack()
 	self.kropkiRatio = ratio
 	
 def setGammaEpsilon(self):
 	self.setKropkiDifference(5)
 	self.setKropkiRatio(3)
 				
+def _initializeRomanSum(self):
+	if 'RomanSum' not in self._constraintInitialized:
+		self._constraintInitialized.append('RomanSum')
+		self.romanSumCells = []
+		self.romanSumValues = []
+
+def setRomanSum(self,row,col=-1,hv=-1,value=-1):
+	if col == -1:
+		(row,col,hv,value) = self._procCell(row)
+	self._initializeRomanSum()
+	self.romanSumCells.append((row,col,hv))
+	if value not in self.romanSumValues:
+		self.romanSumValues.append(value)
+		
+	# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
+	self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] == value)
+	
 def setXVV(self,row,col=-1,hv=-1):
 	if col == -1:
 		(row,col,hv) = self._procCell(row)
-	if self.isXVInitialized is not True:
-		self.xvCells = [(row,col,hv)]
-		self.isXVInitialized = True
-	else:
-		self.xvCells.append((row,col,hv))
-		
-	# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
-	self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] == 5)
+	self.setRomanSum(row,col,hv,5)
 	
 def setXVX(self,row,col=-1,hv=-1):
 	if col == -1:
 		(row,col,hv) = self._procCell(row)
-	if self.isXVInitialized is not True:
-		self.xvCells = [(row,col,hv)]
-		self.isXVInitialized = True
-	else:
-		self.xvCells.append((row,col,hv))
-		
-	# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
-	self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] == 10)
+	self.setRomanSum(row,col,hv,10)
 	
+def setRomanSumArray(self,cells):
+	for x in cells: self.setRomanSum(x)
+
 def setXVVArray(self,cells):
 	for x in cells: self.setXVV(x)
 	
@@ -155,35 +206,85 @@ def setXVArray(self,cells):
 		else:
 			self.setXVX(x[0],x[1],x[2])
 			
-def setAntiXV(self,row,col=-1,hv=-1):
+def setAntiRomanSum(self,row,col=-1,hv=-1,value=-1):
+	if col == -1:
+		(row,col,hv,value) = self._procCell(row)
+	self._initializeRomanSum()
+	self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] != value)
+	
+def setAntiRomanSums(self,row,col=-1,hv=-1):
 	if col == -1:
 		(row,col,hv) = self._procCell(row)
-	self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] != 5)
-	self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] != 10)
+	if 'RomanSum' not in self._constraintInitialized:
+		pass
+	else:
+		for value in self.romanSumValues:
+			self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] != value)
+	
+def setAntiXVV(self,row,col=-1,hv=-1):
+	if col == -1:
+		(row,col,hv) = self._procCell(row)
+	self.setAntiRomanSum(row,col,hv,5)
+
+def setAntiXVX(self,row,col=-1,hv=-1):
+	if col == -1:
+		(row,col,hv) = self._procCell(row)
+	self.setAntiRomanSum(row,col,hv,10)
+
+def setAntiXV(self,row,col=-1,hv=-1):
+	self.setAntiXVV(row,col,hv)
+	self.setAntiXVX(row,col,hv)
+	
+def setAntiRomanSumArray(self,cells):
+	for x in cells: self.setAntiRomanSum(x)
+
+def setAntiRomanSumsArray(self,cells):
+	for x in cells: self.setAntiRomanSums(x)
+
+def setAntiXVVArray(self,cells):
+	for x in cells: self.setAntiXVV(x)
+	
+def setAntiXVXArray(self,cells):
+	for x in cells: self.setAntiXVX(x)
 	
 def setAntiXVArray(self,cells):
 	for x in cells: self.setAntiXV(x)
 
-def setXVNegative(self):
-	if self.isXVInitialized is not True:
-		self.xvCells = []
-		self.isXVInitialized = True
-	self.isXVNegative = True
+def setRomanSumNegative(self,values=[]):
+	if 'RomanSum' not in self._constraintInitialized:
+		self.romanSumCells = []
+		self.romanSumValues = values
+		self._constraintInitialized.append('RomanSum')
+	else:
+		for x in values:
+			if x not in self.romanSumValues:
+				self.romanSumValues.append(x)
+	self._constraintNegative.append('RomanSum')
 	
-def _applyXVNegative(self):
+def setXVVNegative(self):
+	self.setRomanSumNegative([5])
+
+def setXVXNegative(self):
+	self.setRomanSumNegative([10])
+
+def setXVNegative(self):
+	self.setXVVNegative()
+	self.setXVXNegative()
+	
+def _applyRomanSumNegative(self):
 	for i in range(self.boardWidth):
 		for j in range(self.boardWidth):
-			if i < 8 and (i,j,1) not in self.xvCells:
-				self.setAntiXV(i,j,1)
-			if j < 8 and (i,j,0) not in self.xvCells:
-				self.setAntiXV(i,j,0)
+			if i < 8 and (i,j,1) not in self.romanSumCells:
+				self.setAntiRomanSums(i,j,1)
+			if j < 8 and (i,j,0) not in self.romanSumCells:
+				self.setAntiRomanSums(i,j,0)
 				
 def setXVXVV(self,row,col=-1,hv=-1):
 	if col == -1:
 		(row,col,hv) = self._procCell(row)
-	if self.isXVXVInitialized is not True:
+	if 'XVXV' not in self._constraintInitialized:
 		self.xvxvCells = [(row,col,hv)]
-		self.isXVXVInitialized = True
+		self._constraintInitialized.append('XVXV')
 	else:
 		self.xvxvCells.append((row,col,hv))
 		
@@ -195,9 +296,9 @@ def setXVXVV(self,row,col=-1,hv=-1):
 def setXVXVX(self,row,col=-1,hv=-1):
 	if col == -1:
 		(row,col,hv) = self._procCell(row)
-	if self.isXVXVInitialized is not True:
+	if 'XVXV' not in self._constraintInitialized:
 		self.xvxvCells = [(row,col,hv)]
-		self.isXVXVInitialized = True
+		self._constraintInitialized.append('XVXV')
 	else:
 		self.xvxvCells.append((row,col,hv))
 		
@@ -231,10 +332,10 @@ def setAntiXVXVArray(self,cells):
 	for x in cells: self.setAntiXVXV(x)
 
 def setXVXVNegative(self):
-	if self.isXVXVInitialized is not True:
+	if 'XVXV' not in self._constraintInitialized:
 		self.xvxvCells = []
-		self.isXVXVInitialized = True
-	self.isXVXVNegative = True
+		self._constraintInitialized.append('XVXV')
+	self._constraintNegative.append('XVXV')
 	
 def _applyXVXVNegative(self):
 	for i in range(self.boardWidth):
@@ -248,9 +349,9 @@ def setXYDifference(self,row,col=-1,hv=-1):
 	if col == -1:
 		(row,col,hv) = self._procCell(row)
 	# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
-	if self.isXYDifferenceInitialized is not True:
+	if 'XYDifference' not in self._constraintInitialized:
 		self.xyDifferenceCells = [(row,col,hv)]
-		self.isXYDifferenceInitialized = True
+		self._constraintInitialized.append('XYDifference')
 	else:
 		self.xyDifferenceCells.append((row,col,hv))
 		
@@ -273,10 +374,10 @@ def setAntiXYDifferenceArray(self,cells):
 	for x in cells: self.setAntiXYDifference(x)
 
 def setXYDifferenceNegative(self):
-	if self.isXYDifferenceInitialized is not True:
+	if 'XYDifference' not in self._constraintInitialized:
 		self.xyDifferenceCells = []
-		self.isXYDifferenceInitialized = True
-	self.isXYDifferenceNegative = True
+		self._constraintInitialized.append('XYDifference')
+	self._constraintNegative.append('XYDifference')
 	
 def _applyXYDifferenceNegative(self):
 	for i in range(self.boardWidth):

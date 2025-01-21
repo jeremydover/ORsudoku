@@ -25,7 +25,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setArrow([82,81,91,92],sSum=True)
 		p.setArrow([99,89,88,98],sSum=True)
 		
-		self.assertEqual(p.findSolution(test=True),'5*7*3426801909217356*8*4168540*9*723821*9*63547045708*9*26316037142*8*953164*8*5790227*8*5901346940326157*8*','Failed Schroedinger\'s Arrows')
+		self.assertEqual(p.countSolutions(test=True),'1:534268019092173564168540723821635470457082631603714295316457902275901346940326157700000000000000080000009000009000000000090000000000800000800000080000000000000008','Failed Schroedinger\'s Arrows')
 		
 if __name__ == '__main__':
     unittest.main()

@@ -1,3 +1,14 @@
+1/21/2025
+	Fixed error in setParityCountLine, and added test case.
+	Fixed some bugs in Schrödinger cell module left over from migration to v1.0.
+	Simplified Schrödinger Renban and Between line code, added test cases.
+	Fixed error in Schrödinger XV negative constraint code, added test cases.
+	Fixed error in WeakPalindromeLine implementation, and added test case.
+	Added additional test cases.
+	And, oh why did I start this? Changing to a new model of negative constraint tracking that does not require separate class variables for each type (God that was dumb).
+	Oh, this is why I started this: created ability to separate Kropki black/white and XV X/V from a negative constraint perspective, so that we can support only a negative X constraint, or a negative black Kropki constraint.
+	And because I'm a glutton for punishment, also re-did the XV code to generalize to "Roman sums", to allow any values to be used, and have a negative constraint applied.
+
 1/19/2025 bis
 	Fixed syntax error in _solving module for listCandidates solving method.
 	Updated setNearestNeighbors method to accept a single direction as an int, instead of a list with a single int.

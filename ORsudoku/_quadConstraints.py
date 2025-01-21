@@ -58,9 +58,9 @@ def setQuadSumArray(self,cells):
 def setBattenburg(self,row,col=-1):
 	if col == -1:
 		(row,col) = self._procCell(row)
-	if self.isBattenburgInitialized is not True:
+	if 'Battenburg' not in self._constraintInitialized:
 		self.battenburgCells = [(row,col)]
-		self.isBattenburgInitialized = True
+		self._constraintInitialized.append('Battenburg')
 	else:
 		self.battenburgCells.append((row,col))
 		
@@ -78,10 +78,10 @@ def setBattenburgArray(self,cells):
 	for x in cells: self.setBattenburg(x)
 		
 def setBattenburgNegative(self):
-	if self.isBattenburgInitialized is not True:
+	if 'Battenburg' not in self._constraintInitialized:
 		self.battenburgCells = []
-		self.isBattenburgInitialized = True
-	self.isBattenburgNegative = True
+		self._constraintInitialized.append('Battenburg')
+	self._constraintNegative.append('Battenburg')
 	
 	if self.isParity is False:
 		self._setParity()
@@ -114,9 +114,9 @@ def setEntropyQuad(self,row,col=-1):
 	if col == -1:
 		(row,col) = self._procCell(row)
 	# A 2x2 square of cells is entropic if it includes a low, middle, and high digit
-	if self.isEntropyQuadInitialized is not True:
+	if 'EntropyQuad' not in self._constraintInitialized:
 		self.entropyQuadCells = [(row,col)]
-		self.isEntropyQuadInitialized = True
+		self._constraintInitialized.append('EntropyQuad')
 	else:
 		self.entropyQuadCells.append((row,col))
 		
@@ -129,14 +129,14 @@ def setEntropyQuadArray(self,inlist):
 	for x in inlist: self.setEntropyQuad(x)
 	
 def setEntropyQuadNegative(self):
-	if self.isEntropyQuadInitialized is not True:
+	if 'EntropyQuad' not in self._constraintInitialized:
 		self.entropyQuadCells = []
-		self.isEntropyQuadInitialized = True
+		self._constraintInitialized.append('EntropyQuad')
 	
 	if self.isEntropy is False:
 		self._setEntropy()
 		
-	self.isEntropyQuadNegative = True
+	self._constraintNegative.append('EntropyQuad')
 
 def setAntiEntropyQuad(self,row,col=-1):
 	if col == -1:
@@ -160,9 +160,9 @@ def setModularQuad(self,row,col=-1):
 	if col == -1:
 		(row,col) = self._procCell(row)
 	# A 2x2 square of cells is entropic if it includes a low, middle, and high digit
-	if self.isModularQuadInitialized is not True:
+	if 'ModularQuad' not in self._constraintInitialized:
 		self.modularQuadCells = [(row,col)]
-		self.isModularQuadInitialized = True
+		self._constraintInitialized.append('ModularQuad')
 	else:
 		self.modularQuadCells.append((row,col))
 		
@@ -175,14 +175,14 @@ def setModularQuadArray(self,inlist):
 	for x in inlist: self.setModularQuad(x)
 	
 def setModularQuadNegative(self):
-	if self.isModularQuadInitialized is not True:
+	if 'ModularQuad' not in self._constraintInitialized:
 		self.modularQuadCells = []
-		self.isModularQuadInitialized = True
+		self._constraintInitialized.append('ModularQuad')
 	
 	if self.isModular is False:
 		self._setModular()
 		
-	self.isModularQuadNegative = True
+	self._constraintNegative.append('ModularQuad')
 
 def setAntiModularQuad(self,row,col=-1):
 	if col == -1:
@@ -202,18 +202,20 @@ def _applyModularQuadNegative(self):
 			if (i,j) not in self.modularQuadCells:
 				self.setAntiModularQuad(i,j)
 
+def _initializeParityQuad(self):
+	if 'ParityQuad' not in self._constraintInitialized:
+		self._constraintInitialized.append('ParityQuad')
+		self.parityQuadCells = []
+		self.parityQuadExcluded = [0,4]
+
+	if self.isParity is False:
+		self._setParity()
+
 def setParityQuad(self,row,col=-1):
 	if col == -1:
 		(row,col) = self._procCell(row)
-	# A 2x2 square of cells is entropic if it includes a low, middle, and high digit
-	if self.isParityQuadInitialized is not True:
-		self.parityQuadCells = [(row,col)]
-		self.isParityQuadInitialized = True
-	else:
-		self.parityQuadCells.append((row,col))
-		
-	if self.isParity is False:
-		self._setParity()
+	self._initializeParityQuad()
+	self.parityQuadCells.append((row,col))
 	
 	for k in self.parityQuadExcluded:
 		self.model.Add(sum(self.cellParity[row+i][col+j] for i in range(2) for j in range(2)) != k)
@@ -222,20 +224,13 @@ def setParityQuadArray(self,inlist):
 	for x in inlist: self.setParityQuad(x)
 	
 def setParityQuadNegative(self):
-	if self.isParityQuadInitialized is not True:
-		self.parityQuadCells = []
-		self.isParityQuadInitialized = True
-	
-	if self.isParity is False:
-		self._setParity()
-		
-	self.isParityQuadNegative = True
+	self._initializeParityQuad()
+	self._constraintNegative.append('ParityQuad')
 
 def setAntiParityQuad(self,row,col=-1):
 	if col == -1:
 		(row,col) = self._procCell(row)
-	if self.isParity is False:
-		self._setParity()
+	self._initializeParityQuad()
 		
 	varBitmap = self._varBitmap('AntiParityQuad',len(self.parityQuadExcluded))
 	for k in range(len(self.parityQuadExcluded)):
@@ -251,20 +246,23 @@ def _applyParityQuadNegative(self):
 				self.setAntiParityQuad(i,j)
 				
 def setParityQuadExclusions(self,inlist=[0,4]):
+	self._initializeParityQuad()
 	self.parityQuadExcluded = inlist
 
+def _initializeEntropyBattenburg(self):
+	if 'EntropyBattenburg' not in self._constraintInitialized:
+		self.entropyBattenburgCells = []
+		self._constraintInitialized.append('EntropyBattenburg')
+		
+	if self.isEntropy is False:
+		self._setEntropy()
+		
 def setEntropyBattenburg(self,row,col=-1):
 	if col == -1:
 		(row,col) = self._procCell(row)
 	# A 2x2 square of cells is an entropy battenburg if no two adjacent cells on the quad have the same rank
-	if self.isEntropyBattenburgInitialized is not True:
-		self.entropyBattenburgCells = [(row,col)]
-		self.isEntropyBattenburgInitialized = True
-	else:
-		self.entropyBattenburgCells.append((row,col))
-		
-	if self.isEntropy is False:
-		self._setEntropy()
+	self._initializeEntropyBattenburg()
+	self.entropyBattenburgCells.append((row,col))
 	
 	self.model.Add(self.cellEntropy[row][col] != self.cellEntropy[row][col+1])
 	self.model.Add(self.cellEntropy[row][col+1] != self.cellEntropy[row+1][col+1])
@@ -277,6 +275,7 @@ def setEntropyBattenburgArray(self,inlist):
 def setAntiEntropyBattenburg(self,row,col=-1):
 	if col == -1:
 		(row,col) = self._procCell(row)
+	self._initializeEntropyBattenburg()
 	bit1 = self.model.NewBoolVar('AntiEntrBattRow{:d}Col{:d}V1'.format(row,col))
 	bit2 = self.model.NewBoolVar('AntiEntrBattRow{:d}Col{:d}V2'.format(row,col))
 	bit3 = self.model.NewBoolVar('AntiEntrBattRow{:d}Col{:d}V3'.format(row,col))
@@ -295,14 +294,8 @@ def setAntiEntropyBattenburgArray(self,inlist):
 	for x in inlist: self.setAntiEntropyBattenburg(x)
 
 def setEntropyBattenburgNegative(self):
-	if self.isEntropyBattenburgInitialized is not True:
-		self.entropyBattenburgCells = []
-		self.isEntropyBattenburgInitialized = True
-	
-	if self.isEntropy is False:
-		self._setEntropy()
-		
-	self.isEntropyBattenburgNegative = True
+	self._initializeEntropyBattenburg()
+	self._constraintNegative.append('EntropyBattenburg')
 	
 def _applyEntropyBattenburgNegative(self):
 	for i in range(self.boardWidth-1):
@@ -376,9 +369,14 @@ def setQuadMaxParityValue(self,row,col=-1,values=-1,unique=True):
 	
 def setConsecutiveQuad(self,row,col=-1,value=-1):
 	# Of the SIX pairs of cells, if value is 0 (white), exactly one pair is consecutive. If value is 1 (black), at least two pairs are consecutive. If value is 2 (anti), no pairs are consecutive
-	
 	if col == -1:
 		(row,col,value) = self._procCell(row)
+	if 'ConsecutiveQuad' not in self._constraintInitialized:
+		self.consecutiveQuadCells = [(row,col,hv)]
+		self._constraintInitialized.append('ConsecutiveQuad')
+	else:
+		self.consecutiveQuadCells.append((row,col,hv))
+
 	bits = [self.model.NewBoolVar('ConsecQuadRow{:d}Col{:d}'.format(row,col)) for i in range(6)]
 	intVars = [self.model.NewIntVar(0,1,'ConsecQuadIntRow{:d}Col{:d}'.format(row,col)) for i in range(6)]
 	c = [(0,0,0,1),(0,0,1,0),(0,0,1,1),(0,1,1,0),(0,1,1,1),(1,0,1,1)]
@@ -428,16 +426,19 @@ def setAntiConsecutiveQuad(self,row,col=-1):
 	# To label a single cell as specifically not having any consecutive pairs
 	if col == -1:
 		(row,col) = self._procCell(row)
+	if 'ConsecutiveQuad' not in self._constraintInitialized:
+		self.consecutiveQuadCells = [(row,col,hv)]
+		self._constraintInitialized.append('ConsecutiveQuad')
 	self.setConsecutiveQuad(row,col,2)
 	
 def setAntiConsecutiveQuadArray(self,cells):
 	for x in cells: self.setAntiConsecutiveQuad(x)
 
 def setConsecutiveQuadNegative(self):
-	if self.isConsecutiveQuadInitialized is not True:
-		self.consecutiveQuadCells = []
-		self.isConsecutiveQuadInitialized = True
-	self.isConsecutiveQuadNegative = True
+	if 'ConsecutiveQuad' not in self._constraintInitialized:
+		self.consecutiveQuadCells = [(row,col,hv)]
+		self._constraintInitialized.append('ConsecutiveQuad')
+	self._constraintNegative.append('ConsecutiveQuad')
 	
 def _applyConsecutiveQuadNegative(self):
 	for i in range(self.boardWidth-1):

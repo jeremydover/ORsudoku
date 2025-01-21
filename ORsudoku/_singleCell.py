@@ -90,10 +90,10 @@ def	setNeighbourSumArray(self,cells):
 def setFriendly(self,row,col=-1):
 	if col == -1:
 		(row,col) = self._procCell(row)
-		
-	if self.isFriendlyInitialized is not True:
+	
+	if 'Friendly' not in self._constraintInitialized:	
 		self.friendlyCells = [(row,col)]
-		self.isFriendlyInitialized = True
+		self._constraintInitialized.append('Friendly')
 	else:
 		self.friendlyCells.append((row,col))
 		
@@ -133,10 +133,10 @@ def setUnfriendlyArray(self,cells):
 	for x in cells: self.setUnfriendly(x)
 
 def setFriendlyNegative(self):
-	if self.isFriendlyInitialized is not True:
+	if 'Friendly' not in self._constraintInitialized:	
 		self.friendlyCells = []
-		self.isFriendlyInitialized = True
-	self.isFriendlyNegative = True
+		self._constraintInitialized.append('Friendly')
+	self._constraintNegative.append('Friendly')
 	
 def _applyFriendlyNegative(self):
 	for i in range(self.boardWidth):

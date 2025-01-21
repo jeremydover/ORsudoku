@@ -16,46 +16,8 @@ class schroedingerCellSudoku(sudoku):
 		self.boardSizeRoot = boardSizeRoot
 		self.boardWidth = boardSizeRoot*boardSizeRoot
 
-		self.isBattenburgInitialized = False
-		self.isBattenburgNegative = False
-		
-		self.isKropkiInitialized = False
-		self.isKropkiNegative = False
-		self.kropkiDiff = 1
-		self.kropkiRatio = 2
-		
-		self.isFriendlyInitialized = False
-		self.isFriendlyNegative = False
-		
-		self.isRossiniInitialized = False
-		self.isRossiniNegative = False
-		self.rossiniLength = -1
-		self.outsideLength = -1
-		
-		self.isXVInitialized = False
-		self.isXVNegative = False
-		
-		self.isXVXVInitialized = False
-		self.isXVXVNegative = False
-		
-		self.isXYDifferenceInitialized = False
-		self.isXYDifferenceNegative = False
-		
-		self.isEntropyQuadInitialized = False
-		self.isEntropyQuadNegative = False
-				
-		self.isModularQuadInitialized = False
-		self.isModularQuadNegative = False
-
-		self.isEntropyBattenburgInitialized = False
-		self.isEntropyBattenburgNegative = False
-		
-		self.isConsecutiveQuadInitialized = False
-		self.isConsecutiveQuadNegative = False
-		
-		self.isParityQuadInitialized = False
-		self.isParityQuadNegative = False
-		self.parityQuadExcluded = [0,4]
+		self._constraintInitialized = []
+		self._constraintNegative = []
 		
 		self.isParity = False
 		self.isEntropy = False
@@ -74,7 +36,6 @@ class schroedingerCellSudoku(sudoku):
 																	# all cells in the grid, and denote "no Schroedinger"
 		self.maxSDigit = self.schroedingerNotSetBase+self.boardWidth*self.boardWidth
 		self.model = cp_model.CpModel()
-		self.listCandidatesVar = self.model.NewBoolVar('test')
 		self.cellValues = []
 		self.allVars = []
 		self.candTests = [[[None for k in range(self.boardWidth)] for j in range(self.boardWidth)] for i in range(self.boardWidth)]
@@ -91,6 +52,10 @@ class schroedingerCellSudoku(sudoku):
 				tempArrayCell.append(tempCell)
 			self.cellValues.insert(rowIndex,tempArrayCell)
 						
+		# Add main variables to allVars
+		for temp in self.cellValues:
+			self.allVars = self.allVars + temp
+
 		# Now the Schroedinger stuff
 		self.sCell = []
 	
@@ -101,6 +66,10 @@ class schroedingerCellSudoku(sudoku):
 				tempSCellArray.append(c)
 			self.sCell.insert(i,tempSCellArray)
 		
+		# Add sCell variables to allVars
+		for temp in self.sCell:
+			self.allVars = self.allVars + temp
+
 		# Next, create integer versions of sCell variables to check conditions
 		self.sCellInt = []
   
@@ -110,6 +79,10 @@ class schroedingerCellSudoku(sudoku):
 				c = self.model.NewIntVar(0,1,'sCellInt{:d}{:d}'.format(i,j))
 				tempSCellArray.append(c)
 			self.sCellInt.insert(i,tempSCellArray)
+
+		# Add sCellInt variables to allVars
+		for temp in self.sCellInt:
+			self.allVars = self.allVars + temp
 
 		# Next, create variables to hold the alternate values for sCells.
 		# Note: the values are allowed to get so large so that we can determine with an arithmetic condition 
@@ -123,6 +96,10 @@ class schroedingerCellSudoku(sudoku):
 				tempSCellArray.append(c)
 			self.sCellValues.insert(i,tempSCellArray)
 
+		# Add s-values to all vars
+		for temp in self.sCellValues:
+			self.allVars = self.allVars + temp
+
 		# Finally, create variables to hold a different version of the values which are useful for summing constraints
 		self.sCellSums = []
   
@@ -133,6 +110,10 @@ class schroedingerCellSudoku(sudoku):
 				tempSCellArray.append(c)
 			self.sCellSums.insert(i,tempSCellArray)
 		
+		# Add sCellSums variables to allVars
+		for temp in self.sCellSums:
+			self.allVars = self.allVars + temp
+
 		# Schroedinger conditions	
 		# First we tie the values of the Schroedinger cells to the Booleans
 		for i in range(self.boardWidth):
@@ -274,13 +255,22 @@ class schroedingerCellSudoku(sudoku):
 					testString = testString + '{:d}'.format(self.solver.Value(self.cellValues[i][j]))
 		return testString
 		
-	def listCellCandidates(self,row,col=-1,quiet=False):
-		if col == -1:
-			(row,col) = self._procCell(row)
+	def preparePrintVariables(self):
+		consolidatedCellValues = []
+		for tempArray in self.cellValues:
+			consolidatedCellValues = consolidatedCellValues + tempArray
+		for tempArray in self.sCellSums:
+			consolidatedCellValues = consolidatedCellValues + tempArray
+		return consolidatedCellValues
+
+		def listCellCandidates(self,row,col=-1,quiet=False):
+			if col == -1:
+				(row,col) = self._procCell(row)
 			
 		good = []
 		sCell = False
 		nonSCell = False
+		self.listCandidatesVar = self.model.NewBoolVar('test')
 		for x in self.digits:
 			ok = False
 			# Not an S-Cell
@@ -508,11 +498,9 @@ class schroedingerCellSudoku(sudoku):
 	def setKropkiWhite(self,row,col=-1,hv=-1):
 		if col == -1:
 			(row,col,hv) = self._procCell(row)
-		if self.isKropkiInitialized is not True:
-			self.kropkiCells = [(row,col,hv)]
-			self.isKropkiInitialized = True
-		else:
-			self.kropkiCells.append((row,col,hv))
+		self._initializeKropkiWhite()
+		self.kropkiCells.append((row,col,hv))
+		
 		# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
 		# Note: both cells cannot be Schroedinger
 		bc1c2 = self.model.NewBoolVar('LargerValue')
@@ -536,11 +524,9 @@ class schroedingerCellSudoku(sudoku):
 	def setKropkiBlack(self,row,col=-1,hv=-1):
 		if col == -1:
 			(row,col,hv) = self._procCell(row)
-		if self.isKropkiInitialized is not True:
-			self.kropkiCells = [(row,col,hv)]
-			self.isKropkiInitialized = True
-		else:
-			self.kropkiCells.append((row,col,hv))
+		self._initializeKropkiBlack()
+		self.kropkiCells.append((row,col,hv))
+		
 		# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
 		bc1c2 = self.model.NewBoolVar('LargerValue')
 		bc1s2 = self.model.NewBoolVar('LargerValue')
@@ -564,42 +550,29 @@ class schroedingerCellSudoku(sudoku):
 		self.model.Add(self.cellValues[row][col] == self.kropkiRatio*self.cellValues[row+hv][col+(1-hv)]).OnlyEnforceIf(bit)
 		self.model.Add(self.kropkiRatio*self.cellValues[row][col] == self.cellValues[row+hv][col+(1-hv)]).OnlyEnforceIf(bit.Not())
 		
-	def setXVV(self,row,col=-1,hv=-1):
+	def setRomanSum(self,row,col=-1,hv=-1,value=-1):
 		if col == -1:
-			(row,col,hv) = self._procCell(row)
-		if self.isXVInitialized is not True:
-			self.xvCells = [(row,col,hv)]
-			self.isXVInitialized = True
-		else:
-			self.xvCells.append((row,col,hv))
+			(row,col,hv,value) = self._procCell(row)
+		self._initializeRomanSum()
+		self.romanSumCells.append((row,col,hv))
+		if value not in self.romanSumValues:
+			self.romanSumValues.append(value)
 			
 		# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
-		self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] + self.sCellSums[row][col] + self.sCellSums[row+hv][col+(1-hv)] == 5)
-		
-	def setXVX(self,row,col=-1,hv=-1):
-		if col == -1:
-			(row,col,hv) = self._procCell(row)
-		if self.isXVInitialized is not True:
-			self.xvCells = [(row,col,hv)]
-			self.isXVInitialized = True
-		else:
-			self.xvCells.append((row,col,hv))
-			
-		# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
-		self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] + self.sCellSums[row][col] + self.sCellSums[row+hv][col+(1-hv)] == 10)
+		self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] + self.sCellSums[row][col] + self.sCellSums[row+hv][col+(1-hv)] == value)
 
-	def setAntiXV(self,row,col=-1,hv=-1):
+	def setAntiRomanSum(self,row,col=-1,hv=-1,value=-1):
 		if col == -1:
-			(row,col,hv) = self._procCell(row)
-		self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] + sCellSums[row][col] + self.sCellSums[row+hv][col+(1-hv)] != 5)
-		self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] + sCellSums[row][col] + self.sCellSums[row+hv][col+(1-hv)] != 10)
-	
+			(row,col,hv,value) = self._procCell(row)
+		self._initializeRomanSum()
+		self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] + self.sCellSums[row][col] + self.sCellSums[row+hv][col+(1-hv)] != value)
+
 	def setXVXVV(self,row,col=-1,hv=-1):
 		if col == -1:
 			(row,col,hv) = self._procCell(row)
-		if self.isXVXVInitialized is not True:
+		if 'XVXV' not in self._constraintInitialized:
 			self.xvxvCells = [(row,col,hv)]
-			self.isXVXVInitialized = True
+			self._constraintInitialized.append('XVXV')
 		else:
 			self.xvxvCells.append((row,col,hv))
 			
@@ -611,9 +584,9 @@ class schroedingerCellSudoku(sudoku):
 	def setXVXVX(self,row,col=-1,hv=-1):
 		if col == -1:
 			(row,col,hv) = self._procCell(row)
-		if self.isXVXVInitialized is not True:
+		if 'XVXV' not in self._constraintInitialized:
 			self.xvxvCells = [(row,col,hv)]
-			self.isXVXVInitialized = True
+			self._constraintInitialized.append('XVXV')
 		else:
 			self.xvxvCells.append((row,col,hv))
 			
@@ -644,9 +617,9 @@ class schroedingerCellSudoku(sudoku):
 		if col == -1:
 			(row,col) = self._procCell(row)
 			
-		if self.isFriendlyInitialized is not True:
-			self.friendlyCells = [(row,col)]
-			self.isFriendlyInitialized = True
+		if 'Friendly' not in self._constraintInitialized:
+			self.friendlyCells = [(row,col,hv)]
+			self._constraintInitialized.append('Friendly')
 		else:
 			self.friendlyCells.append((row,col))
 			
@@ -731,7 +704,7 @@ class schroedingerCellSudoku(sudoku):
 				self.model.Add(self.cellValues[row][col] == 0)
 		else:
 			allowableDigits = [x for x in self.digits if x >= 1 and x <=self.boardWidth]
-			varBitmap = self._sudoku__varBitmap('XSumRow{:d}Col{:d}RC{:d}'.format(row,col,rc),len(allowableDigits))
+			varBitmap = self._varBitmap('XSumRow{:d}Col{:d}RC{:d}'.format(row,col,rc),len(allowableDigits))
 			
 			for i in range(len(allowableDigits)):
 				self.model.Add(self.cellValues[row][col]+self.sCellSums[row][col] == allowableDigits[i]).OnlyEnforceIf(varBitmap[i])
@@ -753,7 +726,7 @@ class schroedingerCellSudoku(sudoku):
 		
 		self.model.AddBoolAnd([self.sCell[row][col].Not()])
 		allowableDigits = [x for x in self.digits if x >= 1 and x <=self.boardWidth]
-		varBitmap = self._sudoku__varBitmap('NumRoomPosRow{:d}Col{:d}RC{:d}'.format(row,col,rc),len(allowableDigits))
+		varBitmap = self._varBitmap('NumRoomPosRow{:d}Col{:d}RC{:d}'.format(row,col,rc),len(allowableDigits))
 		
 		for i in range(len(allowableDigits)):
 			self.model.Add(self.cellValues[row][col] == allowableDigits[i]).OnlyEnforceIf(varBitmap[i])
@@ -767,20 +740,17 @@ class schroedingerCellSudoku(sudoku):
 		# First the easy part: ensure all of the digits are different. The unassigned S-Cells will not get in the way, and we want to ensure the assigned ones are different from the regular cell values. So this is safe regardless of which are the S-cells
 		self.model.AddAllDifferent([self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(len(inlist))] + [self.sCellValues[inlist[j][0]][inlist[j][1]] for j in range(len(inlist))])
 		
-		# Now the consecutive condition. To do this, we need to know exactly which are the S-cells
-		sCandidates = self.sSubsets(inlist)
-		varBitmap = self._sudoku__varBitmap('RenbanLine',len(sCandidates))
-		for i in range(len(sCandidates)):
-			# First set up S-cell Booleans to match the candidate list
-			self.model.AddBoolAnd([self.sCell[x[0]][x[1]] for x in sCandidates[i]]).OnlyEnforceIf(varBitmap[i])
-			self.model.AddBoolAnd([self.sCell[x[0]][x[1]].Not() for x in inlist if x not in sCandidates[i]]).OnlyEnforceIf(varBitmap[i])
-			
-			# Now prepare the list of variables which need to be consecutive
-			varList = [self.cellValues[x[0]][x[1]] for x in inlist] + [self.sCellValues[x[0]][x[1]] for x in sCandidates[i]]
-			for x in varList:
-				for y in varList:
-					self.model.Add(x-y < len(varList)).OnlyEnforceIf(varBitmap[i])
-					
+		# Old way was dumb. We don't need to know where the S-cells are, just how *many* there are
+		numSCells = self.model.NewIntVar(0,len(inlist),'renbanNumSCells')
+		self.model.Add(numSCells == sum(self.sCellInt[inlist[j][0]][inlist[j][1]] for j in range(len(inlist))))
+		
+		for i in range(len(inlist)):
+			for j in range(len(inlist)):
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]]-self.cellValues[inlist[j][0]][inlist[j][1]] < len(inlist) + numSCells)
+				self.model.Add(self.sCellValues[inlist[i][0]][inlist[i][1]]-self.cellValues[inlist[j][0]][inlist[j][1]] < len(inlist) + numSCells).OnlyEnforceIf(self.sCell[inlist[i][0]][inlist[i][1]])
+				self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]]-self.sCellValues[inlist[j][0]][inlist[j][1]] < len(inlist) + numSCells).OnlyEnforceIf(self.sCell[inlist[j][0]][inlist[j][1]])
+				self.model.Add(self.sCellValues[inlist[i][0]][inlist[i][1]]-self.sCellValues[inlist[j][0]][inlist[j][1]] < len(inlist) + numSCells).OnlyEnforceIf([self.sCell[inlist[i][0]][inlist[i][1]],self.sCell[inlist[j][0]][inlist[j][1]]])
+						
 	def setArrow(self,inlist,sSum=False):
 		inlist = self._procCellList(inlist)
 		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] + self.sCellSums[inlist[0][0]][inlist[0][1]] == sum([self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(1,len(inlist))] + [self.sCellSums[inlist[j][0]][inlist[j][1]] for j in range(1,len(inlist))]))
@@ -812,30 +782,43 @@ class schroedingerCellSudoku(sudoku):
 			
 	def setBetweenLine(self,inlist):
 		inlist = self._procCellList(inlist)
-		c = self.model.NewBoolVar('BetweenRow{:d}Col{:d}ToRow{:d}Col{:d}'.format(inlist[0][0],inlist[0][1],inlist[-1][0],inlist[-1][1]))
 		
-		# Case c true: first element of line is largest. In the S-cell case, the Schroedinger value is always larger than the normal value, so if the constraint is met with respect to the cell value, it will also be met with respect to the S-value. So as long as the cell value is greater than the other end (and its potential S-cell, which we need to control for), we're OK.
-		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] > self.cellValues[inlist[-1][0]][inlist[-1][1]]).OnlyEnforceIf(c)
+		# First note that if an endpoint of a between line is an S-cell, then the other endpoint (one or both values) must be strictly greater or strictly less than both values in the original endpoint. Otherwise, the between cannot be valid for both values of the original endpoint. So as with normal between lines, we create a Boolean variable c to distinguish between the cases where the first endpoint has the greater values, or the second endpoind does.
+		
+		c = self.model.NewBoolVar('BetweenRow{:d}Col{:d}ToRow{:d}Col{:d}'.format(inlist[0][0],inlist[0][1],inlist[-1][0],inlist[-1][1]))
+		self.allVars.append(c)
+		
+		# Now tie the endpoint values to ensure c True = first element largest, c False = last element largest. There are actually two cases for each, depending on whether the endpoints are S-cells.
+		
+		# Case 1: First endpoint is largest. Since the S-cell value is always bigger than the base value, we don't care whether or not the first cell is an S-cell...as long as the base value of the first endpoint is larger than both the S-value and base value of the last, we'll be in this case. If the last endpoint is an S-cell, we have to be bigger than the S-value. Otherwise, we just need to be bigger than the base value.
+		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] > self.cellValues[inlist[-1][0]][inlist[-1][1]]).OnlyEnforceIf([c,self.sCell[inlist[-1][0]][inlist[-1][1]].Not()])
 		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] > self.sCellValues[inlist[-1][0]][inlist[-1][1]]).OnlyEnforceIf([c,self.sCell[inlist[-1][0]][inlist[-1][1]]])
 		
-		for j in range(1,len(inlist)-1):
-			self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] > self.cellValues[inlist[j][0]][inlist[j][1]]).OnlyEnforceIf(c)
-			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] > self.cellValues[inlist[-1][0]][inlist[-1][1]]).OnlyEnforceIf(c)
-			self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] > self.sCellValues[inlist[j][0]][inlist[j][1]]).OnlyEnforceIf([c,self.sCell[inlist[j][0]][inlist[j][1]]])
-			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] > self.sCellValues[inlist[-1][0]][inlist[-1][1]]).OnlyEnforceIf([c,self.sCell[inlist[-1][0]][inlist[-1][1]]])
-			# Since S-cell is bigger, other inequality is satisfied by default
-			
-		# Case c false: last element of line is largest. In this case, we'll just do all four potential comparisons
-		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] < self.cellValues[inlist[-1][0]][inlist[-1][1]]).OnlyEnforceIf(c.Not())
-		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] < self.sCellValues[inlist[-1][0]][inlist[-1][1]]).OnlyEnforceIf([c.Not(),self.sCell[inlist[-1][0]][inlist[-1][1]]])
-		self.model.Add(self.sCellValues[inlist[0][0]][inlist[0][1]] < self.cellValues[inlist[-1][0]][inlist[-1][1]]).OnlyEnforceIf([c.Not(),self.sCell[inlist[0][0]][inlist[0][1]]])
-		self.model.Add(self.sCellValues[inlist[0][0]][inlist[0][1]] < self.sCellValues[inlist[-1][0]][inlist[-1][1]]).OnlyEnforceIf([c.Not(),self.sCell[inlist[0][0]][inlist[0][1]],self.sCell[inlist[-1][0]][inlist[-1][1]]])
+		# Case 2: Last endpoint is largest. Basically everything is symmetric, but now we care that the first endpoint is an sCell of not
+		self.model.Add(self.cellValues[inlist[-1][0]][inlist[-1][1]] > self.cellValues[inlist[0][0]][inlist[0][1]]).OnlyEnforceIf([c.Not(),self.sCell[inlist[0][0]][inlist[0][1]].Not()])
+		self.model.Add(self.cellValues[inlist[-1][0]][inlist[-1][1]] > self.sCellValues[inlist[0][0]][inlist[0][1]]).OnlyEnforceIf([c.Not(),self.sCell[inlist[0][0]][inlist[0][1]]])
 		
+		# Now, to check the between condition, we need to be:
+		# 1. less than the smaller of the bigger cell, which is always the base value
+		# 2. bigger than the larger of the smallest cell, which is the S-value if it exists, otherwise the base
+		# We'll just create variables to determine these, and that way our per-cell comparisons are easy
+		minEndpoint = self.model.NewIntVar(self.minDigit,self.maxDigit,'minEndpointBetweenRow{:d}Col{:d}ToRow{:d}Col{:d}'.format(inlist[0][0],inlist[0][1],inlist[-1][0],inlist[-1][1]))
+		maxEndpoint = self.model.NewIntVar(self.minDigit,self.maxDigit,'maxEndpointBetweenRow{:d}Col{:d}ToRow{:d}Col{:d}'.format(inlist[0][0],inlist[0][1],inlist[-1][0],inlist[-1][1]))
+		
+		self.model.Add(maxEndpoint == self.cellValues[inlist[0][0]][inlist[0][1]]).OnlyEnforceIf(c)
+		self.model.Add(maxEndpoint == self.cellValues[inlist[-1][0]][inlist[-1][1]]).OnlyEnforceIf(c.Not())
+		
+		self.model.Add(minEndpoint == self.cellValues[inlist[-1][0]][inlist[-1][1]]).OnlyEnforceIf([c,self.sCell[inlist[-1][0]][inlist[-1][1]].Not()])
+		self.model.Add(minEndpoint == self.sCellValues[inlist[-1][0]][inlist[-1][1]]).OnlyEnforceIf([c,self.sCell[inlist[-1][0]][inlist[-1][1]]])
+		self.model.Add(minEndpoint == self.cellValues[inlist[0][0]][inlist[0][1]]).OnlyEnforceIf([c.Not(),self.sCell[inlist[0][0]][inlist[0][1]].Not()])
+		self.model.Add(minEndpoint == self.sCellValues[inlist[0][0]][inlist[0][1]]).OnlyEnforceIf([c.Not(),self.sCell[inlist[0][0]][inlist[0][1]]])
+		
+		# Now the per cell comparisons are easy
 		for j in range(1,len(inlist)-1):
-			self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] < self.cellValues[inlist[j][0]][inlist[j][1]]).OnlyEnforceIf(c.Not())
-			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] < self.cellValues[inlist[-1][0]][inlist[-1][1]]).OnlyEnforceIf(c.Not())
-			self.model.Add(self.sCellValues[inlist[j][0]][inlist[j][1]] < self.cellValues[inlist[-1][0]][inlist[-1][1]]).OnlyEnforceIf([c.Not(),self.sCell[inlist[j][0]][inlist[j][1]]])
-			self.model.Add(self.sCellValues[inlist[0][0]][inlist[0][1]] < self.cellValues[inlist[j][0]][inlist[j][1]]).OnlyEnforceIf([c.Not(),self.sCell[inlist[0][0]][inlist[0][1]]])
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] < maxEndpoint)
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] > minEndpoint)
+			self.model.Add(self.sCellValues[inlist[j][0]][inlist[j][1]] < maxEndpoint).OnlyEnforceIf(self.sCell[inlist[j][0]][inlist[j][1]])
+			self.model.Add(self.sCellValues[inlist[j][0]][inlist[j][1]] > minEndpoint).OnlyEnforceIf(self.sCell[inlist[j][0]][inlist[j][1]])
 			
 	def setVault(self,inlist):
 		# Digits in a vault cannot appear in any cell outside the vault but orthogonally adjacent ot a cell in it.
@@ -915,7 +898,7 @@ class superpositionSudoku(schroedingerCellSudoku):
 		#         to be true, i.e., there exists some assignment of values using each of the possible values which yields a true sum
 		
 		sCandidates = self.sSubsets(inlist)
-		varBitmap = self._sudoku__varBitmap('sDAS',len(sCandidates))
+		varBitmap = self._varBitmap('sDAS',len(sCandidates))
 		
 		# Now for the set of vars we need to case the combinations. We can reuse these across cases!
 		cVars = [self.model.NewBoolVar('sDAS{:d}'.format(i)) for i in range(2**max([len(x) for x in sCandidates]))]
@@ -988,7 +971,7 @@ class superpositionSudoku(schroedingerCellSudoku):
 		
 		# Now the consecutive condition. To do this, we need to know exactly which are the S-cells
 		sCandidates = self.sSubsets(inlist)
-		varBitmap = self._sudoku__varBitmap('RenbanLine',len(sCandidates))
+		varBitmap = self._varBitmap('RenbanLine',len(sCandidates))
 		cVars = [self.model.NewBoolVar('Renban{:d}'.format(i)) for i in range(2**max([len(x) for x in sCandidates]))]
 		digitAlt = [[self.cellValues[inlist[j][0]][inlist[j][1]],self.sCellValues[inlist[j][0]][inlist[j][1]]] for j in range(len(inlist))]
 			# Digit alternatives per cell for easy indexing

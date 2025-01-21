@@ -154,7 +154,7 @@ def setWeakPalindromeLine(self,inlist):
 		sys.exit()
 	inlist = self._procCellList(inlist)
 	for j in range(len(inlist) // 2):
-		self.model.AddAllowedAssignments([self.cellValues[inlist[j][0]][inlist[j][1]],self.cellValues[inlist[-j-1][0]][inlist[-j-1][1]]],[(1,1),(1,3),(3,1),(3,3),(2,2),(2,4),(4,2),(4,4),(5,5),(5,7),(5,9),(7,5),(7,7),(7,9),(6,6),(6,8),(8,6),(8,8)])
+		self.model.AddAllowedAssignments([self.cellValues[inlist[j][0]][inlist[j][1]],self.cellValues[inlist[-j-1][0]][inlist[-j-1][1]]],[(1,1),(1,3),(3,1),(3,3),(2,2),(2,4),(4,2),(4,4),(5,5),(5,7),(5,9),(7,5),(7,7),(7,9),(9,5),(9,7),(9,9),(6,6),(6,8),(8,6),(8,8)])
 
 def setParityLine(self,inlist):
 	if self.isParity is False:
@@ -436,7 +436,7 @@ def setParityCountLine(self,inlist):
 	e = self.model.NewBoolVar('ParityCountLine')	# Variable to test if endpoints are equal, in which case we prevent c from flapping.
 	self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] + self.cellValues[inlist[-1][0]][inlist[-1][1]] == len(inlist))
 	self.model.Add(sum(self.cellParity[inlist[j][0]][inlist[j][1]] for j in range(len(inlist))) == self.cellValues[inlist[0][0]][inlist[0][1]]).OnlyEnforceIf(c)
-	self.model.Add(sum(self.cellParity[inlist[j][0]][inlist[j][1]] for j in range(len(inlist))) == self.cellValues[inlist[0][0]][inlist[0][1]]).OnlyEnforceIf(c.Not())
+	self.model.Add(sum(self.cellParity[inlist[j][0]][inlist[j][1]] for j in range(len(inlist))) == self.cellValues[inlist[-1][0]][inlist[-1][1]]).OnlyEnforceIf(c.Not())
 	
 	self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] == self.cellValues[inlist[-1][0]][inlist[-1][1]]).OnlyEnforceIf(e)
 	self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] != self.cellValues[inlist[-1][0]][inlist[-1][1]]).OnlyEnforceIf(e.Not())

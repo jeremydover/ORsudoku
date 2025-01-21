@@ -15,47 +15,9 @@ class cellTransformSudoku(sudoku):
 	def __init__(self,boardSizeRoot,canRepeatDigits=False,irregular=None,digitSet=None):
 		self.boardSizeRoot = boardSizeRoot
 		self.boardWidth = boardSizeRoot*boardSizeRoot
-
-		self.isBattenburgInitialized = False
-		self.isBattenburgNegative = False
 		
-		self.isKropkiInitialized = False
-		self.isKropkiNegative = False
-		self.kropkiDiff = 1
-		self.kropkiRatio = 2
-		
-		self.isFriendlyInitialized = False
-		self.isFriendlyNegative = False
-		
-		self.isRossiniInitialized = False
-		self.isRossiniNegative = False
-		self.rossiniLength = -1
-		self.outsideLength = -1
-		
-		self.isXVInitialized = False
-		self.isXVNegative = False
-		
-		self.isXVXVInitialized = False
-		self.isXVXVNegative = False
-		
-		self.isXYDifferenceInitialized = False
-		self.isXYDifferenceNegative = False
-		
-		self.isEntropyQuadInitialized = False
-		self.isEntropyQuadNegative = False
-					
-		self.isModularQuadInitialized = False
-		self.isModularQuadNegative = False
-
-		self.isEntropyBattenburgInitialized = False
-		self.isEntropyBattenburgNegative = False
-		
-		self.isConsecutiveQuadInitialized = False
-		self.isConsecutiveQuadNegative = False
-		
-		self.isParityQuadInitialized = False
-		self.isParityQuadNegative = False
-		self.parityQuadExcluded = [0,4]
+		self._constraintInitialized = []
+		self._constraintNegative = []
 		
 		self.isParity = False
 		self.isEntropy = False
