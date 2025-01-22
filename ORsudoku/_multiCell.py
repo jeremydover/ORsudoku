@@ -618,33 +618,33 @@ def setBlockCage(self,inlist,values):
 def setMOTECage(self,inlist):
 	# A MOTE cage has more odd than even cells
 	inlist = self._procCellList(inlist)
-	if self.isParity is False:
+	if 'Parity' not in self._propertyInitialized:
 		self._setParity()
 	self.model.Add(sum([self.cellParity[inlist[i][0]][inlist[i][1]] for i in range(len(inlist))]) >= (len(inlist)+2)//2)
 	
 def setMETOCage(self,inlist):
 	# A METO cage has more even than odd cells
 	inlist = self._procCellList(inlist)
-	if self.isParity is False:
+	if 'Parity' not in self._propertyInitialized:
 		self._setParity()
 	self.model.Add(sum([self.cellParity[inlist[i][0]][inlist[i][1]] for i in range(len(inlist))]) <= (len(inlist)-1)//2)
 	
 def setUniparityCage(self,inlist):
 	# A uniparity cage has cells with only one parity
 	inlist = self._procCellList(inlist)
-	if self.isParity is False:
+	if 'Parity' not in self._propertyInitialized:
 		self._setParity()
 	for i in range(len(inlist)-1):
 		self.model.Add(self.cellParity[inlist[i][0]][inlist[i][1]] == self.cellParity[inlist[i+1][0]][inlist[i+1][1]])
 		
 def setEquiparityCage(self,inlist):
 	inlist = self._procCellList(inlist)
-	if self.isParity is False:
+	if 'Parity' not in self._propertyInitialized:
 		self._setParity()
 	self.model.Add(2*sum([self.cellParity[inlist[i][0]][inlist[i][1]] for i in range(len(inlist))]) == len(inlist))
 	
 def setAllOddOrEven(self,inlist):
-	if self.isParity is False:
+	if 'Parity' not in self._propertyInitialized:
 		self._setParity()
 	inlist = set(self._procCellList(inlist))
 	
@@ -867,7 +867,7 @@ def setMagicSquare(self,row,col=-1):
 	self.model.Add(sum(self.cellValues[row+j][col+self.boardSizeRoot-1-j] for j in range(self.boardSizeRoot)) == tSum) # Off diagonal sum
 	
 def setEntropkiWhite(self,row,col=-1,hv=-1):
-	if self.isEntropy is False:
+	if 'Entropy' not in self._propertyInitialized:
 		self._setEntropy()
 	if col == -1:
 		(row,col,hv) = self._procCell(row)
@@ -875,7 +875,7 @@ def setEntropkiWhite(self,row,col=-1,hv=-1):
 	self.model.Add(self.cellEntropy[row][col] != self.cellEntropy[row+hv][col+(1-hv)])
 	
 def setEntropkiBlack(self,row,col=-1,hv=-1):
-	if self.isEntropy is False:
+	if 'Entropy' not in self._propertyInitialized:
 		self._setEntropy()
 	if col == -1:
 		(row,col,hv) = self._procCell(row)
@@ -897,7 +897,7 @@ def setEntropkiArray(self,cells):
 			self.setEntropkiBlack(x[0],x[1],x[2])
 			
 def setParityDotWhite(self,row,col=-1,hv=-1):
-	if self.isParity is False:
+	if 'Parity' not in self._propertyInitialized:
 		self._setParity()
 	if col == -1:
 		(row,col,hv) = self._procCell(row)
@@ -905,7 +905,7 @@ def setParityDotWhite(self,row,col=-1,hv=-1):
 	self.model.Add(self.cellParity[row][col] != self.cellParity[row+hv][col+(1-hv)])
 	
 def setParityDotBlack(self,row,col=-1,hv=-1):
-	if self.isParity is False:
+	if 'Parity' not in self._propertyInitialized:
 		self._setParity()
 	if col == -1:
 		(row,col,hv) = self._procCell(row)
@@ -928,9 +928,9 @@ def setParityDotArray(self,cells):
 
 def setGenetic(self,inlist):
 	inlist = self._procCellList(inlist)
-	if self.isEntropy is False:
+	if 'Entropy' not in self._propertyInitialized:
 		self._setEntropy()
-	if self.isParity is False:
+	if 'Parity' not in self._propertyInitialized:
 		self._setParity()
 		
 	p1Parity = self.model.NewBoolVar('GeneticsP1ParityMatchRow{:d}Col{:d}'.format(inlist[0][0],inlist[0][1]))
@@ -956,7 +956,7 @@ def setGeneticArray(self,cells):
 	for x in cells: self.setGenetic(x)
 	
 def setParitySnake(self,row1,col1,row2,col2,parity=None):
-	if self.isParity is False:
+	if 'Parity' not in self._propertyInitialized:
 		self._setParity()
 	r1 = row1 - 1
 	c1 = col1 - 1

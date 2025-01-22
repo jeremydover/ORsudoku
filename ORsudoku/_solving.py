@@ -58,17 +58,6 @@ def applyNegativeConstraints(self):
 	
 	for x in self._constraintNegative:
 		getattr(self,'_apply'+x+'Negative')()
-	#if self.isBattenburgNegative is True: self._applyBattenburgNegative()
-	#if self.isKropkiNegative is True: self._applyKropkiNegative()
-	#if self.isXVNegative is True: self._applyXVNegative()
-	##if self.isXVXVNegative is True: self._applyXVXVNegative()
-	#if self.isXYDifferenceNegative is True: self._applyXYDifferenceNegative()
-	#if self.isEntropyQuadNegative is True: self._applyEntropyQuadNegative()
-	#if self.isEntropyBattenburgNegative is True: self._applyEntropyBattenburgNegative()
-	#if self.isFriendlyNegative is True: self._applyFriendlyNegative()
-	#if self.isRossiniNegative is True: self._applyRossiniNegative()
-	#if self.isConsecutiveQuadNegative is True: self._applyConsecutiveQuadNegative()
-	#if self.isParityQuadNegative is True: self._applyParityQuadNegative()
 
 def findSolution(self,test=False,debug=False):
 	self.applyNegativeConstraints()

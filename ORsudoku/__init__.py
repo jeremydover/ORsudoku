@@ -75,6 +75,9 @@ class sudoku:
 	EQ = 1		# Constant to assert an equal to comparison
 	LE = 0		# Constant to assert an equal to comparison
 	
+	Low = 0		# Constant to assert a value is "low"
+	High = 1	# Constant to assert a value is "high"
+	
 	def mySuper(self):
 		return super()
 
@@ -84,12 +87,7 @@ class sudoku:
 		
 		self._constraintInitialized = []
 		self._constraintNegative = []
-		
-		self.isParity = False
-		self.isEntropy = False
-		self.isModular = False
-		self.isFullRank = False
-		self.isPrimality = False
+		self._propertyInitialized = []
 		
 		if digitSet is None:
 			self.digits = {x for x in range(1,self.boardWidth+1)}
@@ -170,7 +168,7 @@ class sudoku:
 				self.model.Add(mod == self.cellValues[i][j]-2*div)
 			self.cellParity.insert(i,t)
 		
-		self.isParity = True
+		self._propertyInitialized.append('Parity')
 		
 	def _setEntropy(self):
 		# Set up variables to track entropy and modular constraints
@@ -186,11 +184,11 @@ class sudoku:
 				self.model.Add(3*c+4 > self.cellValues[i][j])
 			self.cellEntropy.insert(i,t)
 		
-		self.isEntropy = True
+		self._propertyInitialized.append('Entropy')
 
 	def _setModular(self):
 		# Set up variables to track modular constraints
-		if self.isEntropy is False:
+		if 'Entropy' not in self._propertyInitialized:
 			self._setEntropy()
 		
 		self.cellModular = []
@@ -204,7 +202,7 @@ class sudoku:
 				self.model.Add(c == self.cellValues[i][j] - 3*self.cellEntropy[i][j])
 			self.cellModular.insert(i,t)
 		
-		self.isModular = True
+		self._propertyInitialized.append('Modular')
 		
 	def _setFullRank(self):
 		if self.boardWidth != 9 or self.minDigit < 0 or self.maxDigit > 9:
@@ -235,7 +233,7 @@ class sudoku:
 				self.model.Add(self.rcSum[i] < self.rcSum[j]).OnlyEnforceIf(c.Not())
 				self.model.Add(self.rcRank[i] < self.rcRank[j]).OnlyEnforceIf(c.Not())
 				
-		self.isFullRank = True
+		self._propertyInitialized.append('FullRank')
 		
 	def _setPrimality(self):
 		if self.boardWidth != 9 or self.minDigit < 0 or self.maxDigit > 9:
@@ -269,7 +267,27 @@ class sudoku:
 				self.model.Add(c == 2).OnlyEnforceIf(varBitmap[8])
 				t.append(c)
 			self.cellPrimality.insert(i,t)
-		self.isPrimality = True
+		self._propertyInitialized.append('Primality')
+		
+	def _setMagnitude(self,five=High):
+		# Set up Boolean variables to track magnitude constraints
+	
+		self.cellMagnitude = []
+		
+		for i in range(self.boardWidth):
+			t = []
+			for j in range(self.boardWidth):
+				c = self.model.NewIntVar(-1,1,'magnitudeValue{:d}{:d}'.format(i,j))
+				t.append(c)
+				if five == self.High:
+					self.model.Add(self.cellValues[i][j] < 5).OnlyEnforceIf(c.Not())
+					self.model.Add(self.cellValues[i][j] >= 5).OnlyEnforceIf(c)
+				else:
+					self.model.Add(self.cellValues[i][j] <= 5).OnlyEnforceIf(c.Not())
+					self.model.Add(self.cellValues[i][j] > 5).OnlyEnforceIf(c)
+			self.cellMagnitude.insert(i,t)
+		
+		self._propertyInitialized.append('Magnitude')
 		
 	def getCellVar(self,i,j):
 		# Returns the model variable associated with a cell value. Useful when tying several puzzles together, e.g. Samurai

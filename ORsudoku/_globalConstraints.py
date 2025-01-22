@@ -64,14 +64,14 @@ def setMagnitudeAntiMirrorOff(self):
 			self.model.Add(self.cellValues[fi][fj] <= 5).OnlyEnforceIf(b.Not())
 
 def setParityMirrorMain(self):
-	if self.isParity is False:
+	if 'Parity' not in self._propertyInitialized:
 		self._setParity()
 	for i in range(1,self.boardWidth):
 		for j in range(i):
 			self.model.Add(self.cellParity[i][j] == self.cellParity[j][i])
 
 def setParityMirrorOff(self):
-	if self.isParity is False:
+	if 'Parity' not in self._propertyInitialized:
 		self._setParity()
 	for i in range(self.boardWidth-1):
 		for j in range(self.boardWidth-1-i):
@@ -80,14 +80,14 @@ def setParityMirrorOff(self):
 			self.model.Add(self.cellParity[i][j] == self.cellParity[fi][fj])
 
 def setEntropyMirrorMain(self):
-	if self.isEntropy is False:
+	if 'Entropy' not in self._propertyInitialized:
 		self._setEntropy()
 	for i in range(1,self.boardWidth):
 		for j in range(i):
 			self.model.Add(self.cellEntropy[i][j] == self.cellEntropy[j][i])
 
 def setEntropyMirrorOff(self):
-	if self.isEntropy is False:
+	if 'Entropy' not in self._propertyInitialized:
 		self._setEntropy()
 	for i in range(self.boardWidth-1):
 		for j in range(self.boardWidth-1-i):
@@ -96,14 +96,14 @@ def setEntropyMirrorOff(self):
 			self.model.Add(self.cellEntropy[i][j] == self.cellEntropy[fi][fj])
 			
 def setEntropyAntiMirrorMain(self):
-	if self.isEntropy is False:
+	if 'Entropy' not in self._propertyInitialized:
 		self._setEntropy()
 	for i in range(1,self.boardWidth):
 		for j in range(i):
 			self.model.Add(self.cellEntropy[i][j] != self.cellEntropy[j][i])
 
 def setEntropyAntiMirrorOff(self):
-	if self.isEntropy is False:
+	if 'Entropy' not in self._propertyInitialized:
 		self._setEntropy()
 	for i in range(self.boardWidth-1):
 		for j in range(self.boardWidth-1-i):
@@ -112,7 +112,7 @@ def setEntropyAntiMirrorOff(self):
 			self.model.Add(self.cellEntropy[i][j] != self.cellEntropy[fi][fj])
 		
 def setPrimalityMirrorMain(self):
-	if self.isPrimality is False:
+	if 'Primality' not in self._propertyInitialized:
 		self._setPrimality()
 	for i in range(1,self.boardWidth):
 		for j in range(i):
@@ -123,7 +123,7 @@ def setPrimalityMirrorMain(self):
 			self.model.Add(self.cellPrimality[j][i] >= 1).OnlyEnforceIf(b.Not())		
 
 def setPrimalityMirrorOff(self):
-	if self.isPrimality is False:
+	if 'Primality' not in self._propertyInitialized:
 		self._setPrimality()
 	for i in range(self.boardWidth-1):
 		for j in range(self.boardWidth-1-i):
@@ -136,7 +136,7 @@ def setPrimalityMirrorOff(self):
 			self.model.Add(self.cellPrimality[fi][fj] >= 1).OnlyEnforceIf(b.Not())
 			
 def setPrimalityAntiMirrorMain(self):
-	if self.isPrimality is False:
+	if 'Primality' not in self._propertyInitialized:
 		self._setPrimality()
 	for i in range(1,self.boardWidth):
 		for j in range(i):
@@ -147,7 +147,7 @@ def setPrimalityAntiMirrorMain(self):
 			self.model.Add(self.cellPrimality[j][i] <= 1).OnlyEnforceIf(b.Not())
 
 def setPrimalityAntiMirrorOff(self):
-	if self.isPrimality is False:
+	if 'Primality' not in self._propertyInitialized:
 		self._setPrimality()
 	for i in range(self.boardWidth-1):
 		for j in range(self.boardWidth-1-i):
@@ -468,7 +468,7 @@ def setRotationalPairs(self):
 					self.model.Add(self.cellValues[self.boardWidth-1-i][self.boardWidth-1-j] != self.cellValues[self.boardWidth-1-k][self.boardWidth-1-m]).OnlyEnforceIf(c.Not())
 					
 def setNoThreeInARowParity(self):
-	if self.isParity is False:
+	if 'Parity' not in self._propertyInitialized:
 		self._setParity()
 	for i in range(self.boardWidth-2):
 		for j in range(self.boardWidth):

@@ -18,12 +18,7 @@ class schroedingerCellSudoku(sudoku):
 
 		self._constraintInitialized = []
 		self._constraintNegative = []
-		
-		self.isParity = False
-		self.isEntropy = False
-		self.isModular = False
-		self.isFullRank = False
-		self.isPrimality = False
+		self._propertyInitialized = []
 		
 		if digitSet is None:
 			self.digits = {x for x in range(self.boardWidth+1)}		# Add additional digit from Schroedinger
@@ -209,7 +204,7 @@ class schroedingerCellSudoku(sudoku):
 			self.cellParity.insert(i,t)
 			self.sCellParity.insert(i,sT)
 		
-		self.isParity = True
+		self._propertyInitialized.append('Parity')
 		
 	def __setEntropy(self):
 		# Set up variables to track entropy and modular constraints
@@ -231,7 +226,7 @@ class schroedingerCellSudoku(sudoku):
 			self.cellEntropy.insert(i,t)
 			self.sCellEntropy.insert(i,sT)
 		
-		self.isEntropy = True
+		self._propertyInitialized.append('Entropy')
 		
 	def printCurrentSolution(self):
 		dW = max([2*len(str(x)) for x in self.digits]) + 1
@@ -474,7 +469,7 @@ class schroedingerCellSudoku(sudoku):
 	def setEvenOdd(self,row,col=-1,parity=-1):
 		if col == -1:
 			(row,col,parity) = self._procCell(row)
-		if self.isParity is False:
+		if 'Parity' not in self._propertyInitialized:
 			self.__setParity()
 		self.model.Add(self.cellParity[row][col] == parity)
 		self.model.Add(self.sCellParity[row][col] == parity)
@@ -861,7 +856,7 @@ class schroedingerCellSudoku(sudoku):
 				self.model.Add(self.sCellValues[x[0]][x[1]] != self.sCellValues[y[0]][y[1]])
 				
 	def setParityLine(self,inlist):
-		if self.isParity is False:
+		if 'Parity' not in self._propertyInitialized:
 			self.__setParity()
 		inlist = self._procCellList(inlist)
 		for j in range(len(inlist)):

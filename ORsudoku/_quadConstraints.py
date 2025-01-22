@@ -64,7 +64,7 @@ def setBattenburg(self,row,col=-1):
 	else:
 		self.battenburgCells.append((row,col))
 		
-	if self.isParity is False:
+	if 'Parity' not in self._propertyInitialized:
 		self._setParity()
 		
 	# Now that we can track parity globally, only need to check that the three pairs: top, right, and bottom are different parity.
@@ -83,7 +83,7 @@ def setBattenburgNegative(self):
 		self._constraintInitialized.append('Battenburg')
 	self._constraintNegative.append('Battenburg')
 	
-	if self.isParity is False:
+	if 'Parity' not in self._propertyInitialized:
 		self._setParity()
 		
 def setAntiBattenburg(self,row,col=-1):
@@ -120,7 +120,7 @@ def setEntropyQuad(self,row,col=-1):
 	else:
 		self.entropyQuadCells.append((row,col))
 		
-	if self.isEntropy is False:
+	if 'Entropy' not in self._propertyInitialized:
 		self._setEntropy()
 	
 	self.model.AddForbiddenAssignments([self.cellEntropy[row][col],self.cellEntropy[row][col+1],self.cellEntropy[row+1][col],self.cellEntropy[row+1][col+1]],[(0,0,0,0),(1,1,1,1),(2,2,2,2),(0,0,0,1),(0,0,1,0),(0,1,0,0),(1,0,0,0),(0,0,0,2),(0,0,2,0),(0,2,0,0),(2,0,0,0),(1,1,1,0),(1,1,0,1),(1,0,1,1),(0,1,1,1),(1,1,1,2),(1,1,2,1),(1,2,1,1),(2,1,1,1),(2,2,2,0),(2,2,0,2),(2,0,2,2),(0,2,2,2),(2,2,2,1),(2,2,1,2),(2,1,2,2),(1,2,2,2),(0,0,1,1),(0,0,2,2),(1,1,0,0),(1,1,2,2),(2,2,0,0),(2,2,1,1),(0,1,0,1),(0,2,0,2),(1,0,1,0),(1,2,1,2),(2,0,2,0),(2,1,2,1),(0,1,1,0),(0,2,2,0),(1,0,0,1),(1,2,2,1),(2,0,0,2),(2,1,1,2)])
@@ -133,7 +133,7 @@ def setEntropyQuadNegative(self):
 		self.entropyQuadCells = []
 		self._constraintInitialized.append('EntropyQuad')
 	
-	if self.isEntropy is False:
+	if 'Entropy' not in self._propertyInitialized:
 		self._setEntropy()
 		
 	self._constraintNegative.append('EntropyQuad')
@@ -142,7 +142,7 @@ def setAntiEntropyQuad(self,row,col=-1):
 	if col == -1:
 		(row,col) = self._procCell(row)
 		
-	if self.isEntropy is False:
+	if 'Entropy' not in self._propertyInitialized:
 		self._setEntropy()
 	
 	self.model.AddAllowedAssignments([self.cellEntropy[row][col],self.cellEntropy[row][col+1],self.cellEntropy[row+1][col],self.cellEntropy[row+1][col+1]],[(0,0,0,0),(1,1,1,1),(2,2,2,2),(0,0,0,1),(0,0,1,0),(0,1,0,0),(1,0,0,0),(0,0,0,2),(0,0,2,0),(0,2,0,0),(2,0,0,0),(1,1,1,0),(1,1,0,1),(1,0,1,1),(0,1,1,1),(1,1,1,2),(1,1,2,1),(1,2,1,1),(2,1,1,1),(2,2,2,0),(2,2,0,2),(2,0,2,2),(0,2,2,2),(2,2,2,1),(2,2,1,2),(2,1,2,2),(1,2,2,2),(0,0,1,1),(0,0,2,2),(1,1,0,0),(1,1,2,2),(2,2,0,0),(2,2,1,1),(0,1,0,1),(0,2,0,2),(1,0,1,0),(1,2,1,2),(2,0,2,0),(2,1,2,1),(0,1,1,0),(0,2,2,0),(1,0,0,1),(1,2,2,1),(2,0,0,2),(2,1,1,2)])
@@ -166,7 +166,7 @@ def setModularQuad(self,row,col=-1):
 	else:
 		self.modularQuadCells.append((row,col))
 		
-	if self.isModular is False:
+	if 'Modular' not in self._propertyInitialized:
 		self._setModular()
 	
 	self.model.AddForbiddenAssignments([self.cellModular[row][col],self.cellModular[row][col+1],self.cellModular[row+1][col],self.cellModular[row+1][col+1]],[(3,3,3,3),(1,1,1,1),(2,2,2,2),(3,3,3,1),(3,3,1,3),(3,1,3,3),(1,3,3,3),(3,3,3,2),(3,3,2,3),(3,2,3,3),(2,3,3,3),(1,1,1,3),(1,1,3,1),(1,3,1,1),(3,1,1,1),(1,1,1,2),(1,1,2,1),(1,2,1,1),(2,1,1,1),(2,2,2,3),(2,2,3,2),(2,3,2,2),(3,2,2,2),(2,2,2,1),(2,2,1,2),(2,1,2,2),(1,2,2,2),(3,3,1,1),(3,3,2,2),(1,1,3,3),(1,1,2,2),(2,2,3,3),(2,2,1,1),(3,1,3,1),(3,2,3,2),(1,3,1,3),(1,2,1,2),(2,3,2,3),(2,1,2,1),(3,1,1,3),(3,2,2,3),(1,3,3,1),(1,2,2,1),(2,3,3,2),(2,1,1,2)])
@@ -179,7 +179,7 @@ def setModularQuadNegative(self):
 		self.modularQuadCells = []
 		self._constraintInitialized.append('ModularQuad')
 	
-	if self.isModular is False:
+	if 'Modular' not in self._propertyInitialized:
 		self._setModular()
 		
 	self._constraintNegative.append('ModularQuad')
@@ -188,7 +188,7 @@ def setAntiModularQuad(self,row,col=-1):
 	if col == -1:
 		(row,col) = self._procCell(row)
 		
-	if self.isModular is False:
+	if 'Modular' not in self._propertyInitialized:
 		self._setModular()
 	
 	self.model.AddAllowedAssignments([self.cellModular[row][col],self.cellModular[row][col+1],self.cellModular[row+1][col],self.cellModular[row+1][col+1]],[(3,3,3,3),(1,1,1,1),(2,2,2,2),(3,3,3,1),(3,3,1,3),(3,1,3,3),(1,3,3,3),(3,3,3,2),(3,3,2,3),(3,2,3,3),(2,3,3,3),(1,1,1,3),(1,1,3,1),(1,3,1,1),(3,1,1,1),(1,1,1,2),(1,1,2,1),(1,2,1,1),(2,1,1,1),(2,2,2,3),(2,2,3,2),(2,3,2,2),(3,2,2,2),(2,2,2,1),(2,2,1,2),(2,1,2,2),(1,2,2,2),(3,3,1,1),(3,3,2,2),(1,1,3,3),(1,1,2,2),(2,2,3,3),(2,2,1,1),(3,1,3,1),(3,2,3,2),(1,3,1,3),(1,2,1,2),(2,3,2,3),(2,1,2,1),(3,1,1,3),(3,2,2,3),(1,3,3,1),(1,2,2,1),(2,3,3,2),(2,1,1,2)])
@@ -208,7 +208,7 @@ def _initializeParityQuad(self):
 		self.parityQuadCells = []
 		self.parityQuadExcluded = [0,4]
 
-	if self.isParity is False:
+	if 'Parity' not in self._propertyInitialized:
 		self._setParity()
 
 def setParityQuad(self,row,col=-1):
@@ -254,7 +254,7 @@ def _initializeEntropyBattenburg(self):
 		self.entropyBattenburgCells = []
 		self._constraintInitialized.append('EntropyBattenburg')
 		
-	if self.isEntropy is False:
+	if 'Entropy' not in self._propertyInitialized:
 		self._setEntropy()
 		
 def setEntropyBattenburg(self,row,col=-1):
@@ -336,7 +336,7 @@ def setQuadMaxValueArray(self,cells):
 def setQuadMaxParityValue(self,row,col=-1,values=-1,unique=True):
 	# row,col defines the 2x2 to which the clue applies
 	# value is the largest value *of its parity* which occurs in the quad
-	if self.isParity is False:
+	if 'Parity' not in self._propertyInitialized:
 		self._setParity()
 		
 	if col == -1:

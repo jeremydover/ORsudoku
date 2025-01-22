@@ -19,12 +19,7 @@ class quattroQuadri(sudoku):
 
 		self._constraintInitialized = []
 		self._constraintNegative = []
-		
-		self.isParity = False
-		self.isEntropy = False
-		self.isModular = False
-		self.isFullRank = False
-		self.isPrimality = False
+		self._propertyInitialized = []
 		
 		self.digits = digitSet
 		self.maxDigit = max(self.digits)

@@ -96,7 +96,7 @@ def setFastThermo(self,inlist,missing=False):
 	self.setThermo(inlist,False,missing,'fast')
 
 def setOddEvenThermo(self,inlist,slow=False,missing=False):
-	if self.isParity is False:
+	if 'Parity' not in self._propertyInitialized:
 		self._setParity()
 	self.setThermo(inlist,slow,missing)
 	inlist = self._procCellList(inlist)
@@ -114,7 +114,7 @@ def setvariableLengthThermo(self,bulb,nextCell,slow=False,reflective=False):
 	n = self.procCell(nextCell)
 				
 def setCountTheOddsLine(self,inlist):
-	if self.isParity is False:
+	if 'Parity' not in self._propertyInitialized:
 		self._setParity()
 		
 	inlist = self._procCellList(inlist)
@@ -142,7 +142,7 @@ def setPalindromeLine(self,inlist):
 		self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] == self.cellValues[inlist[-j-1][0]][inlist[-j-1][1]])
 		
 def setParindromeLine(self,inlist):
-	if self.isParity is False:
+	if 'Parity' not in self._propertyInitialized:
 		self._setParity()
 	inlist = self._procCellList(inlist)
 	for j in range(len(inlist) // 2):
@@ -157,7 +157,7 @@ def setWeakPalindromeLine(self,inlist):
 		self.model.AddAllowedAssignments([self.cellValues[inlist[j][0]][inlist[j][1]],self.cellValues[inlist[-j-1][0]][inlist[-j-1][1]]],[(1,1),(1,3),(3,1),(3,3),(2,2),(2,4),(4,2),(4,4),(5,5),(5,7),(5,9),(7,5),(7,7),(7,9),(9,5),(9,7),(9,9),(6,6),(6,8),(8,6),(8,8)])
 
 def setParityLine(self,inlist):
-	if self.isParity is False:
+	if 'Parity' not in self._propertyInitialized:
 		self._setParity()
 	inlist = self._procCellList(inlist)
 	for j in range(len(inlist)-1):
@@ -271,7 +271,7 @@ def setEntropicWhispersLine(self,inlist):
 		
 def setEntropicLine(self,inlist):
 	inlist = self._procCellList(inlist)
-	if self.isEntropy is False:
+	if 'Entropy' not in self._propertyInitialized:
 		self._setEntropy()
 	
 	if len(inlist) == 2:
@@ -282,7 +282,7 @@ def setEntropicLine(self,inlist):
 
 def setModularLine(self,inlist):
 	inlist = self._procCellList(inlist)
-	if self.isModular is False:
+	if 'Modular' not in self._propertyInitialized:
 		self._setModular()
 	
 	if len(inlist) == 2:
@@ -429,7 +429,7 @@ def setNabnerLine(self,inlist):
 			self.setMinWhispersLine([inlist[i],inlist[j]],2)
 			
 def setParityCountLine(self,inlist):
-	if self.isParity is False:
+	if 'Parity' not in self._propertyInitialized:
 		self._setParity()
 	inlist = self._procCellList(inlist)
 	c = self.model.NewBoolVar('ParityCountLine')

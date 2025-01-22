@@ -833,7 +833,7 @@ def setMaximin(self,row1,col1,rc,value,length=-1):
 	self.model.AddBoolOr(maxVars)
 
 def setFullRank(self,row1,col1,rc,value):
-	if self.isFullRank is False:
+	if 'FullRank' not in self._propertyInitialized:
 		self._setFullRank()
 		
 	# Convert from 1-base to 0-base
@@ -845,7 +845,7 @@ def setFullRank(self,row1,col1,rc,value):
 	self.model.Add(self.rcRank[4*i+2*j+k] == value)
 
 def setParityParty(self,row1,col1,rc,value):
-	if self.isParity is False:
+	if 'Parity' not in self._propertyInitialized:
 		self._setParity()
 		
 	row = row1 - 1
@@ -905,7 +905,7 @@ def setFirstSeenParity(self,row1,col1,rc,value):
 	col = col1 - 1
 	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
 	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
-	if self.isParity is False:
+	if 'Parity' not in self._propertyInitialized:
 		self._setParity()
 	varBitmap = self._varBitmap('FirstSeenParityRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth)
 	clueParity = value % 2
@@ -919,7 +919,7 @@ def setFirstSeenEntropy(self,row1,col1,rc,value):
 	col = col1 - 1
 	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
 	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
-	if self.isEntropy is False:
+	if 'Entropy' not in self._propertyInitialized:
 		self._setEntropy()
 	varBitmap = self._varBitmap('FirstSeenEntropyRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth)
 	clueEntropy = (value-1) // 3
@@ -933,7 +933,7 @@ def setFirstSeenModular(self,row1,col1,rc,value):
 	col = col1 - 1
 	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
 	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
-	if self.isModular is False:
+	if 'Modular' not in self._propertyInitialized:
 		self._setModular()
 	varBitmap = self._varBitmap('FirstSeenModularRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth)
 	clueModular = value - 3*((value-1) //3)

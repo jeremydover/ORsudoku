@@ -18,12 +18,7 @@ class cellTransformSudoku(sudoku):
 		
 		self._constraintInitialized = []
 		self._constraintNegative = []
-		
-		self.isParity = False
-		self.isEntropy = False
-		self.isModular = False
-		self.isFullRank = False
-		self.isPrimality = False
+		self._propertyInitialized = []
 		
 		if digitSet is None:
 			self.baseDigits = {x for x in range(1,self.boardWidth+1)}
