@@ -1,3 +1,21 @@
+1/22/2025
+	Fixed error in Roman sums shorthand processing with multi-digit sum values.
+	Fixed error in Schrödinger sum application of XV negative constraint.
+	Fixed error in shift line code.
+	Added Schrödinger support for whispers lines.
+	Implemented support for ambiguous cages, where the cage sum may be one of several values.
+	Added support for index lines, including a test case.
+	For transform and S-cells, added anti-knight rules to ensure modifier cells are not a knight's move apart.
+	For transform sudoku, added rule to ensure that for each modifier cell, no cell a king's (or a knight's) move from the modifier has the same base digit.
+	Implemented short sandwich clues, and added test case. Updated sandwich sums to allow clues on bottom/right of grid.
+	Updated to test harness to allow pytest as well as nose2.
+	Added support for NextToNine sum clues.
+	Added support for XAverages, including test case.
+	Added support for offset digits, including test case.
+	Added support for "domino-based" negative constraints for Kropki and Roman sums; negative constraint is only applied between two adjacent cells that are not already in a positive clue.
+	Added support for remote Kropki arrows...negative constraint is not supported.
+	Added additional test cases.
+
 1/21/2025
 	Fixed error in setParityCountLine, and added test case.
 	Fixed some bugs in Schrödinger cell module left over from migration to v1.0.

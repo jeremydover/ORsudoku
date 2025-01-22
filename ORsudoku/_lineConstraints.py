@@ -404,7 +404,7 @@ def setShiftLine(self,inlist):
 	inlist = self._procCellList(inlist)
 	c = self.model.NewBoolVar('ShiftLineR{:d}C{:d}'.format(inlist[0][0],inlist[0][1]))
 	for j in range(len(inlist) // 2):
-		self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] == self.cellValues[inlist[-j-1][0]][inlist[-j-1][1] + 1]).OnlyEnforceIf(c)
+		self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] == self.cellValues[inlist[-j-1][0]][inlist[-j-1][1]] + 1).OnlyEnforceIf(c)
 		self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] + 1 == self.cellValues[inlist[-j-1][0]][inlist[-j-1][1]]).OnlyEnforceIf(c.Not())
 		
 def setUpAndDownLine(self,inlist):
@@ -568,4 +568,10 @@ def setSequenceLine(self,inlist):
 	inlist = self._procCellList(inlist)
 	for i in range(1,len(inlist)):
 		self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]]-self.cellValues[inlist[i-1][0]][inlist[i-1][1]] == self.cellValues[inlist[1][0]][inlist[1][1]]-self.cellValues[inlist[0][0]][inlist[0][1]])
-		
+
+def setIndexLine(self,inlist):
+	inlist = self._procCellList(inlist)
+	myVars = [self.model.NewIntVar(0,self.maxDigit-self.minDigit,'indexLineVars') for i in range(len(inlist))]
+	for i in range(len(inlist)):
+		self.model.Add(myVars[i] == self.cellValues[inlist[i][0]][inlist[i][1]] - self.minDigit)
+	self.model.AddInverse(myVars,myVars)

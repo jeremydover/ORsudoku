@@ -19,6 +19,7 @@ def _initializeKropkiWhite(self):
 		self.kropkiDiff = 1
 		if 'KropkiBlack' not in self._constraintInitialized:
 			self.kropkiCells = []
+			self.kropkiDomino = False
 
 def _initializeKropkiBlack(self):
 	if 'KropkiBlack' not in self._constraintInitialized:
@@ -26,6 +27,7 @@ def _initializeKropkiBlack(self):
 		self.kropkiRatio = 2
 		if 'KropkiWhite' not in self._constraintInitialized:
 			self.kropkiCells = []
+			self.kropkiDomino = False
 
 def setKropkiWhite(self,row,col=-1,hv=-1):
 	if col == -1:
@@ -89,23 +91,25 @@ def setKropkiArray(self,cells):
 		else:
 			self.setKropkiGray(x[0],x[1],x[2])
 
-def setKropkiWhiteNegative(self):
+def setKropkiWhiteNegative(self,dominoesOnly=False):
 	self._initializeKropkiWhite()
 	self._constraintNegative.append('KropkiWhite')
+	self.kropkiDomino = dominoesOnly
 
-def setKropkiBlackNegative(self):
+def setKropkiBlackNegative(self,dominoesOnly=False):
 	self._initializeKropkiBlack()
 	self._constraintNegative.append('KropkiBlack')
+	self.kropkiDomino = dominoesOnly
 
-def setKropkiNegative(self):
+def setKropkiNegative(self,dominoesOnly=False):
 	self.setKropkiWhiteNegative()
 	self.setKropkiBlackNegative()
+	self.kropkiDomino = dominoesOnly
 	
 def setAntiKropkiWhite(self,row,col=-1,hv=-1):
 	if col == -1:
 		(row,col,hv) = self._procCell(row)
 	self._initializeKropkiWhite()
-
 	self.model.Add(self.cellValues[row][col] - self.cellValues[row+hv][col+(1-hv)] != self.kropkiDiff)
 	self.model.Add(self.cellValues[row][col] - self.cellValues[row+hv][col+(1-hv)] != -1*self.kropkiDiff)
 
@@ -133,19 +137,27 @@ def setAntiKropkiArray(self,cells):
 		self.setAntiKropkiBlack(x)
 
 def _applyKropkiWhiteNegative(self):
+	if self.kropkiDomino:
+		freeCells = {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)} - {(x[0],x[1]) for x in self.kropkiCells} - {(x[0],x[1]+1) for x in self.kropkiCells if x[2] == 0} - {(x[0]+1,x[1]) for x in self.kropkiCells if x[2] == 1}
+	else:
+		freeCells = {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)}
 	for i in range(self.boardWidth):
 		for j in range(self.boardWidth):
-			if i < 8 and (i,j,1) not in self.kropkiCells:
+			if i < 8 and (i,j,1) not in self.kropkiCells and (i,j) in freeCells and (i+1,j) in freeCells:
 				self.setAntiKropkiWhite(i,j,1)
-			if j < 8 and (i,j,0) not in self.kropkiCells:
+			if j < 8 and (i,j,0) not in self.kropkiCells and (i,j) in freeCells and (i,j+1) in freeCells:
 				self.setAntiKropkiWhite(i,j,0)
 
 def _applyKropkiBlackNegative(self):
+	if self.kropkiDomino:
+		freeCells = {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)} - {(x[0],x[1]) for x in self.kropkiCells} - {(x[0],x[1]+1) for x in self.kropkiCells if x[2] == 0} - {(x[0]+1,x[1]) for x in self.kropkiCells if x[2] == 1}
+	else:
+		freeCells = {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)}
 	for i in range(self.boardWidth):
 		for j in range(self.boardWidth):
-			if i < 8 and (i,j,1) not in self.kropkiCells:
+			if i < 8 and (i,j,1) not in self.kropkiCells and (i,j) in freeCells and (i+1,j) in freeCells:
 				self.setAntiKropkiBlack(i,j,1)
-			if j < 8 and (i,j,0) not in self.kropkiCells:
+			if j < 8 and (i,j,0) not in self.kropkiCells and (i,j) in freeCells and (i,j+1) in freeCells:
 				self.setAntiKropkiBlack(i,j,0)
 
 def setKropkiDifference(self,diff=1):
@@ -162,15 +174,123 @@ def setGammaEpsilon(self):
 	self.setKropkiDifference(5)
 	self.setKropkiRatio(3)
 				
+def _initializeRemoteKropkiWhite(self):
+	if 'RemoteKropkiWhite' not in self._constraintInitialized:
+		self._constraintInitialized.append('RemoteKropkiWhite')
+		self.remoteKropkiDiff = 1
+		if 'RemoteKropkiBlack' not in self._constraintInitialized:
+			self.remoteKropkiCells = []
+
+def _initializeRemoteKropkiBlack(self):
+	if 'RemoteKropkiBlack' not in self._constraintInitialized:
+		self._constraintInitialized.append('RemoteKropkiBlack')
+		self.remoteKropkiRatio = 2
+		if 'RemoteKropkiWhite' not in self._constraintInitialized:
+			self.remoteKropkiCells = []
+
+def _setRemoteKropkiBase(self,row,col=-1,direct=-1,color=-1):
+	if col == -1:
+		(row,col,hv,color) = self._procCell(row)
+	self.remoteKropkiCells.append((row,col,direct))
+	
+	# Note: row,col is the top/left cell of the pair, dir = Up, Down, Left, Right class variables
+	bit = self.model.NewBoolVar('RemoteKropkiBigger{:d}Col{:d}Dir{:d}'.format(row,col,direct))
+	match direct:
+		case self.Up:
+			maxDigit = row
+			hStep = 0
+			vStep = -1
+		case self.Down:
+			maxDigit = self.boardWidth-row-1
+			hStep = 0
+			vStep = 1
+		case self.Left:
+			maxDigit = col
+			hStep = -1
+			vStep = 0
+		case self.Right:
+			maxDigit = self.boardWidth-col-1
+			hStep = 1
+			vStep = 0
+	varBitmap = self._varBitmap('RemoteKropkiWhiteRow{:d}Col{:d}'.format(row,col),maxDigit)
+	for i in range(1,maxDigit+1):
+		self.model.Add(self.cellValues[row][col] == i).OnlyEnforceIf(varBitmap[i-1])
+		if color == self.White:
+			self.model.Add(self.cellValues[row][col] - self.cellValues[row+i*vStep][col+i*hStep] == self.remoteKropkiDiff).OnlyEnforceIf(varBitmap[i-1]+[bit])
+			self.model.Add(self.cellValues[row][col] - self.cellValues[row+i*vStep][col+i*hStep] == -1*self.remoteKropkiDiff).OnlyEnforceIf(varBitmap[i-1]+[bit.Not()])
+		elif color == self.Black:
+			self.model.Add(self.cellValues[row][col] == self.remoteKropkiRatio*self.cellValues[row+i*vStep][col+i*hStep]).OnlyEnforceIf(varBitmap[i-1]+[bit])
+			self.model.Add(self.remoteKropkiRatio*self.cellValues[row][col] == self.cellValues[row+i*vStep][col+i*hStep]).OnlyEnforceIf(varBitmap[i-1]+[bit.Not()])
+		else:
+			bit2 = self.model.NewBoolVar('RemoteKropkiGray{:d}Col{:d}Dir{:d}'.format(row,col,direct))
+			self.model.Add(self.cellValues[row][col] - self.cellValues[row+i*vStep][col+i*hStep] == self.remoteKropkiDiff).OnlyEnforceIf(varBitmap[i-1]+[bit,bit2])
+			self.model.Add(self.cellValues[row][col] - self.cellValues[row+i*vStep][col+i*hStep] == -1*self.remoteKropkiDiff).OnlyEnforceIf(varBitmap[i-1]+[bit.Not(),bit2])
+			self.model.Add(self.cellValues[row][col] == self.remoteKropkiRatio*self.cellValues[row+i*vStep][col+i*hStep]).OnlyEnforceIf(varBitmap[i-1]+[bit,bit2.Not()])
+			self.model.Add(self.remoteKropkiRatio*self.cellValues[row][col] == self.cellValues[row+i*vStep][col+i*hStep]).OnlyEnforceIf(varBitmap[i-1]+[bit.Not(),bit2.Not()])
+			
+def setRemoteKropkiWhite(self,row,col=-1,direct=-1):
+	if col == -1:
+		(row,col,direct) = self._procCell(row)
+	self._initializeRemoteKropkiWhite()
+	self._setRemoteKropkiBase(row,col,direct,self.White)
+
+def setRemoteKropkiBlack(self,row,col=-1,direct=-1):
+	if col == -1:
+		(row,col,direct) = self._procCell(row)
+	self._initializeRemoteKropkiBlack()
+	self._setRemoteKropkiBase(row,col,direct,self.Black)
+
+def setRemoteKropkiGray(self,row,col=-1,direct=-1):
+	if col == -1:
+		(row,col,direct) = self._procCell(row)
+	self._initializeRemoteKropkiWhite()
+	self._initializeRemoteKropkiBlack()
+	self._setRemoteKropkiBase(row,col,direct,self.Gray)
+	
+def setRemoteKropkiWhiteArray(self,cells):
+	for x in cells: self.setRemoteKropkiWhite(x)
+	
+def setRemoteKropkiBlackArray(self,cells):
+	for x in cells: self.setRemoteKropkiBlack(x)
+	
+def setRemoteKropkiGrayArray(self,cells):
+	for x in cells: self.setRemoteKropkiGray(x)
+	
+def setRemoteKropkiArray(self,cells):
+	cellList = self._procCellList(cells)
+	for x in cellList:
+		match x[3]:
+			case self.White:
+				self.setRemoteKropkiWhite(x[0],x[1],x[2])
+			case self.Black:
+				self.setRemoteKropkiBlack(x[0],x[1],x[2])
+			case _:
+				self.setRemoteKropkiGray(x[0],x[1],x[2])
+			
+def setRemoteKropkiDifference(self,diff=1):
+	# Sets the difference used in all subsequent white Kropki arrows
+	self._initializeRemoteKropkiWhite()
+	self.remoteKropkiDiff = diff
+	
+def setRemoteKropkiRatio(self,ratio=2):
+	# Sets the ratio used in all subsequent black Kropki arrows
+	self._initializeRemoteKropkiBlack()
+	self.remoteKropkiRatio = ratio
+
 def _initializeRomanSum(self):
 	if 'RomanSum' not in self._constraintInitialized:
 		self._constraintInitialized.append('RomanSum')
 		self.romanSumCells = []
 		self.romanSumValues = []
+		self.romanDomino = False
 
 def setRomanSum(self,row,col=-1,hv=-1,value=-1):
 	if col == -1:
-		(row,col,hv,value) = self._procCell(row)
+		T = self._procCell(row)
+		row = T[0]
+		col = T[1]
+		hv = T[2]
+		value = int(''.join(map(str,[T[i] for i in range(3,len(T))])),10)
 	self._initializeRomanSum()
 	self.romanSumCells.append((row,col,hv))
 	if value not in self.romanSumValues:
@@ -250,7 +370,7 @@ def setAntiXVXArray(self,cells):
 def setAntiXVArray(self,cells):
 	for x in cells: self.setAntiXV(x)
 
-def setRomanSumNegative(self,values=[]):
+def setRomanSumNegative(self,values=[],dominoesOnly=False):
 	if 'RomanSum' not in self._constraintInitialized:
 		self.romanSumCells = []
 		self.romanSumValues = values
@@ -260,23 +380,28 @@ def setRomanSumNegative(self,values=[]):
 			if x not in self.romanSumValues:
 				self.romanSumValues.append(x)
 	self._constraintNegative.append('RomanSum')
+	self.romanDomino = dominoesOnly
 	
-def setXVVNegative(self):
-	self.setRomanSumNegative([5])
+def setXVVNegative(self,dominoesOnly=False):
+	self.setRomanSumNegative([5],dominoesOnly)
 
-def setXVXNegative(self):
-	self.setRomanSumNegative([10])
+def setXVXNegative(self,dominoesOnly=False):
+	self.setRomanSumNegative([10],dominoesOnly)
 
-def setXVNegative(self):
-	self.setXVVNegative()
-	self.setXVXNegative()
+def setXVNegative(self,dominoesOnly=False):
+	self.setXVVNegative(dominoesOnly)
+	self.setXVXNegative(dominoesOnly)
 	
 def _applyRomanSumNegative(self):
+	if self.romanDomino:
+		freeCells = {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)} - {(x[0],x[1]) for x in self.romanSumCells} - {(x[0],x[1]+1) for x in self.romanSumCells if x[2] == 0} - {(x[0]+1,x[1]) for x in self.romanSumCells if x[2] == 1}
+	else:
+		freeCells = {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)}
 	for i in range(self.boardWidth):
 		for j in range(self.boardWidth):
-			if i < 8 and (i,j,1) not in self.romanSumCells:
+			if i < 8 and (i,j,1) not in self.romanSumCells and (i,j) in freeCells and (i+1,j) in freeCells:
 				self.setAntiRomanSums(i,j,1)
-			if j < 8 and (i,j,0) not in self.romanSumCells:
+			if j < 8 and (i,j,0) not in self.romanSumCells and (i,j) in freeCells and (i,j+1) in freeCells:
 				self.setAntiRomanSums(i,j,0)
 				
 def setXVXVV(self,row,col=-1,hv=-1):
@@ -449,6 +574,14 @@ def setCage(self,inlist,value = None):
 	if value is not None:
 		self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in inlist) == value)
 		
+def setAmbiguousCage(self,inlist,values,repeating=False):
+	inlist = self._procCellList(inlist)
+	if not repeating:
+		self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in inlist])
+	varBitmap = self._varBitmap('AmbiguousCageRow{:d}Col{:d}'.format(inlist[0][0],inlist[0][1]),len(values))
+	for i in range(len(values)):
+		self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in inlist) == values[i]).OnlyEnforceIf(varBitmap[i])
+
 def setRepeatingCage(self,inlist,value):
 	inlist = self._procCellList(inlist)
 	self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in inlist) == value)

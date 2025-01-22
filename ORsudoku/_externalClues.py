@@ -93,6 +93,52 @@ def setDoubleXSum(self,row1,col1,rc,value):
 				self.model.Add(sum(myVars) == value).OnlyEnforceIf(varBitmap[varTrack])
 			varTrack = varTrack + 1
 
+def setXAverageBase(self,row1,col1,rc,value,pm):
+	#row,col are the coordinates of the cell containing the length, value is the sum
+	#rc: 0 -> if adding in row, 1 -> if adding in column. Needed for corner cells.
+	#pm: determines if these are normal X-averages (including the digit) or reverse X-Averages (sum on the other side)
+	
+	# Convert from 1-base to 0-base
+	row = row1 - 1
+	col = col1 - 1
+	sumRow = row if rc == self.Row or pm == 1 else self.boardWidth-1-row
+	sumCol = col if rc == self.Col or pm == 1 else self.boardWidth-1-col
+	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
+	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
+	hStep = pm * hStep	# Change direction in case we're doing reverse
+	vStep = pm * vStep
+	
+	digits = list(self.digits)
+	varBitmap = self._varBitmap('XSumRow{:d}Col{:d}RC{:d}'.format(row,col,rc),len(digits))
+		
+	for i in range(len(digits)):
+		if digits[i] == 0:
+			# In this case we have to have a null sum, which must be 0.
+			if value == 0:
+				self.model.Add(self.cellValues[sumRow][sumCol] == 0).OnlyEnforceIf(varBitmap[i])
+			else:
+				self.model.AddBoolAnd([varBitmap[i][0].Not()]).OnlyEnforceIf(varBitmap[i])		
+				# If value is not 0, then 0 is not a valid digit and this case cannot occur, but there's no arithmetic way to express this	
+		elif abs(digits[i]) > self.boardWidth:
+			# Digit is too big to have a reasonable sum, so disallow
+			self.model.AddBoolAnd([varBitmap[i][0].Not()]).OnlyEnforceIf(varBitmap[i])	
+		elif digits[i] > 0:
+			self.model.Add(self.cellValues[row][col] == digits[i]).OnlyEnforceIf(varBitmap[i])
+			self.model.Add(sum(self.cellValues[sumRow+j*vStep][sumCol+j*hStep] for j in range(digits[i])) == value*digits[i]).OnlyEnforceIf(varBitmap[i])
+		else: # So if a digit is negative, we reverse the intended direction
+			mySumRow = self.boardWidth-1-sumRow if rc == self.Col else sumRow
+			mySumCol = self.boardWidth-1-sumCol if rc == self.Row else sumCol
+			myHStep = -1 * hStep
+			myVStep = -1 * vStep				
+			self.model.Add(self.cellValues[row][col] == digits[i]).OnlyEnforceIf(varBitmap[i])
+			self.model.Add(sum(self.cellValues[mySumRow+j*myVStep][mySumCol+j*myHStep] for j in range(-1*digits[i])) == value*digits[i]).OnlyEnforceIf(varBitmap[i])
+
+def setXAverage(self,row1,col1,rc,value):
+	self.setXAverageBase(row1,col1,rc,value,1)
+	
+def setReverseXAverage(self,row1,col1,rc,value):
+	self.setXAverageBase(row1,col1,rc,value,-1)
+
 def setXKropki(self,row1,col1,rc,wb,neg=False):
 	# row,col are the coordinates of the cell containing the Kropki position, so no 9s allowed
 	# rc is whether the cell is poiting to the row or column 0->row, 1->column
@@ -182,11 +228,11 @@ def setSandwichSum(self,row1,col1,rc,value,digits=[]):
 	if len(digits) == 0:
 		digits = [self.minDigit,self.maxDigit]
 		
-	# Convert from 1-base to 0-base
+	# Convert from 1-base to 0-base: note, we allow clues on the bottom/right ends now too
 	row = row1 - 1
 	col = col1 - 1
-	hStep = 0 if rc == self.Col else 1
-	vStep = 0 if rc == self.Row else 1
+	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
+	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
 	
 	varBitmap = self._varBitmap('SandwichPositionsRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth*(self.boardWidth-1))
 	
@@ -237,6 +283,51 @@ def setOpenfacedSandwichSum(self,row1,col1,rc,value,digit=9):
 		else:
 			self.model.Add(sum(self.cellValues[row+j*vStep][col+j*hStep] for j in range(i)) == value).OnlyEnforceIf(varBitmap[i])
 
+def setShortSandwichSum(self,row1,col1,rc,value,depth=6):
+	# row,col are the coordinates of the cell containing the index of the target cell
+	# rc is whether things are row/column
+	# value is the sum of values between the smallest and largest values in the first <depth> cells from the clue
+	# depth defaults to 6 but can be set to any value greater than 2. Well, it could be 2 as well, but that'd be pretty dumb.
+	
+	# Convert from 1-base to 0-base: note, we allow clues on the bottom/right ends now too
+	row = row1 - 1
+	col = col1 - 1
+	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
+	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
+	
+	varBitmap = self._varBitmap('SandwichPositionsRow{:d}Col{:d}RC{:d}'.format(row,col,rc),depth*(depth-1))
+	
+	# We loop over all possible positions for the sandwich digits
+	varTrack = 0
+	for i in range(depth):
+		for j in range(depth):
+			if i == j:
+				continue
+			else:
+				for k in range(depth):
+					if k != i:
+						self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] > self.cellValues[row+k*vStep][col+k*hStep]).OnlyEnforceIf(varBitmap[varTrack])
+					if k != j:
+						self.model.Add(self.cellValues[row+j*vStep][col+j*hStep] < self.cellValues[row+k*vStep][col+k*hStep]).OnlyEnforceIf(varBitmap[varTrack])
+
+			if i > j:
+				myMax = i
+				myMin = j
+			else:
+				myMax = j
+				myMin = i
+
+			if (myMax - myMin) == 1:
+				# This is an adjacent case
+				if value == 0:
+					pass # There is no additional constraint to put here
+				else:
+					self.model.AddBoolAnd(varBitmap[varTrack][0].Not()).OnlyEnforceIf(varBitmap[varTrack])
+			else:
+				self.model.Add(sum(self.cellValues[row+k*vStep][col+k*hStep] for k in range(myMin+1,myMax)) == value).OnlyEnforceIf(varBitmap[varTrack])
+				
+			varTrack = varTrack + 1
+			
 def setBeforeNine(self,row1,col1,rc,value):
 	self.setOpenfacedSandwichSum(row1,col1,rc,value,digit=9)
 
@@ -614,6 +705,18 @@ def setNextToNine(self,row1,col1,rc,values,digit=9):
 				# If there are two values, the %2 trick in the variable ensures they alternate, so that values are put on different sides
 				self.model.Add(self.cellValues[row+(i+1)*vStep][col+(i+1)*hStep] == values[j]).OnlyEnforceIf(varBitmap[i] + [lrA[j%2]])
 				self.model.Add(self.cellValues[row+(i-1)*vStep][col+(i-1)*hStep] == values[j]).OnlyEnforceIf(varBitmap[i] + [lrA[(j+1)%2]])
+				
+def setNextToNineSum(self,row1,col1,rc,value,digit=9):
+	row = row1 - 1
+	col = col1 - 1
+	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
+	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
+	
+	varBitmap = self._varBitmap('NextToNineRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth)
+	for i in range(self.boardWidth):
+		self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] == digit).OnlyEnforceIf(varBitmap[i])
+		neighbors = {i-1,i+1} & {j for j in range(self.boardWidth)}
+		self.model.Add(sum(self.cellValues[row+j*vStep][col+j*hStep] for j in neighbors) == value).OnlyEnforceIf(varBitmap[i])
 
 def setMaximumRun(self,row1,col1,rc,value,length=3):
 	# row,col are the coordinates of the cell containing the index of the target cell

@@ -526,3 +526,20 @@ def setCountingCircles(self,inlist):
 		dAppears = self.model.NewBoolVar('countingCircleValueAppears')
 		self.model.Add(sum(circleDigit) == d).OnlyEnforceIf(dAppears)
 		self.model.Add(sum(circleDigit) == 0).OnlyEnforceIf(dAppears.Not())
+		
+def setOffsetDigit(self,digit):
+	# The digit that appears below the offset digit is its number of cells away from the offset digit in its row
+	digitPlace = []
+	for i in range(self.boardWidth):
+		tempArray = []
+		for j in range(self.boardWidth):
+			tempCell = self.model.NewBoolVar('digitPlace{:d}{:d}{:d}'.format(digit,i,j))
+			self.model.Add(self.cellValues[i][j] == digit).OnlyEnforceIf(tempCell)
+			self.model.Add(self.cellValues[i][j] != digit).OnlyEnforceIf(tempCell.Not())
+			tempArray.append(tempCell)
+		digitPlace.insert(i,tempArray) 
+	
+	for j in range(1,self.boardWidth):
+		for k in range(self.boardWidth):
+			for m in range(self.boardWidth):
+				self.model.Add(self.cellValues[j][k] == abs(m-k)).OnlyEnforceIf([digitPlace[j-1][k],digitPlace[j][m]])

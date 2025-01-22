@@ -120,6 +120,7 @@ Non-Consecutive
 Numbered Room
 Odd-Even Thermos - see Thermometers
 Odd Max Quad - see Odd Max Values
+Offset Digits
 Openfaced Sandwich Sums - see Sandwich Sums
 Order Sum Cages
 Outside Clues
@@ -151,6 +152,7 @@ QuattroQuadri
 Ratio Pairs - see Kropki and Kropki pairs
 Region Sum Lines (sum of all cells along a line in a region is fixed)
 Region Segment Sum Lines - see Region Sum Lines
+Remote Kropki Arrows - see Kropki
 Renban Lines
 Renrenbanban Lines (see Renban Lines)
 Repeating Arrows - see Arrows
@@ -186,6 +188,7 @@ Unique Pairs Lines
 Vaults
 Weak Palindrome Lines
 Windoku
+X-Average - see X-Sum
 X-Kropki
 XSudoku
 X-Sum
@@ -932,6 +935,11 @@ setRepeatingCage(list,value): creates a killer cage where values may repeat
   list: list of cell specifications indicating the cells in a killer cage
   value: indicates the sum of the digits in the cage
   
+setAmbiguousCage(list,values,repeating=False): creates a killer cage whose sum is one of a given set of values, to be determined by the solver
+  list: list of cell specifications indicating the cells in a killer cage
+  values: the list of possible sums the cage could take on
+  repeating: by default digits are not allowed to repeat; setting repeating=True permits repeats
+
 setPsychoKillerCage(list,value): creates a psycho killer cage, where the elements of the cage *provide a reference* to the digit in the same relative position in the box indicated by the cage element, and the sum of the referred digits is given
   list: list of cell specifications of cells in the cage
   value: sum of the referred cells
@@ -982,11 +990,13 @@ setAntiKropkiArray(list): creates multiple anti-Kropki constraints
 setAntiKropkiWhiteArray(list): same, but for white dots only
 setAntiKropkiBlackArray(list): same, but for black dots only
   
-setKropkiNegative(): implements true Kropki rules with a negative constraint
-setKropkiWhiteNegative(): sets a negative constraint on only white Kropki dots
-setKropkiBlackNegative(): sets a negative constraint on only black Kropki dots
-Note: this is probably a super edge case, but a 1/2 pair can be either a white or block dot. If you define a black dot in a puzzle with a negative constraint on white dots, then the black dot CAN be a 1/2, despite there being no white dot there. If this is not desired behavior, then just exclude 1s from both cells with setPencilmarks(). Problem solved. As inelegantly, but easily, as possible.
-
+setKropkiNegative(dominoesOnly): implements true Kropki rules with a negative constraint
+setKropkiWhiteNegative(dominoesOnly): sets a negative constraint on only white Kropki dots
+setKropkiBlackNegative(dominoesOnly): sets a negative constraint on only black Kropki dots
+  dominoesOnly is an optional parameter, defaulting to False, which sets the negative constraint only on pairs of adjacent cells such that neither cell lies on a positive clue...if one thinks of the pairs as dominoes, no additional non-overlapping dominoes can be placed
+  
+  Note: this is probably a super edge case, but a 1/2 pair can be either a white or block dot. If you define a black dot in a puzzle with a negative constraint on white dots, then the black dot CAN be a 1/2, despite there being no white dot there. If this is not desired behavior, then just exclude ones from both cells with setPencilmarks(). Problem solved. As inelegantly, but easily, as possible.
+  
 To change the values used for difference for white dots, and ratio for black dots, you can use the following methods:
 setKropkiDifference(value)
 setKropkiRatio(value)
@@ -994,6 +1004,21 @@ setKropkiRatio(value)
 The values can be reset to their defaults by calling them with no argument. All dots added subsequently to these calls will use the new values, without changing constraints already entered. HOWEVER, if a negative constraint is applied, it will ALWAYS use the final set value of these two variables to apply the negative constraint against.
 
 setGammaEpsilon(): implement Gamma Epsilon rules, equivalent to setKropkiDifference(5) & setKropkiRatio(3)
+
+Remote Kropki Arrows are similar to dots, but an arrow in a cell points to the cell indexed by the digit in the arrow cell with which it shares a Kropki relationship. The following methods are supported, all analogous to their standard Kropki counterparts:
+setRemoteKropkiWhite(cellDir)
+setRemoteKropkiBlack(cellDir)
+setRemoteKropkiGray(cellDir)
+setRemoteKropkiWhiteArray(list) - list of cellDir
+setRemoteKropkiBlackArray(list) - list of cellDir
+setRemoteKropkiGrayArray(list) - list of cellDir
+setRemoteKropkiArray(list) - list of cellDirBWG
+setRemoteKropkiDifference(diff)
+setRemoteKropkiRatio(ratio)
+  cellDir: an extended cell specification which adds the Direction parameter: All parameters can be in a tuple, and these can use the Up, Down, Left, Right specification for class variables. Shorthand is possible, appending 0 to a cell spec to indicate Up, 1 for Down, 2 for Left and 3 for Right
+  Example: 251, '251' and (2,5,p.Down) all specify an down arrow in cell 2,5
+  
+  cellDirBWG: extends the cellDir spec with a color attribute. In a tuple, can use the class variables Black, White and Gray. Shorthand is possible, with 0 to indicate White, 1 for Black and 2 for Gray.
 
 Line Sum Lines
 --------------
@@ -1135,6 +1160,12 @@ setNextToNine(row,col,rc,values,digit): given a set of 1/2 digits on a row/colum
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   values: A list of values to go next to 9; if only one value is given it may be given as an integer
   digit (optional): defines which digit is the one the clued digits must appear next to...defaults to 9
+  
+setNextToNineSum(self,row1,col1,rc,value,digit): gives the sum of the cells next to the nine in the clued row/column
+  row,col: The coordinates of the cell containing the clue, i.e. the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  value: an integer specifying the sum of the cells next to the given digit
+  digit (optional): defines which digit is the one the clued digits must appear next to...defaults to 9
 
 No Three in a Row (Parity)
 --------------------------
@@ -1158,6 +1189,11 @@ setReverseNumberedRoom(row,col,rc,value): sets a reverse numbered room constrain
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: The value (1-9) to be placed based on the indexing cell
   Note: for negative digits, the behavior of a reverse Numbered Room is to count cells from the other side of the row/column, a la regular Numbered Room
+
+Offset Digits
+-------------
+setOffsetDigit(digit): for each instance of the selected digit, the digit below it is the distance to the given digit in its row
+  digit: the digit having this property
 
 Order Sum Cages
 ---------------
@@ -1459,7 +1495,7 @@ p = schroedingerCellSudoku(boardSizeRoot)
   Arrows (including Double Arrows)
   Between lines - all digits on the line must be less than all digits on one end point and greater than all digits on the other end poit
   Block Cages
-  Disjoint Groups - allDigits=False can be applied
+  Disjoint Groups - allDigits=False can be applied, forcing all 10 digits to appear in each location
   Even/Odd
   Given digits - setting a given digits enforces the corresponding cell is not a Schrödinger cell
   Killer cages
@@ -1474,6 +1510,7 @@ p = schroedingerCellSudoku(boardSizeRoot)
   Thermos/Slow Thermos
   Unicorn Digits
   Vaults
+  Whispers Lines - sSum=True can be applied; normally both digits in an S-cell on a whispers line must meet the whispers criteria, with sSum=True, the sum of the digits in an sCell must meet the criterion. To use sSum=True, the base minWhispers/maxWhispers lines functions must be used, not the nationality whispers aliases
   Windoku - allDigits=False can be applied
   X/Diagonal Sudoku - allDigits=False can be applied
   XV
@@ -1688,6 +1725,10 @@ setDoubleXSum(row,col,rc,value): set a double X sum constraint on a row or colum
   value: The sum of the first X cells in the row/column from the clue, where X is the value in the adjacent cell, plus the sum of the first Y cells in the row/column on the other side of the row/column from the clue, where Y is the value in the cell furthest from the clue.
   Note: for negative digits, the behavior of either of the sums in a double sum is exactly as in X-sums, to take the sum from the other side
   
+setXAverage(row,col,rc,value): like an X Sum, but specifies the average of the cells
+
+setReverseXAverage(row,col,rc,value): like a reverse X Sum, but specifies the average of the cells
+  
 XV/XV Pairs
 -----------
 setXVV(cellHV): creates a V clue
@@ -1726,11 +1767,12 @@ setAntiXVXArray(list): creates multiple anti-X clues
 setAntiXVArray(list): creates multiple anti-XV clues
   list: list of cellHV specifications
 
-setXVVNegative(): implements negative constraint, all pairs not marked with another Roman numeral cannot sum to 5
+setXVVNegative(dominoesOnly): implements negative constraint, all pairs not marked with another Roman numeral cannot sum to 5
 
-setXVXNegative(): implements negative constraint, all pairs not marked with another Roman numeral cannot sum to 10
+setXVXNegative(dominoesOnly): implements negative constraint, all pairs not marked with another Roman numeral cannot sum to 10
 
-setXVNegative(): implements negative constraint, all pairs not marked with another Roman numeral cannot sum to 5 or 10
+setXVNegative(dominoesOnly): implements negative constraint, all pairs not marked with another Roman numeral cannot sum to 5 or 10
+  dominoesOnly is an optional parameter, defaulting to False, which sets the negative constraint only on pairs of adjacent cells such that neither cell lies on a positive clue...if one thinks of the pairs as dominoes, no additional non-overlapping dominoes can be placed
 
 Roman sums are similar to XV, but can use any set of numbers.
 
@@ -1752,8 +1794,9 @@ setAntiRomanSums(cellHV): creates a negative assertion that the sum of the clued
 setAntiRomanSumsArray(list): create multiple setAntiRomanSums constraints
   list: list of cellHV specifications
   
-setRomanSumNegative(list): implements negative constraint, all pairs not marked with a Roman numeral can sum to any value used in a clue, or to any additional value provided in list
+setRomanSumNegative(list,dominoesOnly): implements negative constraint, all pairs not marked with a Roman numeral can sum to any value used in a clue, or to any additional value provided in list
   list: list of forbidden sum values
+  dominoesOnly is an optional parameter, defaulting to False, which sets the negative constraint only on pairs of adjacent cells such that neither cell lies on a positive clue...if one thinks of the pairs as dominoes, no additional non-overlapping dominoes can be placed
 
 XVXV
 ----

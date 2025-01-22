@@ -6,7 +6,7 @@ class TestPuzzle(unittest.TestCase):
 	# Author: zetamath
 	# Link: https://logic-masters.de/Raetselportal/Raetsel/zeigen.php?id=0008RS
 	# Constraints tested: schroedingerCellSudoku, setXVXArray, SetRenbanLine
-	
+
 	def test_puzzle(self):
 		p = schroedingerCellSudoku(3)
 		p.setXVXArray([151,230,321,380,460,660,771,781,810,940,950])

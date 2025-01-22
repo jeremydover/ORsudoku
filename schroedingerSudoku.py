@@ -263,9 +263,9 @@ class schroedingerCellSudoku(sudoku):
 			consolidatedCellValues = consolidatedCellValues + tempArray
 		return consolidatedCellValues
 
-		def listCellCandidates(self,row,col=-1,quiet=False):
-			if col == -1:
-				(row,col) = self._procCell(row)
+	def listCellCandidates(self,row,col=-1,quiet=False):
+		if col == -1:
+			(row,col) = self._procCell(row)
 			
 		good = []
 		sCell = False
@@ -356,6 +356,13 @@ class schroedingerCellSudoku(sudoku):
 			for j in range(self.boardWidth):
 				diagNeighbors = {(i-1,j-1),(i-1,j+1),(i+1,j-1),(i+1,j+1)} & {(k,m) for k in range(self.boardWidth) for m in range(self.boardWidth)}
 				self.model.AddBoolAnd([self.sCell[x[0]][x[1]].Not() for x in diagNeighbors]).OnlyEnforceIf(self.sCell[i][j])
+
+	def setSchroedingerAntiKnight(self):
+		# Asserts that no two S-cells can be a knight's move apart, i.e. not diagonally adjacent
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				knNeighbors = {(i-2,j-1),(i-2,j+1),(i+2,j-1),(i+2,j+1),(i+1,j-2),(i+1,j+2),(i-1,j-2),(i-1,j+2)} & {(k,m) for k in range(self.boardWidth) for m in range(self.boardWidth)}
+				self.model.AddBoolAnd([self.sCell[x[0]][x[1]].Not() for x in knNeighbors]).OnlyEnforceIf(self.sCell[i][j])
 
 	def setAntiKnight(self):
 		for i in range(self.boardWidth):
@@ -555,6 +562,7 @@ class schroedingerCellSudoku(sudoku):
 			(row,col,hv,value) = self._procCell(row)
 		self._initializeRomanSum()
 		self.romanSumCells.append((row,col,hv))
+
 		if value not in self.romanSumValues:
 			self.romanSumValues.append(value)
 			
@@ -566,6 +574,15 @@ class schroedingerCellSudoku(sudoku):
 			(row,col,hv,value) = self._procCell(row)
 		self._initializeRomanSum()
 		self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] + self.sCellSums[row][col] + self.sCellSums[row+hv][col+(1-hv)] != value)
+
+	def setAntiRomanSums(self,row,col=-1,hv=-1):
+		if col == -1:
+			(row,col,hv) = self._procCell(row)
+		if 'RomanSum' not in self._constraintInitialized:
+			pass
+		else:
+			for value in self.romanSumValues:
+				self.model.Add(self.cellValues[row][col] + self.cellValues[row+hv][col+(1-hv)] + self.sCellSums[row][col] + self.sCellSums[row+hv][col+(1-hv)] != value)
 
 	def setXVXVV(self,row,col=-1,hv=-1):
 		if col == -1:
@@ -662,6 +679,14 @@ class schroedingerCellSudoku(sudoku):
 		inlist = self._procCellList(inlist)
 		self.model.Add(sum([self.cellValues[x[0]][x[1]] for x in inlist] + [self.sCellSums[x[0]][x[1]] for x in inlist]) == value)
 		
+	def setAmbiguousCage(self,inlist,values,repeating=False):
+		inlist = self._procCellList(inlist)
+		if not repeating:
+			self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in inlist] + [self.sCellValues[x[0]][x[1]] for x in inlist])
+		varBitmap = self._varBitmap('AmbiguousCageRow{:d}Col{:d}'.format(inlist[0][0],inlist[0][1]),len(values))
+		for i in range(len(values)):
+			self.model.Add(sum([self.cellValues[x[0]][x[1]] for x in inlist] + [self.sCellSums[x[0]][x[1]] for x in inlist]) == values[i]).OnlyEnforceIf(varBitmap[i])
+
 	def setBlockCage(self,inlist,values):
 		# A block cage is an area with a list of values that cannot appear in that area
 		inlist = self._procCellList(inlist)
@@ -879,6 +904,52 @@ class schroedingerCellSudoku(sudoku):
 		for i in range(1,len(sumSets)):
 			self.model.Add(sum(sumSets[i]) == baseSum)
 			
+	def setMinWhispersLine(self,inlist,value,sSum=False):
+		# Sets a whispers line where the minimum difference between two adjacent cells on the line is value. For an S-cell, the comparison must be valid for both digits
+		inlist = self._procCellList(inlist)
+		for j in range(len(inlist)-1):
+			if sSum is False:
+				bit1 = self.model.NewBoolVar('MaxWhisperBiggerRow{:d}Col{:d}'.format(inlist[j][0],inlist[j][1]))
+				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] >= value).OnlyEnforceIf(bit1)
+				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] <= -1*value).OnlyEnforceIf(bit1.Not())
+				
+				bit2 = self.model.NewBoolVar('MaxWhisperSCellFirstOnlyBiggerRow{:d}Col{:d}'.format(inlist[j][0],inlist[j][1]))
+				self.model.Add(self.sCellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] >= value).OnlyEnforceIf([bit2,self.sCell[inlist[j][0]][inlist[j][1]]])
+				self.model.Add(self.sCellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] <= -1*value).OnlyEnforceIf([bit2.Not(),self.sCell[inlist[j][0]][inlist[j][1]]])
+				self.model.AddBoolAnd(bit2).OnlyEnforceIf(self.sCell[inlist[j][0]][inlist[j][1]].Not())
+				
+				bit3 = self.model.NewBoolVar('MaxWhisperSCellSecondOnlyBiggerRow{:d}Col{:d}'.format(inlist[j][0],inlist[j][1]))
+				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.sCellValues[inlist[j+1][0]][inlist[j+1][1]] >= value).OnlyEnforceIf([bit3,self.sCell[inlist[j+1][0]][inlist[j+1][1]]])
+				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.sCellValues[inlist[j+1][0]][inlist[j+1][1]] <= -1*value).OnlyEnforceIf([bit3.Not(),self.sCell[inlist[j+1][0]][inlist[j+1][1]]])
+				self.model.AddBoolAnd(bit3).OnlyEnforceIf(self.sCell[inlist[j+1][0]][inlist[j+1][1]].Not())
+				
+				bit4 = self.model.NewBoolVar('MaxWhisperSCellBothBiggerRow{:d}Col{:d}'.format(inlist[j][0],inlist[j][1]))
+				self.model.Add(self.sCellValues[inlist[j][0]][inlist[j][1]] - self.sCellValues[inlist[j+1][0]][inlist[j+1][1]] >= value).OnlyEnforceIf([bit4,self.sCell[inlist[j][0]][inlist[j][1]],self.sCell[inlist[j+1][0]][inlist[j+1][1]]])
+				self.model.Add(self.sCellValues[inlist[j][0]][inlist[j][1]] - self.sCellValues[inlist[j+1][0]][inlist[j+1][1]] <= -1*value).OnlyEnforceIf([bit4.Not(),self.sCell[inlist[j][0]][inlist[j][1]],self.sCell[inlist[j+1][0]][inlist[j+1][1]]])
+				self.model.AddBoolAnd(bit4).OnlyEnforceIf(self.sCell[inlist[j][0]][inlist[j][1]].Not())
+				self.model.AddBoolAnd(bit4).OnlyEnforceIf(self.sCell[inlist[j+1][0]][inlist[j+1][1]].Not())
+			else:
+				bit1 = self.model.NewBoolVar('MaxWhisperBiggerRow{:d}Col{:d}'.format(inlist[j][0],inlist[j][1]))
+				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] + self.sCellSums[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] - self.sCellSums[inlist[j+1][0]][inlist[j+1][1]] >= value).OnlyEnforceIf(bit1)
+				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] + self.sCellSums[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] - self.sCellSums[inlist[j+1][0]][inlist[j+1][1]] <= -1*value).OnlyEnforceIf(bit1.Not())
+				
+	def setMaxWhispersLine(self,inlist,value,sSum=False):
+		# Sets a whispers line where the maximum difference between two adjacent cells on the line is value For an S-cell, the comparison is made with both values
+		inlist = self._procCellList(inlist)
+		for j in range(len(inlist)-1):
+			if sSum is False:
+				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] <= value)
+				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] >= -1*value)
+				self.model.Add(self.sCellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] <= value).OnlyEnforceIf([self.sCell[inlist[j][0]][inlist[j][1]]])
+				self.model.Add(self.sCellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] >= -1*value).OnlyEnforceIf([self.sCell[inlist[j][0]][inlist[j][1]]])
+				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.sCellValues[inlist[j+1][0]][inlist[j+1][1]] <= value).OnlyEnforceIf([self.sCell[inlist[j+1][0]][inlist[j+1][1]]])
+				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.sCellValues[inlist[j+1][0]][inlist[j+1][1]] >= -1*value).OnlyEnforceIf([self.sCell[inlist[j+1][0]][inlist[j+1][1]]])
+				self.model.Add(self.sCellValues[inlist[j][0]][inlist[j][1]] - self.sCellValues[inlist[j+1][0]][inlist[j+1][1]] <= value).OnlyEnforceIf([self.sCell[inlist[j][0]][inlist[j][1]],self.sCell[inlist[j+1][0]][inlist[j+1][1]]])
+				self.model.Add(self.sCellValues[inlist[j][0]][inlist[j][1]] - self.sCellValues[inlist[j+1][0]][inlist[j+1][1]] >= -1*value).OnlyEnforceIf([self.sCell[inlist[j][0]][inlist[j][1]],self.sCell[inlist[j+1][0]][inlist[j+1][1]]])
+			else:
+				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] + self.sCellSums[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] - self.sCellSums[inlist[j+1][0]][inlist[j+1][1]] <= value)
+				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] + self.sCellSums[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] - self.sCellSums[inlist[j+1][0]][inlist[j+1][1]] >= -1*value)
+						
 class superpositionSudoku(schroedingerCellSudoku):
 	'''This class is a version of Schrödinger cell sudoku, but the constraints take a harder line on the double-digit cells to 
 	   look more like classical superposition. Whenever an S-cell is used on a constraint, there must be an assignment of Schrödinger cells that makes the constraint work, for both possible values. So for example, if an S-cell is on a Renban line with 3, 4, and 5, the Schrödinger cell must be 2/6, since either assignment independently could satisfy the constraint. It could not be 1/2, for assigning it to be 1 would leave the set of digits discontiguous. Constraints that order, such as between lines or thermos, can be inherited intact, but summing constraints need to be revised.'''

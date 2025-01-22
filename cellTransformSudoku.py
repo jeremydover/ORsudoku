@@ -172,7 +172,30 @@ class cellTransformSudoku(sudoku):
 			for j in range(self.boardWidth):
 				diagNeighbors = {(i-1,j-1),(i-1,j+1),(i+1,j-1),(i+1,j+1)} & {(k,m) for k in range(self.boardWidth) for m in range(self.boardWidth)}
 				self.model.AddBoolAnd([self.double[x[0]][x[1]].Not() for x in diagNeighbors]).OnlyEnforceIf(self.double[i][j])
-		
+				
+	def setTransformAntiKingDigital(self):
+		# Asserts that no cell a king's move from a transform cell can have the same digit
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				diagNeighbors = {(i-1,j-1),(i-1,j+1),(i+1,j-1),(i+1,j+1)} & {(k,m) for k in range(self.boardWidth) for m in range(self.boardWidth)}
+				for x in diagNeighbors:
+					self.model.Add(self.baseValues[i][j] != self.baseValues[x[0]][x[1]]).OnlyEnforceIf(self.double[i][j])	
+					
+	def setTransformAntiKnight(self):
+		# Asserts that no two transform cells can be a knight's move apart
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				knNeighbors = {(i-2,j-1),(i-2,j+1),(i+2,j-1),(i+2,j+1),(i+1,j-2),(i+1,j+2),(i-1,j-2),(i-1,j+2)} & {(k,m) for k in range(self.boardWidth) for m in range(self.boardWidth)}
+				self.model.AddBoolAnd([self.double[x[0]][x[1]].Not() for x in knNeighbors]).OnlyEnforceIf(self.double[i][j])
+				
+	def setTransformAntiKnightDigital(self):
+		# Asserts that no cell a knight's move from a transform cell can have the same digit
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				knNeighbors = {(i-2,j-1),(i-2,j+1),(i+2,j-1),(i+2,j+1),(i+1,j-2),(i+1,j+2),(i-1,j-2),(i-1,j+2)} & {(k,m) for k in range(self.boardWidth) for m in range(self.boardWidth)}
+				for x in knNeighbors:
+					self.model.Add(self.baseValues[i][j] != self.baseValues[x[0]][x[1]]).OnlyEnforceIf(self.double[i][j])		
+	
 	def printCurrentSolution(self):
 		dW = max([len(str(x)) for x in self.digits])
 		colorama.init()
