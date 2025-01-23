@@ -71,12 +71,14 @@ class sudoku:
 	Corner = 0	# Constant to determine clue type for corner/edge clues
 	Edge = 1	# Constant to determine clue type for corner/edge clues
 	
+	NE = 3      # Constant to assert a not equal comparison
 	GE = 2 		# Constant to assert a greater than or equal to comparison
 	EQ = 1		# Constant to assert an equal to comparison
-	LE = 0		# Constant to assert an equal to comparison
+	LE = 0		# Constant to assert a less than or equal to comparison
 	
 	Low = 0		# Constant to assert a value is "low"
-	High = 1	# Constant to assert a value is "high"
+	Middle = 1  # Constant to assert a value is "middle"
+	High = 2	# Constant to assert a value is "high"
 	
 	def mySuper(self):
 		return super()
@@ -162,7 +164,6 @@ class sudoku:
 				div = self.model.NewIntVar(0,2*maxDiff,'ParityDiv')
 				mod = self.model.NewIntVar(0,1,'parityValue{:d}{:d}'.format(i,j))
 				t.append(mod)
-				self.allVars.append(mod)
 				self.model.Add(2*div <= self.cellValues[i][j])
 				self.model.Add(2*div+2 > self.cellValues[i][j])
 				self.model.Add(mod == self.cellValues[i][j]-2*div)
@@ -179,7 +180,6 @@ class sudoku:
 			for j in range(self.boardWidth):
 				c = self.model.NewIntVar(self.minDigit // 3 - 1,self.maxDigit // 3,'entropyValue{:d}{:d}'.format(i,j))
 				t.append(c)
-				self.allVars.append(c)
 				self.model.Add(3*c+1 <= self.cellValues[i][j])
 				self.model.Add(3*c+4 > self.cellValues[i][j])
 			self.cellEntropy.insert(i,t)
@@ -198,7 +198,6 @@ class sudoku:
 			for j in range(self.boardWidth):
 				c = self.model.NewIntVar(1,3,'modularValue{:d}{:d}'.format(i,j))
 				t.append(c)
-				self.allVars.append(c)
 				self.model.Add(c == self.cellValues[i][j] - 3*self.cellEntropy[i][j])
 			self.cellModular.insert(i,t)
 		
@@ -245,7 +244,7 @@ class sudoku:
 		for i in range(self.boardWidth):
 			t = []
 			for j in range(self.boardWidth):
-				varBitmap = self.__varBitmap('PrimalityRow{:d}Col{:d}'.format(i,j),self.boardWidth)
+				varBitmap = self._varBitmap('PrimalityRow{:d}Col{:d}'.format(i,j),self.boardWidth)
 				c = self.model.NewIntVar(0,2,'primalityValue{:d}{:d}'.format(i,j))
 				self.model.Add(self.cellValues[i][j] == 1).OnlyEnforceIf(varBitmap[0])
 				self.model.Add(c == 1).OnlyEnforceIf(varBitmap[0])
@@ -269,26 +268,6 @@ class sudoku:
 			self.cellPrimality.insert(i,t)
 		self._propertyInitialized.append('Primality')
 		
-	def _setMagnitude(self,five=High):
-		# Set up Boolean variables to track magnitude constraints
-	
-		self.cellMagnitude = []
-		
-		for i in range(self.boardWidth):
-			t = []
-			for j in range(self.boardWidth):
-				c = self.model.NewIntVar(-1,1,'magnitudeValue{:d}{:d}'.format(i,j))
-				t.append(c)
-				if five == self.High:
-					self.model.Add(self.cellValues[i][j] < 5).OnlyEnforceIf(c.Not())
-					self.model.Add(self.cellValues[i][j] >= 5).OnlyEnforceIf(c)
-				else:
-					self.model.Add(self.cellValues[i][j] <= 5).OnlyEnforceIf(c.Not())
-					self.model.Add(self.cellValues[i][j] > 5).OnlyEnforceIf(c)
-			self.cellMagnitude.insert(i,t)
-		
-		self._propertyInitialized.append('Magnitude')
-		
 	def getCellVar(self,i,j):
 		# Returns the model variable associated with a cell value. Useful when tying several puzzles together, e.g. Samurai
 		return self.cellValues[i][j]
@@ -299,7 +278,7 @@ class sudoku:
 	
 	from ._multiCell import setFortress,_initializeKropkiWhite,_initializeKropkiBlack,setKropkiWhite,setKropkiBlack,setKropkiGray,setKropkiWhiteArray,setKropkiBlackArray,setKropkiGrayArray,setKropkiArray,setKropkiWhiteNegative,setKropkiBlackNegative,setKropkiNegative,setAntiKropkiWhite,setAntiKropkiBlack,setAntiKropki,setAntiKropkiWhiteArray,setAntiKropkiBlackArray,setAntiKropkiArray,_applyKropkiWhiteNegative,_applyKropkiBlackNegative,setKropkiDifference,setKropkiRatio,setGammaEpsilon,_initializeRemoteKropkiWhite,_initializeRemoteKropkiBlack,_setRemoteKropkiBase,setRemoteKropkiWhite,setRemoteKropkiBlack,setRemoteKropkiGray,setRemoteKropkiWhiteArray,setRemoteKropkiBlackArray,setRemoteKropkiGrayArray,setRemoteKropkiArray,setRemoteKropkiDifference,setRemoteKropkiRatio,_initializeRomanSum,setRomanSum,setXVV,setXVX,setRomanSumArray,setXVVArray,setXVXArray,setXVArray,setAntiRomanSum,setAntiRomanSums,setAntiXVV,setAntiXVX,setAntiXV,setAntiRomanSumArray,setAntiRomanSumsArray,setAntiXVVArray,setAntiXVXArray,setAntiXVArray,setRomanSumNegative,setXVVNegative,setXVXNegative,setXVNegative,_applyRomanSumNegative,setXVXVV,setXVXVX,setXVXVVArray,setXVXVXArray,setXVXVArray,setAntiXVXV,setAntiXVXVArray,setXVXVNegative,_applyXVXVNegative,setXYDifference,setXYDifferenceArray,setAntiXYDifference,setAntiXYDifferenceArray,setXYDifferenceNegative,_applyXYDifferenceNegative,setEitherOr,setEitherOrArray,setCloneRegion,setDominantCloneRegion,setShakenCloneRegion,setCage,setRepeatingCage,setMedianCage,setBlockCage,setMOTECage,setMETOCage,setUniparityCage,setEquiparityCage,setAllOddOrEven,setPuncturedCage,setPsychoKillerCage,setKnappDanebenCage,setCapsule,setDavidAndGoliath,setDigitCountCage,setVault,setZone,setLookAndSayCage,setPsychoLookAndSayCage,setOrderSumCages,setMagicSquare,setEntropkiWhite,setEntropkiBlack,setEntropkiWhiteArray,setEntropkiBlackArray,setEntropkiArray,setParityDotWhite,setParityDotBlack,setParityDotWhiteArray,setParityDotBlackArray,setParityDotArray,setGenetic,setGeneticArray,setParitySnake,setConsecutiveChainRegion,setAntiQueenCell,setTripleTab,setEqualSumCages
 	
-	from ._externalClues import setLittleKiller,setXSumBase,setXSum,setReverseXSum,setDoubleXSum,setXAverageBase,setXAverage,setReverseXAverage,setXKropki,setNumberedRoomBase,setNumberedRoom,setReverseNumberedRoom,setSandwichSum,setOpenfacedSandwichSum,setShortSandwichSum,setBeforeNine,setBattlefield,setPositionSum,_setDigitsInBlock,setOutside,setOutsideDiagonal,setOutsideLength,setCornerEdge,setRossini,setRossiniLength,setRossiniNegative,_applyRossiniNegative,setMaxAscending,setSkyscraper,setSkyscraperSum,setNextToNine,setNextToNineSum,setMaximumRun,setMaximumTriplet,setDescriptivePair,setMinimax,setMaximin,setFullRank,setParityParty,setSumSandwich,setAscendingStarter,setFirstSeenParity,setFirstSeenEntropy,setFirstSeenModular,setPointingDifferents,setBust
+	from ._externalClues import setLittleKiller,setXSumBase,setXSum,setReverseXSum,setDoubleXSum,setXAverageBase,setXAverage,setReverseXAverage,setXKropki,setNumberedRoomBase,setNumberedRoom,setReverseNumberedRoom,setSandwichSum,setOpenfacedSandwichSum,setShortSandwichSum,setBeforeNine,setBattlefield,setPositionSum,_setDigitsInBlock,setOutside,setOutsideDiagonal,setOutsideLength,setCornerEdge,setRossini,setRossiniLength,setRossiniNegative,_applyRossiniNegative,setMaxAscending,setSkyscraper,setSkyscraperSum,setNextToNine,setNextToNineSum,setMaximumRun,setMaximumTriplet,setDescriptivePair,setMinimax,setMaximin,setFullRank,setParityParty,setSumSandwich,setAscendingStarter,setFirstSeenParity,setFirstSeenEntropy,setFirstSeenModular,setPointingDifferents,setBust,setHangingSum
 	
 	from ._quadConstraints import setQuadruple,setQuadrupleArray,setQuadSum,setQuadSumArray,setBattenburg,setBattenburgArray,setBattenburgNegative,setAntiBattenburg,setAntiBattenburgArray,_applyBattenburgNegative,setEntropyQuad,setEntropyQuadArray,setEntropyQuadNegative,setAntiEntropyQuad,setAntiEntropyQuadArray,_applyEntropyQuadNegative,setModularQuad,setModularQuadArray,setModularQuadNegative,setAntiModularQuad,setAntiModularQuadArray,_applyModularQuadNegative,_initializeParityQuad,setParityQuad,setParityQuadArray,setParityQuadNegative,setAntiParityQuad,setAntiParityQuadArray,_applyParityQuadNegative,setParityQuadExclusions,_initializeEntropyBattenburg,setEntropyBattenburg,setEntropyBattenburgArray,setAntiEntropyBattenburg,setAntiEntropyBattenburgArray,setEntropyBattenburgNegative,_applyEntropyBattenburgNegative,setQuadMaxArrow,setQuadMaxArrowArray,setQuadMaxValue,setQuadMaxValueArray,setQuadMaxParityValue,setConsecutiveQuad,setConsecutiveQuadWhite,setConsecutiveQuadWhiteArray,setConsecutiveQuadBlack,setConsecutiveQuadBlackArray,setConsecutiveQuadArray,setAntiConsecutiveQuad,setAntiConsecutiveQuadArray,setConsecutiveQuadNegative,_applyConsecutiveQuadNegative,setDiagonalConsecutivePairs,setDiagonalConsecutivePairsArray
 	

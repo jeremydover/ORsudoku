@@ -1,3 +1,8 @@
+1/23/2025
+	Pushed earlier in the day was a "behind-the-scenes" update that cleaned up some base object variables that needed to be duplicated across the code base. Nothing fancy, all tests still passed, some technical debt paid down.
+	This latest push contains the implementation of hanging sums. Basically, these give you pretty granular detail on how to pick cells to create
+	a sum, and how far into the grid the sum should extend. Very powerful. Maybe too powerful. You can implement "the sum of the even digits starting from the third cell and continuing until the fourth odd digit in the row is 8". But you really shouldn't unless you want solvers to hate you. Parity party can be implemented with this function (though there's an existing native setParityParty), but there are some other test cases for which this works too.
+
 1/22/2025
 	Fixed error in Roman sums shorthand processing with multi-digit sum values.
 	Fixed error in Schrödinger sum application of XV negative constraint.

@@ -69,6 +69,9 @@ def findSolution(self,test=False,debug=False):
 	
 	if test is True:
 		return self.testStringSolution()
+	elif debug is True:
+		for v in self.allVars:
+			print('%s=%i' % (v,self.solver.Value(v)))
 	else:
 		print('Solver status = %s' % self.solver.StatusName(self.solveStatus))
 		if self.solveStatus == cp_model.OPTIMAL:

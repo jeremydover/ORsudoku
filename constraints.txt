@@ -79,6 +79,7 @@ Global Modular (see Global Entropy)
 Global Neighbor Sums
 Global Whispers (Dutch, et. al.)
 Gurth's Symmetric Placement (GSP)
+Hanging Sums
 Indexing
 Irregular Sudoku
 Isotopes
@@ -826,6 +827,119 @@ setGSP(pairs): assert the GSP constraint
 
 setRotationalPairs(): assert the rotational pairs contraint: each digit has a partner digit which is always placed in cells under a 180 degree rotation. Like GSP, but pairs are not asserted in advance
 
+Hanging Sums
+------------
+This is a function which is probably overloaded with capability, but generically, it allows the setter to define outside sum clues
+which give the sum of some selection of digits, up to some terminator. The syntax is:
+setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=True,includeTerminator=True)
+  row,col: The coordinates of the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  value: the length of the longest run of increasing digits in the row/col
+ 
+  selectSummands: a *list* of conditions (tuples) which describe whether or not to select certain cells into the sum. Generically,
+  each tuple starts with a sting containing a property name, and is followed by values specific to that property. Note that multiple
+  selection criteria may be given, and they are combined with a logical AND, so a cell must meet ALL given conditions to be included
+  in the sum. selectSummands may be an empty list.
+    Property: 'Index'
+	  For this property, we are picking cells based on their position within the clued row/column.
+	  Values[0]: A comparator: use the class variables GE, EQ or LE, or NE if you really think that's useful
+	  Values[1]: index to stop
+	  So for example, ('Index',p.GE,4) would include all cells in the two boxes not adjacent to the clue. Yes, this is just a cage. I get it.
+	
+	Property: 'IndexSkip'
+	  Hah, it's not just cages.
+	  For this property, we can pick every other, every third, etc. cell
+	  Values[0]: Skip number, 2 skips every other, etc.
+	  Values[1]: Start number, cell in (0...skip-1} to start at
+	
+	Property: 'Magnitude'
+	  For this property, we select digits based on whether they're big or small.
+	  Values[0]: A comparator. Again, NE and EQ don't seem particularly useful, but I'll put em in anyway
+	  Values[1]: Value for comparison
+	
+	Property: 'Parity'
+	  For this property, we will pick cells based on parity.
+	  Value: Use 0 for even, 1 for odd. Or you can use the Even/Odd class variables.
+	
+	Property: 'Entropy'
+	 For this property, we pick cells based on Entropy class: low: 1,2,3, middle: 4,5,6, high: 7,8,9
+	 Values[0]: Use any comparator class variable: NE, EQ, LE, GE
+	 Values[1]: Values for comparison: again, use class variables Low, Middle, High
+	
+	Property: 'Modular'
+	 For this property, we pick cells based on Modulus class: 1: 1,4,7, 2: 2,5,8, 3: 3,6,9
+	 Values[0]: Use any comparator class variable: NE, EQ, LE, GE. Mathematically, LE and GE don't really make much sense, but they work.
+	 Values[1]: Values for comparison: again, use class variables Low, Middle, High
+	
+	Property: 'Primality'
+	For this property, we pick cells based on whether their digit is prime or not. Which brings up the 1 problem.
+	For purposes here, "not prime" is 0: 4,6,8,9; "maybe kinda" is 1: 1; "prime" is 2: 2,3,5,7. Like modular, evern though the LE and GE 
+	comparisons don't really make sense, you can use them.
+	
+	Property: 'MatchParity'
+	For this property, we pick cells if they match the parity of the cell specified in value
+	Value: cell whose parity to match
+	
+	Property: 'MatchEntropy'
+	For this property, we pick cells if they match the entropy of the cell specified in value
+	Value: cell whose parity to match
+	
+	Property: 'MatchModular'
+	For this property, we pick cells if they match the modularity of the cell specified in value
+	Value: cell whose parity to match
+
+  selectTerminator: a *list* of conditions (tuples) which describe when the sum should stop. As with summand selection,
+  each tuple starts with a sting containing a property name, and is followed by values specific to that property. Note that multiple
+  selection criteria may be given, but for termination they are combined with a logical OR. There are two styles of termination, defined
+  in the terminateOnFirst parameter, described below. Currently supported properties:
+    Terminator: 'Fixed'
+	We're terminating at a fixed index in the row/column, e.g. the first six cells.
+	Value: index at which to terminate sum
+	
+	Terminator: 'SumReached'
+	Terminate when a particular sum is reached or exceeded, value is the sum that is reached
+	Value: target sum to stop at
+	
+	Terminator: 'DigitReached'
+	Terminate when a fixed digit is reached
+	Value: target digit to stop at 
+	
+	Terminator: 'DigitSetReached'
+	Terminate when some numbered instance of a digit set is reached
+	Values[0]: list of target digits
+	Values[1]: nth instance of target to stop at
+	
+	Terminator: 'ParityChangeReached'
+	Terminate when some numbered instance of a change in parity occurs
+	Value: nth instance of target
+	
+	Terminator: 'EntropyChangeReached'
+	Terminate when some numbered instance of a change in entropy occurs
+	Value: nth instance of target
+	
+	Terminator: 'ModularChangeReached'
+	Terminate when some numbered instance of a change in modular occurs
+	Value: nth instance of target
+	
+  terminateOnFirst: by default, the sum will terminate at the first cell that matches one of the termination criteria. However, in hindsight,
+  the behavior seen in actual puzzles seems to be ambiguity, where the sum can terminate based on any of the given criteria, determined on a
+  clue-by-clue basis. Since it seemed dumb to implement only the mode that no actual puzzles use, setting terminateOnFirst=False causes the
+  solver to allow the sum to continue to any possible termination point, not just the first one that occurs.
+  
+  includeTerminator: by default, the sum will include the cell which signals that the sum is to be terminated into the sum. To change this
+  behavior and sum only up to, but not including, the terminator, set includeTerminator=False. Word to the wise: not including the terminator
+  may give wonky results if the first cell is the terminator. Caveat emptor.
+  
+  Example:
+  p.setHangingSum(1,2,p.Col,14,[],[('Fixed',1),('DigitSetReached',[2,4,6,8],1),('DigitSetReached',[1,3,5,7,9],1)],terminateOnFirst=False)
+  
+  This sets a parity party constraint. There are no selectSummands, so all digits are included in the sum. The sum can stop after the first digit,
+  or continues until it reached an even digit, or until it reaches an odd digit. Parity party can also be implemented like so:
+  
+  p.setHangingSum(1,2,p.Col,14,[],[('Fixed',1),('ParityChangeReached',1)],terminateOnFirst=False)
+  
+  The sum can again terminate in the first cell, or it continues to the first parity change.
+	
 Indexing (159)
 --------------
 ****NOTE****
