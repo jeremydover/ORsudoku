@@ -31,7 +31,9 @@ def setMaxCell(self,row,col=-1):
 	
 def setMinMaxArray(self,cells):
 	for x in cells: self.setMinMaxCell(x)
-setMaxMinArray = setMinMaxArray
+
+def setMaxMinArray(self,cells):
+	for x in cells: self.setMinMaxCell(x)
 	
 def setMinArray(self,cells):
 	for x in cells: self.setMinCell(x)
@@ -339,7 +341,126 @@ def setSlingshot(self,row1,col1,tail,head):
 		hStep = 1
 		vStep = 0
 	
-	varBitmap = self._varBitmap('DifferentNeighborsRow{:d}Col{:d}'.format(row,col),cand)
+	varBitmap = self._varBitmap('SlingshotRow{:d}Col{:d}'.format(row,col),cand)
 	for i in range(1,cand+1):
 			self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] == matchVar).OnlyEnforceIf(varBitmap[i-1])
 			self.model.Add(self.cellValues[row][col] == i).OnlyEnforceIf(varBitmap[i-1])
+			
+def _initializeNeighborSet(self):
+	if 'NeighborSet' not in self._constraintInitialized:
+		self._constraintInitialized.append('NeighborSet')
+		self.neighborSetProperty = 'Entropy'
+		self.neighborSetPropertyInitialized = False
+		self.neighborSetCells = []
+			
+def _setNeighborSetBase(self,row,col,pm,prop=None):
+	# Asserts a cell will (pm = 1) or won't (pm = -1) have an adjacent cell with the same property (prop)
+	
+	self._initializeNeighborSet()
+	if prop is None:
+		prop = self.neighborSetProperty
+
+	neighbors = list({(row-1,col),(row+1,col),(row,col-1),(row,col+1)} & {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)})
+	neighborBools = [self.model.NewBoolVar('NeighborSetNeighborTests') for j in range(len(neighbors))]
+	
+	if type(prop) == str:
+		if prop not in self._constraintInitialized:
+			getattr(self,'_set'+prop)()
+		myCells = getattr(self,'cell'+prop)	
+		for j in range(len(neighbors)):
+			self.model.Add(myCells[row][col] == myCells[neighbors[j][0]][neighbors[j][1]]).OnlyEnforceIf(neighborBools[j])
+			self.model.Add(myCells[row][col] != myCells[neighbors[j][0]][neighbors[j][1]]).OnlyEnforceIf(neighborBools[j].Not())
+			
+	elif type(prop) == list or type(prop) == set:
+		thisDigitBools = []
+		for x in prop:
+			c = self.model.NewBoolVar('BaseCellTestDigit{:d}'.format(x))
+			self.model.Add(self.cellValues[row][col] == x).OnlyEnforceIf(c)
+			self.model.Add(self.cellValues[row][col] != x).OnlyEnforceIf(c.Not())
+			thisDigitBools.append(c)
+		thisDigitIn = self.model.NewBoolVar('BaseCellTest')
+		self.model.AddBoolOr(thisDigitBools).OnlyEnforceIf(thisDigitIn)
+		self.model.AddBoolAnd([x.Not() for x in thisDigitBools]).OnlyEnforceIf(thisDigitIn.Not())
+
+		for j in range(len(neighbors)):
+			thisNeighborBools = []
+			for x in prop:
+				c = self.model.NewBoolVar('NeighborTestDigit{:d}'.format(x))
+				self.model.Add(self.cellValues[neighbors[j][0]][neighbors[j][1]] == x).OnlyEnforceIf(c)
+				self.model.Add(self.cellValues[neighbors[j][0]][neighbors[j][1]] != x).OnlyEnforceIf(c.Not())
+				thisNeighborBools.append(c)
+			neighborIn = self.model.NewBoolVar('NeighborTest')
+			self.model.AddBoolOr(thisNeighborBools).OnlyEnforceIf(neighborIn)
+			self.model.AddBoolAnd([x.Not() for x in thisNeighborBools]).OnlyEnforceIf(neighborIn.Not())
+			self.model.Add(sum([thisDigitIn,neighborIn]) == 1).OnlyEnforceIf(neighborBools[j].Not())
+			self.model.AddBoolOr([thisDigitIn,neighborIn.Not()]).OnlyEnforceIf(neighborBools[j])
+			self.model.AddBoolOr([thisDigitIn.Not(),neighborIn]).OnlyEnforceIf(neighborBools[j])
+			
+	if pm == 1:
+		self.model.AddBoolOr(neighborBools)
+		self.neighborSetCells.append((row,col))
+	if pm == -1:
+		self.model.AddBoolAnd([x.Not() for x in neighborBools])
+		
+def setPosNeighborSet(self,row1,col1=-1,prop=None):
+	if col1 == -1:
+		(row,col) = self._procCell(row1)
+	else:
+		row = row1 - 1
+		col = col1 - 1
+	self._setNeighborBase(row,col,1,prop)
+	
+def setPosNeighbourSet(self,row,col,prop=None):
+	self._setNeighborSet(row,col,prop)
+	
+def setNegNeighborSet(self,row,col,prop=None):
+	if col1 == -1:
+		(row,col) = self._procCell(row1)
+	else:
+		row = row1 - 1
+		col = col1 - 1
+	self._setNeighborBase(row,col,-1,prop)
+	
+def setNegNeighbourSet(self,row,col,prop=None):
+	self.setAntiNeighborSet(row,col,prop)
+	
+def setPosNeighborSetArray(self,inlist1,prop=None):
+	inlist = self._procCellList(inlist1)
+	for x in inlist: self._setNeighborSetBase(x[0],x[1],1,prop)
+	
+def setPosNeighbourSetArray(self,inlist1,prop=None):
+	self.setPosNeighborSetArray(inlist1,prop)
+	
+def setNegNeighborSetArray(self,inlist1,prop=None):
+	inlist = self._procCellList(inlist1)
+	for x in inlist: self._setNeighborSetBase(x[0],x[1],-1,prop)
+	
+def setNegNeighbourSetArray(self,inlist1,prop=None):
+	self.setNegNeighborSetArray(inlist1,prop)
+
+def setNeighborSetArray(self,inlist1,prop=None):
+	inlist = self._procCellList(inlist1)
+	for x in inlist: self._setNeighborSetBase(x[0],x[1],x[2],prop)
+
+def setNeighbourSetArray(self,inlist1,prop=None):
+	self.setNeighborArray(inlist1,prop)
+
+def setNeighborSetProperty(self,prop):
+	self._initializeNeighborSet()
+	self.neighborSetProperty = prop
+
+def setNeighbourSetProperty(self,prop):
+	self.setNeighborSetProperty(prop)
+	
+def setNeighborSetNegative(self):
+	self._initializeNeighborSet()
+	self._constraintNegative.append('NeighborSet')
+	
+def setNeighbourSetNegative(self):
+	self.setNeighbourSetNegative()
+	
+def _applyNeighborSetNegative(self):
+	for i in range(self.boardWidth):
+		for j in range(self.boardWidth):
+			if (i,j) not in self.neighborSetCells:
+				self._setNeighborSetBase(i,j,-1)

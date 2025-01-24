@@ -113,6 +113,7 @@ More-Odd-Than-Even/More-Even-Than-Odd Cages
 Nabner Lines
 Nearest Neighbor
 Negator Sudoku - see Cell Transform Sudoku
+Neighbor Sets
 Neighbor Sums
 Next-To-Nine
 No-Three-In-A-Row (Parity)
@@ -1257,6 +1258,30 @@ setNearestNeighbor(row,col,pointers): arrows in a cell point to the orthogonal n
 	row,col: the cell in question
 	pointers: a single direction, or a list of directions: use class variables Up, Down, Left and Right
 
+Neighbor Sets
+-------------
+setPosNeighborSet(row,col,prop): assert that this cell has an orthogonal neighbor with which it matches on property
+  row,col: the cell in question
+  prop (optional): property may be any of 'Parity', 'Entropy', 'Modular', 'Primality', or may be a list of integers, where two cells match if their digits are both in or both out of the set. Property is optional, and defaults to 'Entropy', unless a property has been set with setNeighborSetProperty (below)
+  
+setNegNeighborSet(row,col,prop): assert that this cell does not have an orthogonal neighbor with which it matches on property
+
+setPosNeighborSetArray(list,prop): sets multiple positive Neighbor Set constraints
+  list: list of cell specifications
+  prop (optional): property
+
+setNegNeighborSetArray(list,prop): sets multiple negative Neighbor Set constraints
+  list: list of cell specifications
+  prop (optional): property
+
+setNeighborSetArray(list,prop): sets multiple positive or negative Neighbor Set constraints
+  list: list of extended cell specifications, row/column/pn, for positive negative. Use 0 for positive, 1 for negative, or Pos and Neg class variables
+  prop (optional): property
+  
+setNeighborSetProperty(prop): sets the property used by neighbor set constraints; property defaults to 'Entropy', or can be set individually in specific method calls
+
+setNeighborSetNegative(): sets a negative constraint, so that all cells not designated as having a matching orthogonal neighbor will not
+
 Neighbor Sums
 -------------
 setNeighborSum(cell): asserts a cell is the sum of its orthogonally adjacent neighbors
@@ -1821,17 +1846,21 @@ setAntiDiagonalOff(): assert that the off diagonal contains the minimum number o
 
 X-Sums
 ------
-setXSum(row,col,rc,value): set an X sum constraint on a row or column
+setXSum(row,col,rc,value,depth,depthStyle): set an X sum constraint on a row or column
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: The sum of the first X cells in the row/column from the clue, where X is the value in the adjacent cell
   Note: for negative digits, the behavior of an X-Sum is to take digits from the other side of the row/column, a la a reverse sum
+  depth (Optional): depth=1 is the default, which acts like a normal X-Sums clue. If depth is greater than 1, then the cell which picks the length of the sum can be anywhere in the first "depth" cells of the clued row/column. If depth is 0, then the cell which picks the length of the sum can be anywhere where the clued row/column meets the region containing the cell next to the clue.
+  depthStyle (Optional): By default, any cell allowed to have the length picker by depth can contain it. depthStyle can be set to 'Smallest' or 'Largest' to force the smallest or largest value in the set of possible cells to be the one chosen.
   
 setReverseXSum(row,col,rc,value): set a reverse X sum constraint on a row or column, where the sum is taken on cells starting from the end of the row/column opposite the clue
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: The sum of the first X cells on the other side of the row/column from the clue, where X is the value in the adjacent cell
   Note: for negative digits, the behavior of a Reverse X-Sum is to take digits from the other side of the row/column, a la regular X-Sum
+  depth (Optional): depth=1 is the default, which acts like a normal X-Sums clue. If depth is greater than 1, then the cell which picks the length of the sum can be anywhere in the first "depth" cells of the clued row/column. If depth is 0, then the cell which picks the length of the sum can be anywhere where the clued row/column meets the region containing the cell next to the clue.
+  depthStyle (Optional): By default, any cell allowed to have the length picker by depth can contain it. depthStyle can be set to 'Smallest' or 'Largest' to force the smallest or largest value in the set of possible cells to be the one chosen.
   
 setDoubleXSum(row,col,rc,value): set a double X sum constraint on a row or column, where the clue is the sum of the X sums taken from both sides of the row/column
   row,col: The coordinates of the cell next to which the clue value sits

@@ -8,10 +8,11 @@ def setLittleKiller(self,row1,col1,row2,col2,value):
 	cells = [(row1+vStep*k,col1+hStep*k) for k in range(self.boardWidth) if row1+vStep*k-1 in range(self.boardWidth) and col1+hStep*k-1 in range(self.boardWidth)]
 	self.setRepeatingCage(cells,value)
 	
-def setXSumBase(self,row1,col1,rc,value,pm):
+def setXSumBase(self,row1,col1,rc,value,pm,depth=1,depthStyle=None):
 	#row,col are the coordinates of the cell containing the length, value is the sum
 	#rc: 0 -> if adding in row, 1 -> if adding in column. Needed for corner cells.
 	#pm: determines if these are normal X-sums (including the digit) or reverse X-Sums (sum on the other side)
+	#depth: allows the indexing digit to be in one of the first depth cells of the row/column
 	
 	# Convert from 1-base to 0-base
 	row = row1 - 1
@@ -25,6 +26,25 @@ def setXSumBase(self,row1,col1,rc,value,pm):
 	
 	digits = list(self.digits)
 	varBitmap = self._varBitmap('XSumRow{:d}Col{:d}RC{:d}'.format(row,col,rc),len(digits))
+	if depth != 1:
+		if depth > 1:
+			depthIndices = list(range(depth))
+		else:
+			myRegion = [x for x in self.regions if (row,col) in x]
+			depthIndices = [j for j in range(self.boardWidth) if (row+j*vStep,col+j*hStep) in myRegion[0]]
+		depthVars = [self.model.NewBoolVar('XSumsDepthVars') for j in range(len(depthIndices))]
+		self.model.AddBoolOr(depthVars)
+
+		if depthStyle == 'Smallest':
+			for j in range(depth):
+				for k in range(depth):
+					if k != j:
+						self.model.Add(self.cellValues[row+j*vStep][col+j*hStep] < self.cellValues[row+k*vStep][col+k*hStep]).OnlyEnforceIf(depthVars[j])
+		if depthStyle == 'Largest':
+			for j in range(depth):
+				for k in range(depth):
+					if k != j:
+						self.model.Add(self.cellValues[row+j*vStep][col+j*hStep] > self.cellValues[row+k*vStep][col+k*hStep]).OnlyEnforceIf(depthVars[j])
 		
 	for i in range(len(digits)):
 		if digits[i] == 0:
@@ -38,21 +58,31 @@ def setXSumBase(self,row1,col1,rc,value,pm):
 			# Digit is too big to have a reasonable sum, so disallow
 			self.model.AddBoolAnd([varBitmap[i][0].Not()]).OnlyEnforceIf(varBitmap[i])	
 		elif digits[i] > 0:
-			self.model.Add(self.cellValues[row][col] == digits[i]).OnlyEnforceIf(varBitmap[i])
+			if depth == 1:
+				self.model.Add(self.cellValues[row][col] == digits[i]).OnlyEnforceIf(varBitmap[i])
+			else:
+				for j in range(len(depthVars)):
+					self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] == digits[i]).OnlyEnforceIf(varBitmap[i] + [depthVars[j]])
+					self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] != digits[i]).OnlyEnforceIf(varBitmap[i] + [depthVars[j].Not()])
 			self.model.Add(sum(self.cellValues[sumRow+j*vStep][sumCol+j*hStep] for j in range(digits[i])) == value).OnlyEnforceIf(varBitmap[i])
 		else: # So if a digit is negative, we reverse the intended direction
 			mySumRow = self.boardWidth-1-sumRow if rc == self.Col else sumRow
 			mySumCol = self.boardWidth-1-sumCol if rc == self.Row else sumCol
 			myHStep = -1 * hStep
 			myVStep = -1 * vStep				
-			self.model.Add(self.cellValues[row][col] == digits[i]).OnlyEnforceIf(varBitmap[i])
+			if depth == 1:
+				self.model.Add(self.cellValues[row][col] == digits[i]).OnlyEnforceIf(varBitmap[i])
+			else:
+				for j in range(len(depthVars)):
+					self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] == digits[i]).OnlyEnforceIf(varBitmap[i] + [depthVars[j]])
+					self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] != digits[i]).OnlyEnforceIf(varBitmap[i] + [depthVars[j.Not()]])
 			self.model.Add(sum(self.cellValues[mySumRow+j*myVStep][mySumCol+j*myHStep] for j in range(-1*digits[i])) == value).OnlyEnforceIf(varBitmap[i])
 			
-def setXSum(self,row1,col1,rc,value):
-	self.setXSumBase(row1,col1,rc,value,1)
+def setXSum(self,row1,col1,rc,value,depth=1,depthStyle=None):
+	self.setXSumBase(row1,col1,rc,value,1,depth,depthStyle)
 	
 def setReverseXSum(self,row1,col1,rc,value):
-	self.setXSumBase(row1,col1,rc,value,-1)
+	self.setXSumBase(row1,col1,rc,value,-1,depth,depthStyle)
 			
 def setDoubleXSum(self,row1,col1,rc,value):
 	# A double X sum clue gives the sum of the X sums from each direction (top/bottom or left/right) in the clued row or column.

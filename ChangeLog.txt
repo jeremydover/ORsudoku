@@ -1,3 +1,8 @@
+1/23/2025bis
+	Added some test cases.
+	Added support for neighbor sets, which assert a cell has a neighbor matching on some property.
+	Added additional features to X-Sums, which allows the cell which picks the length of the sum to be in the first given number of cells, or in the first region.
+
 1/23/2025
 	Pushed earlier in the day was a "behind-the-scenes" update that cleaned up some base object variables that needed to be duplicated across the code base. Nothing fancy, all tests still passed, some technical debt paid down.
 	This latest push contains the implementation of hanging sums. Basically, these give you pretty granular detail on how to pick cells to create
