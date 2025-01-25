@@ -237,7 +237,17 @@ class sudoku:
 				
 		self._propertyInitialized.append('FullRank')
 		
-	def _setPrimality(self):
+	def configurePrimality(self,whatIsOne='Neither'):
+		match whatIsOne:
+			case 'Prime':
+				one = 0
+			case 'NotPrime':
+				one = 2
+			case 'Neither':
+				one = 1
+		self._setPrimality(one)
+	
+	def _setPrimality(self,whatIsOne=1):
 		if self.boardWidth != 9 or self.minDigit < 0 or self.maxDigit > 9:
 			print("Primality constraints only supported for digits {0..9} on 9x9 boards or smaller.")
 			sys.exit()
@@ -250,7 +260,7 @@ class sudoku:
 				varBitmap = self._varBitmap('PrimalityRow{:d}Col{:d}'.format(i,j),self.boardWidth)
 				c = self.model.NewIntVar(0,2,'primalityValue{:d}{:d}'.format(i,j))
 				self.model.Add(self.cellValues[i][j] == 1).OnlyEnforceIf(varBitmap[0])
-				self.model.Add(c == 1).OnlyEnforceIf(varBitmap[0])
+				self.model.Add(c == whatIsOne).OnlyEnforceIf(varBitmap[0])
 				self.model.Add(self.cellValues[i][j] == 2).OnlyEnforceIf(varBitmap[1])
 				self.model.Add(c == 0).OnlyEnforceIf(varBitmap[1])
 				self.model.Add(self.cellValues[i][j] == 3).OnlyEnforceIf(varBitmap[2])
@@ -285,8 +295,8 @@ class sudoku:
 	
 	from ._quadConstraints import setQuadruple,setQuadrupleArray,setQuadSum,setQuadSumArray,setBattenburg,setBattenburgArray,setBattenburgNegative,setAntiBattenburg,setAntiBattenburgArray,_applyBattenburgNegative,setEntropyQuad,setEntropyQuadArray,setEntropyQuadNegative,setAntiEntropyQuad,setAntiEntropyQuadArray,_applyEntropyQuadNegative,setModularQuad,setModularQuadArray,setModularQuadNegative,setAntiModularQuad,setAntiModularQuadArray,_applyModularQuadNegative,_initializeParityQuad,setParityQuad,setParityQuadArray,setParityQuadNegative,setAntiParityQuad,setAntiParityQuadArray,_applyParityQuadNegative,setParityQuadExclusions,_initializeEntropyBattenburg,setEntropyBattenburg,setEntropyBattenburgArray,setAntiEntropyBattenburg,setAntiEntropyBattenburgArray,setEntropyBattenburgNegative,_applyEntropyBattenburgNegative,setQuadMaxArrow,setQuadMaxArrowArray,setQuadMaxValue,setQuadMaxValueArray,setQuadMaxParityValue,setConsecutiveQuad,setConsecutiveQuadWhite,setConsecutiveQuadWhiteArray,setConsecutiveQuadBlack,setConsecutiveQuadBlackArray,setConsecutiveQuadArray,setAntiConsecutiveQuad,setAntiConsecutiveQuadArray,setConsecutiveQuadNegative,_applyConsecutiveQuadNegative,setDiagonalConsecutivePairs,setDiagonalConsecutivePairsArray
 	
-	from ._lineConstraints import setArrow,setHeavyArrow,setDoubleArrow,setPointingArrow,setMultiDigitSumArrow,setMissingArrow,setRepeatingArrow,setThermo,setSlowThermo,setFastThermo,setOddEvenThermo,setSlowOddEvenThermo,setMissingThermo,setvariableLengthThermo,setCountTheOddsLine,setKeypadKnightLine,setKeypadKingLine,setPalindromeLine,setParindromeLine,setWeakPalindromeLine,setParityLine,setRenbanLine,setRenrenbanbanLine,setNotRenbanLine,setRunOnRenbanLine,setMinWhispersLine,setMaxWhispersLine,setGermanWhispersLine,setDutchWhispersLine,setChineseWhispersLine,setMinExtendedWhispersLine,setMaxExtendedWhispersLine,setRunOnNabnerLine,setEntropicWhispersLine,setEntropicLine,setModularLine,setBetweenLine,setLockoutLine,setRegionSumLine,setRegionSegmentSumLine,setRegionometer,setDoublingLine,setShiftLine,setUpAndDownLine,setAverageLine,setNabnerLine,setParityCountLine,set10Line,setClockLine,setMagicLine,setConsecutiveLine,setZipperLine,setLineSumLine,setUniquePairsLines,setCellIndexLines,setSplitPeaLine,setSequenceLine,setIndexLine
+	from ._lineConstraints import setArrow,setHeavyArrow,setDoubleArrow,setPointingArrow,setMultiDigitSumArrow,setMissingArrow,setRepeatingArrow,setThermo,setSlowThermo,setFastThermo,setOddEvenThermo,setSlowOddEvenThermo,setMissingThermo,setvariableLengthThermo,setCountTheOddsLine,setKeypadKnightLine,setKeypadKingLine,setPalindromeLine,setParindromeLine,setWeakPalindromeLine,setParityLine,setRenbanLine,setRenrenbanbanLine,setNotRenbanLine,setRunOnRenbanLine,setMinWhispersLine,setMaxWhispersLine,setGermanWhispersLine,setDutchWhispersLine,setChineseWhispersLine,setMinExtendedWhispersLine,setMaxExtendedWhispersLine,setRunOnNabnerLine,setEntropicWhispersLine,setEntropicLine,setModularLine,setBetweenLine,setLockoutLine,setRegionSumLine,setRegionSegmentSumLine,setRegionometer,setDoublingLine,setShiftLine,setUpAndDownLine,setAverageLine,setNabnerLine,setParityCountLine,set10Line,setClockLine,setMagicLine,setConsecutiveLine,setZipperLine,setLineSumLine,setUniquePairsLines,setCellIndexLines,setSplitPeaLine,setSequenceLine,setIndexLine,setLotLine
 	
 	from ._solving import applyNegativeConstraints,findSolution,preparePrintVariables,countSolutions,printCurrentSolution,testStringSolution,listCandidates,addExcludedDigit,addExcludedDigitArray,listCellCandidates
 	
-	from ._utilities import _varBitmap,_procCell,_procCellList,getOrthogonalNeighbors,_selectCellsInRowCol,_terminateCellsInRowCol,_evaluateHangingClues
+	from ._utilities import _varBitmap,_procCell,_procCellList,getOrthogonalNeighbors,_selectCellsOnLine,_selectCellsInRowCol,_terminateCellsOnLine,_terminateCellsInRowCol,_evaluateHangingClues

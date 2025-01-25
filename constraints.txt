@@ -96,6 +96,7 @@ Little Killer
 Lockout Lines
 Logic Bombs
 Look-and-Say Cages - see Zones
+Lot Lines
 Magic Lines
 Magic Squares
 Magnitude Mirror - see Diagonal Mirrors
@@ -265,6 +266,9 @@ Quadruples are indexed similarly, from 11 to 88:
 -------------------------------------
 
 Edge constraints are indexed by the top- or left-most cell in the pair of adjacent cells. An additional parameter hv is provided to determine whether the pair is horizontal or vertical. The class variables Horz and Vert can be used for this designation. 
+
+Notes on primes: By default, 1 is considered neither prime, nor not prime. This behavior can be configured with the method:
+configurePrimality(whatIsOne): set behavior of 1 in primality constraints. Options are 'Prime', 'NotPrime' or 'Neither'
 
 10 Lines
 --------
@@ -861,7 +865,8 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=
 	
 	Property: 'Parity'
 	  For this property, we will pick cells based on parity.
-	  Value: Use 0 for even, 1 for odd. Or you can use the Even/Odd class variables.
+	  Values[0]: Use any comparator class variable: NE, EQ, LE, GE
+	  Values[1]: Use 0 for even, 1 for odd. Or you can use the Even/Odd class variables.
 	
 	Property: 'Entropy'
 	 For this property, we pick cells based on Entropy class: low: 1,2,3, middle: 4,5,6, high: 7,8,9
@@ -875,20 +880,15 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=
 	
 	Property: 'Primality'
 	For this property, we pick cells based on whether their digit is prime or not. Which brings up the 1 problem.
-	For purposes here, "not prime" is 0: 4,6,8,9; "maybe kinda" is 1: 1; "prime" is 2: 2,3,5,7. Like modular, evern though the LE and GE 
-	comparisons don't really make sense, you can use them.
+	By default, "not prime" is 0: 4,6,8,9; "maybe kinda" is 1: 1; "prime" is 2: 2,3,5,7. Like modular, even though the LE and GE comparisons don't really make sense, you can use them. The behavior of 1 can be configured with the configurePrimality method.
 	
-	Property: 'MatchParity'
-	For this property, we pick cells if they match the parity of the cell specified in value
-	Value: cell whose parity to match
+	Property: 'MatchParity', 'MatchEntropy', 'MatchModular', 'MatchPrimality'
+	For this property, we pick cells if they match the given property of the cell specified in value
+	Value: cell whose property to match
 	
-	Property: 'MatchEntropy'
-	For this property, we pick cells if they match the entropy of the cell specified in value
-	Value: cell whose parity to match
-	
-	Property: 'MatchModular'
-	For this property, we pick cells if they match the modularity of the cell specified in value
-	Value: cell whose parity to match
+	Property: 'ParityChange', 'EntropyChange', 'ModularChange', 'PrimalityChange'
+	For this property, we pick cells if it is part of a change in the given property
+	Value: 'before' picks the first cell in the change, 'after' picks the second
 	
 	Property: 'DigitSet'
 	For this property, we pick cells if their corresponding digit is in the given list of digits
@@ -911,8 +911,9 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=
 	Value: index at which to terminate sum
 	
 	Terminator: 'SumReached'
-	Terminate when a particular sum is reached or exceeded, value is the sum that is reached
+	Terminate when a sum of the cell values (regardless of whether our target is a sum, count or other) is reached or exceeded
 	Value: target sum to stop at
+	Example: This could be used to find all of the even digits in the first N digits whose sum does not exceed 15.
 	
 	Terminator: 'DigitReached'
 	Terminate when a fixed digit is reached
@@ -933,6 +934,10 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=
 	
 	Terminator: 'ModularChangeReached'
 	Terminate when some numbered instance of a change in modular occurs
+	Value: nth instance of target
+	
+	Terminator: 'PrimalityChangeReached'
+	Terminate when some numbered instance of a change in primality occurs
 	Value: nth instance of target
 	
 	Terminator: 'Indexed'
@@ -1179,6 +1184,20 @@ setLogicBomb(row,col): asserts a cell is a logic bomb, so that it and its 8 knig
   
 assertNumberOfLogicBombs(n): asserts that there are at least n logic Bombs in the grid (10 is max for 9x9)
   n: positive integer
+
+Lot Lines
+---------
+setLotLine(inlist,lotIndex,property): asserts that the cell at lotIndex on the line counts the number of instances of property on the line
+  inlist: list of cell specifications
+  lotIndex: the index of the cell along the line (1-based, from the front) containing the lot cell
+  property: the property to count. Currently supported:
+    'ParityChange' - count the number of parity changes between digits along the line
+	  (analogous 'EntropyChange', 'ModularChange', and 'PrimalityChange' also supported)
+	'MatchParity' - count the number of cells on the line whose parity matches the lot cell
+	  (analogous 'MatchEntropy', 'MatchModular', and 'MatchPrimality' also supported)
+	'UniqueDigits' - count the number of unique digits appearing on the line
+	'Even'/'Odd' - count number of even/odd cells on line
+	'Low'/'Middle'/'High' - count number of cells with low/middle/high entropy on line
 
 Magic Lines
 -----------

@@ -61,16 +61,15 @@ def _procCellList(self,inlist):
 	return list(map(lambda x: self._procCell(x),inlist))
 	
 def getOrthogonalNeighbors(self,i,j):
-	return [(i+k,j+m) for k in [-1,0,1] for m in [-1,0,1] if i+k >= 0 and i+k < self.boardWidth and j+m >= 0 and j+m < self.boardWidth and abs(k) != abs(m)]
+	#return [(i+k,j+m) for k in [-1,0,1] for m in [-1,0,1] if i+k >= 0 and i+k < self.boardWidth and j+m >= 0 and j+m < self.boardWidth and abs(k) != abs(m)]
+	return list({(i+k,j+m) for k in [-1,0,1] for m in [-1,0,1] if abs(k) != abs(m)} & {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)})
 	
-def _selectCellsInRowCol(self,row,col,rc,selectCriteria):
+def _selectCellsOnLine(self,L,selectCriteria):
 	
-	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
-	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
-	
-	# Now I'm going to create selection Booleans to evaluate each cell against the selectCriteria criteria. 
+	# Migrated from a version which worked on row/column, should not be too hard :-)
+	# I'm going to create selection Booleans to evaluate each cell against the selectCriteria criteria. 
 	# Notice how I'm clever enough to avoid defining selectSummands as long as I can. #genius
-	selectionCells = [self.model.NewBoolVar('SelectionCondition{:d}'.format(i)) for i in range(self.boardWidth)]
+	selectionCells = [self.model.NewBoolVar('SelectionCondition{:d}'.format(i)) for i in range(len(L))]
 	
 	# OK, document as I go! selectCriteria is an array of criteria, all of which must be true for a cell to be
 	# selected. Each array element is itself a tuple of at least two items: property, value.
@@ -123,162 +122,135 @@ def _selectCellsInRowCol(self,row,col,rc,selectCriteria):
 	# Property: 'MatchModular'
 	# For this property, we pick cells if they match the modularity of the cell specified in value
 	# Value: cell whose parity to match
+	#
+	# Property: 'ParityChange', 'EntropyChange', 'ModularChange', 'PrimalityChange'
+	# For this property, slect the values either before or after a change in the specified property
+	# Value: 'before' or 'after'
 
 	criteriaBools = []
 	criterionNumber = 0
 	for criterion in selectCriteria:
-		criterionBools = [self.model.NewBoolVar('Criterion{:d}{:d}'.format(criterionNumber,i)) for i in range(self.boardWidth)]
+		criterionBools = [self.model.NewBoolVar('Criterion{:d}{:d}'.format(criterionNumber,i)) for i in range(len(L))]
 		self.allVars = self.allVars + criterionBools
 		match criterion[0]:
 			case 'Location':
 				match criterion[1]:
 					case self.LE:
 						self.model.AddBoolAnd([criterionBools[j] for j in range(criterion[2])])
-						self.model.AddBoolAnd([criterionBools[j].Not() for j in range(criterion[2],self.boardWidth)])
+						self.model.AddBoolAnd([criterionBools[j].Not() for j in range(criterion[2],len(L))])
 					case self.EQ:
 						self.model.AddBoolAnd([criterionBools[criterion[2]]])
-						self.model.AddBoolAnd([criterionBools[j].Not() for j in range(self.boardWidth) if j != criterion[2]])
+						self.model.AddBoolAnd([criterionBools[j].Not() for j in range(len(L)) if j != criterion[2]])
 					case self.GE:
 						self.model.AddBoolAnd([criterionBools[j].Not() for j in range(criterion[2]-1)])
-						self.model.AddBoolAnd([criterionBools[j] for j in range(criterion[2]-1,self.boardWidth)])
+						self.model.AddBoolAnd([criterionBools[j] for j in range(criterion[2]-1,len(L))])
 					case self.NE:
 						self.model.AddBoolAnd([criterionBools[criterion[2]].Not()])
-						self.model.AddBoolAnd([criterionBools[j] for j in range(self.boardWidth) if j != criterion[2]])
+						self.model.AddBoolAnd([criterionBools[j] for j in range(len(L)) if j != criterion[2]])
 			
 			case 'LocationSkip':
-				self.model.AddBoolAnd([criterionBools[j] for j in range(self.boardWidth) if (j % criterion[1]) == criterion[2]])
-				self.model.AddBoolAnd([criterionBools[j].Not() for j in range(self.boardWidth) if (j % criterion[1]) != criterion[2]])
+				self.model.AddBoolAnd([criterionBools[j] for j in range(len(L)) if (j % criterion[1]) == criterion[2]])
+				self.model.AddBoolAnd([criterionBools[j].Not() for j in range(len(L)) if (j % criterion[1]) != criterion[2]])
 				
 			case 'Magnitude':
-				for i in range(self.boardWidth):
+				for i in range(len(L)):
 					match criterion[1]:
 						case self.LE:
-							self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] <= criterion[2]).OnlyEnforceIf(criterionBools[i])
-							self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] > criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] <= criterion[2]).OnlyEnforceIf(criterionBools[i])
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] > criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
 						case self.EQ:
-							self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] == criterion[2]).OnlyEnforceIf(criterionBools[i])
-							self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] != criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] == criterion[2]).OnlyEnforceIf(criterionBools[i])
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] != criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
 						case self.GE:
-							self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] >= criterion[2]).OnlyEnforceIf(criterionBools[i])
-							self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] < criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] >= criterion[2]).OnlyEnforceIf(criterionBools[i])
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] < criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
 						case self.NE:
-							self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] != criterion[2]).OnlyEnforceIf(criterionBools[i])
-							self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] == criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] != criterion[2]).OnlyEnforceIf(criterionBools[i])
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] == criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
 			
-			case 'Parity':
-				if 'Parity' not in self._propertyInitialized:
-					self._setParity()
-				if len(criterion) == 2:
-					target = criterion[1]
+			case 'Parity' | 'Entropy' | 'Modular' | 'Primality':
+				if criterion[0] not in self._propertyInitialized:
+					getattr(self,'_set'+criterion[0])()
+				myCells = getattr(self,'cell'+criterion[0])
+				for i in range(len(L)):
+					match criterion[1]:
+						case self.LE:
+							self.model.Add(myCells[L[i][0]][L[i][1]] <= criterion[2]).OnlyEnforceIf(criterionBools[i])
+							self.model.Add(myCells[L[i][0]][L[i][1]] > criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
+						case self.EQ:
+							self.model.Add(myCells[L[i][0]][L[i][1]] == criterion[2]).OnlyEnforceIf(criterionBools[i])
+							self.model.Add(myCells[L[i][0]][L[i][1]] != criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
+						case self.GE:
+							self.model.Add(myCells[L[i][0]][L[i][1]] >= criterion[2]).OnlyEnforceIf(criterionBools[i])
+							self.model.Add(myCells[L[i][0]][L[i][1]] < criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
+						case self.NE:
+							self.model.Add(myCells[L[i][0]][L[i][1]] != criterion[2]).OnlyEnforceIf(criterionBools[i])
+							self.model.Add(myCells[L[i][0]][L[i][1]] == criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
+							
+			case 'MatchParity' | 'MatchEntropy' | 'MatchModular' | 'MatchPrimality':
+				if criterion[0][5:] not in self._propertyInitialized:
+					getattr(self,'_set'+criterion[0][5:])()
+				mCell = criterion[1] - 1
+				myCells = getattr(self,'cell'+criterion[0][5:])
+				for i in range(len(L)):
+					self.model.Add(myCells[L[i][0]][L[i][1]] == myCells[L[mCell][0]][L[mCell][1]]).OnlyEnforceIf(criterionBools[i])
+					self.model.Add(myCells[L[i][0]][L[i][1]] != myCells[L[mCell][0]][L[mCell][1]]).OnlyEnforceIf(criterionBools[i].Not())
+							
+			case 'ParityChange' | 'EntropyChange' | 'ModularChange' | 'PrimalityChange':
+				if criterion[0][0:-6] not in self._propertyInitialized:
+					getattr(self,'_set'+criterion[0][0:-6])()
+				if criterion[1] == 'before':
+					self.model.AddBoolAnd(criterionBools[-1].Not())  # last cell cannot be picked
 				else:
-					target = criterion[2]
-				for i in range(self.boardWidth):
-					self.model.Add(self.cellParity[row+i*vStep][col+i*hStep] == target).OnlyEnforceIf(criterionBools[i])
-					self.model.Add(self.cellParity[row+i*vStep][col+i*hStep] != target).OnlyEnforceIf(criterionBools[i].Not())
-
-			case 'MatchParity':
-				if 'Parity' not in self._propertyInitialized:
-					self._setParity()
-				mCell = criterion[1] - 1
-				for i in range(self.boardWidth):
-					self.model.Add(self.cellParity[row+i*vStep][col+i*hStep] == self.cellParity[row+mCell*vStep][col+mCell*hStep]).OnlyEnforceIf(criterionBools[i])
-					self.model.Add(self.cellParity[row+i*vStep][col+i*hStep] != self.cellParity[row+mCell*vStep][col+mCell*hStep]).OnlyEnforceIf(criterionBools[i].Not())
-			
-			case 'Entropy':
-				if 'Entropy' not in self._propertyInitialized:
-					self._setEntropy()
-				for i in range(self.boardWidth):
-					match criterion[1]:
-						case self.LE:
-							self.model.Add(self.cellEntropy[row+i*vStep][col+i*hStep] <= criterion[2]).OnlyEnforceIf(criterionBools[i])
-							self.model.Add(self.cellEntropy[row+i*vStep][col+i*hStep] > criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
-						case self.EQ:
-							self.model.Add(self.cellEntropy[row+i*vStep][col+i*hStep] == criterion[2]).OnlyEnforceIf(criterionBools[i])
-							self.model.Add(self.cellEntropy[row+i*vStep][col+i*hStep] != criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
-						case self.GE:
-							self.model.Add(self.cellEntropy[row+i*vStep][col+i*hStep] >= criterion[2]).OnlyEnforceIf(criterionBools[i])
-							self.model.Add(self.cellEntropy[row+i*vStep][col+i*hStep] < criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
-						case self.NE:
-							self.model.Add(self.cellEntropy[row+i*vStep][col+i*hStep] != criterion[2]).OnlyEnforceIf(criterionBools[i])
-							self.model.Add(self.cellEntropy[row+i*vStep][col+i*hStep] == criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
-			
-			case 'MatchEntropy':
-				if 'Entropy' not in self._propertyInitialized:
-					self._setEntropy()
-				mCell = criterion[1] - 1
-				for i in range(self.boardWidth):
-					self.model.Add(self.cellEntropy[row+i*vStep][col+i*hStep] == self.cellEntropy[row+mCell*vStep][col+mCell*hStep]).OnlyEnforceIf(criterionBools[i])
-					self.model.Add(self.cellEntropy[row+i*vStep][col+i*hStep] != self.cellEntropy[row+mCell*vStep][col+mCell*hStep]).OnlyEnforceIf(criterionBools[i].Not())
-
-			case 'Modular':
-				if 'Modular' not in self._propertyInitialized:
-					self._setModular()
-				for i in range(self.boardWidth):
-					match criterion[1]:
-						case self.LE:
-							self.model.Add(self.cellModular[row+i*vStep][col+i*hStep] <= criterion[2]).OnlyEnforceIf(criterionBools[i])
-							self.model.Add(self.cellModular[row+i*vStep][col+i*hStep] > criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
-						case self.EQ:
-							self.model.Add(self.cellModular[row+i*vStep][col+i*hStep] == criterion[2]).OnlyEnforceIf(criterionBools[i])
-							self.model.Add(self.cellModular[row+i*vStep][col+i*hStep] != criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
-						case self.GE:
-							self.model.Add(self.cellModular[row+i*vStep][col+i*hStep] >= criterion[2]).OnlyEnforceIf(criterionBools[i])
-							self.model.Add(self.cellModular[row+i*vStep][col+i*hStep] < criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
-						case self.NE:
-							self.model.Add(self.cellModular[row+i*vStep][col+i*hStep] != criterion[2]).OnlyEnforceIf(criterionBools[i])
-							self.model.Add(self.cellModular[row+i*vStep][col+i*hStep] == criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
-							
-			case 'MatchModular':
-				if 'Modular' not in self._propertyInitialized:
-					self._setModular()
-				mCell = criterion[1] - 1
-				for i in range(self.boardWidth):
-					self.model.Add(self.cellModular[row+i*vStep][col+i*hStep] == self.cellModular[row+mCell*vStep][col+mCell*hStep]).OnlyEnforceIf(criterionBools[i])
-					self.model.Add(self.cellModular[row+i*vStep][col+i*hStep] != self.cellModular[row+mCell*vStep][col+mCell*hStep]).OnlyEnforceIf(criterionBools[i].Not())
-			
-			case 'Primality':
-				if 'Primality' not in self._propertyInitialized:
-					self._setPrimality()
-				for i in range(self.boardWidth):
-					match criterion[1]:
-						case self.LE:
-							self.model.Add(self.cellPrimality[row+i*vStep][col+i*hStep] <= criterion[2]).OnlyEnforceIf(criterionBools[i])
-							self.model.Add(self.cellPrimality[row+i*vStep][col+i*hStep] > criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
-						case self.EQ:
-							self.model.Add(self.cellPrimality[row+i*vStep][col+i*hStep] == criterion[2]).OnlyEnforceIf(criterionBools[i])
-							self.model.Add(self.cellPrimality[row+i*vStep][col+i*hStep] != criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
-						case self.GE:
-							self.model.Add(self.cellPrimality[row+i*vStep][col+i*hStep] >= criterion[2]).OnlyEnforceIf(criterionBools[i])
-							self.model.Add(self.cellPrimality[row+i*vStep][col+i*hStep] < criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
-						case self.NE:
-							self.model.Add(self.cellPrimality[row+i*vStep][col+i*hStep] != criterion[2]).OnlyEnforceIf(criterionBools[i])
-							self.model.Add(self.cellPrimality[row+i*vStep][col+i*hStep] == criterion[2]).OnlyEnforceIf(criterionBools[i].Not())	
-							
+					self.model.AddBoolAnd(criterionBools[0].Not())  # first cell cannot be picked
+				myCells = getattr(self,'cell'+criterion[0][0:-6])
+				for i in range(1,len(L)):
+					if criterion[1] == 'before':
+						self.model.Add(myCells[L[i][0]][L[i][1]] != myCells[L[i-1][0]][L[i-1][1]]).OnlyEnforceIf(criterionBools[i-1])
+						self.model.Add(myCells[L[i][0]][L[i][1]] == myCells[L[i-1][0]][L[i-1][1]]).OnlyEnforceIf(criterionBools[i-1].Not())
+					else:
+						self.model.Add(myCells[L[i][0]][L[i][1]] != myCells[L[i-1][0]][L[i-1][1]]).OnlyEnforceIf(criterionBools[i])
+						self.model.Add(myCells[L[i][0]][L[i][1]] == myCells[L[i-1][0]][L[i-1][1]]).OnlyEnforceIf(criterionBools[i].Not())
+					
 			case 'DigitSet':
-				for i in range(self.boardWidth):
+				for i in range(len(L)):
 					for j in self.digits:
 						if j in criterion[1]:
-							self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] != j).OnlyEnforceIf(criterionBools[i].Not())
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] != j).OnlyEnforceIf(criterionBools[i].Not())
 						else:
-							self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] != j).OnlyEnforceIf(criterionBools[i])
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] != j).OnlyEnforceIf(criterionBools[i])
 							
 			case 'BeforeDigit':
-				self.model.Add(self.cellValues[row][col] != criterion[1]).OnlyEnforceIf(criterionBools[0])
-				self.model.Add(self.cellValues[row][col] == criterion[1]).OnlyEnforceIf(criterionBools[0].Not())
-				for i in range(1,self.boardWidth):
-					self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] != criterion[1]).OnlyEnforceIf(criterionBools[i])
+				self.model.Add(self.cellValues[L[0][0]][L[0][1]] != criterion[1]).OnlyEnforceIf(criterionBools[0])
+				self.model.Add(self.cellValues[L[0][0]][L[0][1]] == criterion[1]).OnlyEnforceIf(criterionBools[0].Not())
+				for i in range(1,len(L)):
+					self.model.Add(self.cellValues[L[i][0]][L[i][1]] != criterion[1]).OnlyEnforceIf(criterionBools[i])
 					self.model.AddBoolAnd(criterionBools[i-1]).OnlyEnforceIf(criterionBools[i])
-					for j in range(i+1,self.boardWidth):
-						self.model.Add(self.cellValues[row+j*vStep][col+j*hStep] != criterion[1]).OnlyEnforceIf(criterionBools[i].Not())
+					for j in range(i+1,len(L)):
+						self.model.Add(self.cellValues[L[j][0]][L[j][1]] != criterion[1]).OnlyEnforceIf(criterionBools[i].Not())
 
 			case 'AfterDigit':
-				self.model.Add(self.cellValues[row+(self.boardWidth-1)*vStep][col+(self.boardWidth-1)*hStep] != criterion[1]).OnlyEnforceIf(criterionBools[-1])
-				self.model.Add(self.cellValues[row+(self.boardWidth-1)*vStep][col+(self.boardWidth-1)*hStep] == criterion[1]).OnlyEnforceIf(criterionBools[-1].Not())
-				for i in range(self.boardWidth-1):
-					self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] != criterion[1]).OnlyEnforceIf(criterionBools[i])
+				self.model.Add(self.cellValues[L[-1][0]][L[-1][1]] != criterion[1]).OnlyEnforceIf(criterionBools[-1])
+				self.model.Add(self.cellValues[L[-1][0]][L[-1][1]] == criterion[1]).OnlyEnforceIf(criterionBools[-1].Not())
+				for i in range(len(L)-1):
+					self.model.Add(self.cellValues[L[i][0]][L[i][1]] != criterion[1]).OnlyEnforceIf(criterionBools[i])
 					self.model.AddBoolAnd(criterionBools[i+1]).OnlyEnforceIf(criterionBools[i])
 					for j in range(i):
-						self.model.Add(self.cellValues[row+j*vStep][col+j*hStep] != criterion[1]).OnlyEnforceIf(criterionBools[i].Not())
+						self.model.Add(self.cellValues[L[j][0]][L[j][1]] != criterion[1]).OnlyEnforceIf(criterionBools[i].Not())
+						
+			case 'DigitInstance':
+				if criterion[1] == 'First':
+					myL = L
+				else:
+					myL = L.reverse()
+				self.model.AddBoolAnd(criterionBools[0])
+				for i in range(1,len(L)):
+					checkVars = [self.model.NewBoolVar('check') for j in range(i)]
+					for j in range(i):
+						self.model.Add(self.cellValues[L[i][0]][L[i][1]] != self.cellValues[L[j][0]][L[j][1]]).OnlyEnforceIf(checkVars[j])
+						self.model.Add(self.cellValues[L[i][0]][L[i][1]] == self.cellValues[L[j][0]][L[j][1]]).OnlyEnforceIf(checkVars[j].Not())
+					self.model.AddBoolAnd(checkVars).OnlyEnforceIf(criterionBools[i])
+					self.model.AddBoolOr([x.Not() for x in checkVars]).OnlyEnforceIf(criterionBools[i].Not())
 										
 		criteriaBools.insert(criterionNumber,criterionBools)
 		criterionNumber = criterionNumber + 1
@@ -289,13 +261,19 @@ def _selectCellsInRowCol(self,row,col,rc,selectCriteria):
 		self.model.AddBoolOr([criteriaBools[j][i].Not() for j in range(len(criteriaBools))]).OnlyEnforceIf(selectionCells[i].Not())
 		
 	return selectionCells
-	
-def _terminateCellsInRowCol(self,row,col,rc,selectTerminator):
+
+def _selectCellsInRowCol(self,row,col,rc,selectCriteria):
 	
 	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
 	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
+	L = [(row+i*vStep,col+i*hStep) for i in range(self.boardWidth)]
+	selectionCells = self._selectCellsOnLine(L,selectCriteria)
+	return selectionCells
+
 	
-		# Well, I'll be danged. That actually went surprisingly well. Which means the terminator is going to be a bear, because I initially thought it'd be straightforward. The good news is we don't have to worry about multiple criteria...just one is going to apply. As before I'll document here as I code. As before, a select terminator is going to be a tuple, with the first element the terminator name.
+def _terminateCellsOnLine(self,L,selectTerminator):
+	
+	# Well, I'll be danged. That actually went surprisingly well. Which means the terminator is going to be a bear, because I initially thought it'd be straightforward. The good news is we don't have to worry about multiple criteria...just one is going to apply. As before I'll document here as I code. As before, a select terminator is going to be a tuple, with the first element the terminator name.
 	
 	# Terminator: 'Fixed'
 	# We're terminating at a fixed index in the row/column, e.g. the first six cells.
@@ -326,51 +304,51 @@ def _terminateCellsInRowCol(self,row,col,rc,selectTerminator):
 	# Terminate when some numbered instance of a change in modular occurs
 	# Value: nth instance of target	
 	
-	terminatorCells = [self.model.NewBoolVar('HangingSumTermination{:d}'.format(i)) for i in range(self.boardWidth)]
+	terminatorCells = [self.model.NewBoolVar('HangingSumTermination{:d}'.format(i)) for i in range(len(L))]
 	self.allVars = self.allVars + terminatorCells
 	terminatorBools = []
 	terminatorNumber = 0
 	for terminator in selectTerminator:
-		termBools = [self.model.NewBoolVar('TermCriterion{:d}{:d}'.format(terminatorNumber,i)) for i in range(self.boardWidth)]
+		termBools = [self.model.NewBoolVar('TermCriterion{:d}{:d}'.format(terminatorNumber,i)) for i in range(len(L))]
 		self.allVars = self.allVars + termBools
 		match terminator[0]:
 			case 'Fixed':
 				self.model.AddBoolAnd(termBools[terminator[1]-1])
-				self.model.AddBoolAnd([termBools[j].Not() for j in range(self.boardWidth) if j != terminator[1]-1])
+				self.model.AddBoolAnd([termBools[j].Not() for j in range(len(L)) if j != terminator[1]-1])
 			case 'SumReached':
-				self.model.Add(partialSum[0] >= terminator[1]).OnlyEnforceIf(termBools[0])
-				self.model.Add(partialSum[0] < terminator[1]).OnlyEnforceIf(termBools[0].Not())
-				for i in range(1,self.boardWidth):
-					self.model.Add(partialSum[i-1] < terminator[1]).OnlyEnforceIf(termBools[i])
-					self.model.Add(partialSum[i] >= terminator[1]).OnlyEnforceIf(termBools[i])
+				self.model.Add(self.cellValues[L[0][0]][L[0][1]] >= terminator[1]).OnlyEnforceIf(termBools[0])
+				self.model.Add(self.cellValues[L[0][0]][L[0][1]] < terminator[1]).OnlyEnforceIf(termBools[0].Not())
+				for i in range(1,len(L)):
+					self.model.Add(sum(self.cellValues[L[j][0]][L[j][1]] for j in range(i)) < terminator[1]).OnlyEnforceIf(termBools[i])
+					self.model.Add(sum(self.cellValues[L[j][0]][L[j][1]] for j in range(i+1)) >= terminator[1]).OnlyEnforceIf(termBools[i])
 					c = self.model.NewBoolVar('switch')
-					self.model.Add(partialSum[i-1] >= terminator[1]).OnlyEnforceIf([c,termBools[i].Not()])
-					self.model.Add(partialSum[i] < terminator[1]).OnlyEnforceIf([c.Not(),termBools[i].Not()])
+					self.model.Add(sum(self.cellValues[L[j][0]][L[j][1]] for j in range(i)) >= terminator[1]).OnlyEnforceIf([c,termBools[i].Not()])
+					self.model.Add(sum(self.cellValues[L[j][0]][L[j][1]] for j in range(i+1)) < terminator[1]).OnlyEnforceIf([c.Not(),termBools[i].Not()])
 					self.model.AddBoolAnd(c).OnlyEnforceIf(termBools[i])
 			case 'DigitReached':
-				for i in range(self.boardWidth):
-					self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] == terminator[1]).OnlyEnforceIf(termBools[i])
-					self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] != terminator[1]).OnlyEnforceIf(termBools[i].Not())
+				for i in range(len(L)):
+					self.model.Add(self.cellValues[L[i][0]][L[i][1]] == terminator[1]).OnlyEnforceIf(termBools[i])
+					self.model.Add(self.cellValues[L[i][0]][L[i][1]] != terminator[1]).OnlyEnforceIf(termBools[i].Not())
 			case 'DigitSetReached':
-				instanceCount = [self.model.NewIntVar(0,self.boardWidth,'digitInstanceCount') for j in range(self.boardWidth)]
-				isInstance = [self.model.NewBoolVar('digitInstanceTest') for j in range(self.boardWidth)]
+				instanceCount = [self.model.NewIntVar(0,len(L),'digitInstanceCount') for j in range(len(L))]
+				isInstance = [self.model.NewBoolVar('digitInstanceTest') for j in range(len(L))]
 				self.allVars = self.allVars + instanceCount + isInstance
-				for i in range(self.boardWidth):
+				for i in range(len(L)):
 					digitVars = [self.model.NewBoolVar('digitPicker') for j in range(len(terminator[1]))]
 					self.allVars = self.allVars + digitVars
 					for j in range(len(terminator[1])):
-						self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] == terminator[1][j]).OnlyEnforceIf(digitVars[j])
-						self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] != terminator[1][j]).OnlyEnforceIf(digitVars[j].Not())
+						self.model.Add(self.cellValues[L[i][0]][L[i][1]] == terminator[1][j]).OnlyEnforceIf(digitVars[j])
+						self.model.Add(self.cellValues[L[i][0]][L[i][1]] != terminator[1][j]).OnlyEnforceIf(digitVars[j].Not())
 						self.model.AddBoolAnd(isInstance[i]).OnlyEnforceIf(digitVars[j])
 					self.model.AddBoolAnd(isInstance[i].Not()).OnlyEnforceIf([digitVars[j].Not() for j in range(len(terminator[1]))])
 				self.model.Add(instanceCount[0] == 1).OnlyEnforceIf(isInstance[0])
 				self.model.Add(instanceCount[0] == 0).OnlyEnforceIf(isInstance[0].Not())
-				for i in range(1,self.boardWidth):
+				for i in range(1,len(L)):
 					self.model.Add(instanceCount[i] == instanceCount[i-1]+1).OnlyEnforceIf(isInstance[i])
 					self.model.Add(instanceCount[i] == instanceCount[i-1]).OnlyEnforceIf(isInstance[i].Not())
 				self.model.Add(instanceCount[0] == terminator[2]).OnlyEnforceIf(termBools[0])
 				self.model.Add(instanceCount[0] < terminator[2]).OnlyEnforceIf(termBools[0].Not())
-				for i in range(1,self.boardWidth):
+				for i in range(1,len(L)):
 					self.model.Add(instanceCount[i-1] < terminator[2]).OnlyEnforceIf(termBools[i])
 					self.model.Add(instanceCount[i] == terminator[2]).OnlyEnforceIf(termBools[i])
 					c = self.model.NewBoolVar('switch')
@@ -378,75 +356,25 @@ def _terminateCellsInRowCol(self,row,col,rc,selectTerminator):
 					self.model.Add(instanceCount[i-1] >= terminator[2]).OnlyEnforceIf([c,termBools[i].Not()])
 					self.model.Add(instanceCount[i] < terminator[2]).OnlyEnforceIf([c.Not(),termBools[i].Not()])
 					self.model.AddBoolAnd(c).OnlyEnforceIf(termBools[i])
-			case 'ParityChangeReached':
-				if 'Parity' not in self._propertyInitialized:
-					self._setParity()
-				instanceCount = [self.model.NewIntVar(0,self.boardWidth,'parityChangeInstanceCount') for j in range(self.boardWidth)]
-				isInstance = [self.model.NewBoolVar('parityChangeInstanceTest') for j in range(self.boardWidth)]
+			case 'ParityChangeReached' | 'EntropyChangeReached' | 'ModularChangeReached' | 'PrimalityChangeReached':
+				if terminator[0][0:-13] not in self._propertyInitialized:
+					getattr(self,'_set'+terminator[0][0:-13])()
+				instanceCount = [self.model.NewIntVar(0,len(L),terminator[0][0:-13]+'ChangeInstanceCount') for j in range(len(L))]
+				isInstance = [self.model.NewBoolVar(terminator[0][0:-13]+'ChangeInstanceTest') for j in range(len(L))]
 				self.allVars = self.allVars + instanceCount + isInstance
 				self.model.AddBoolAnd(isInstance[0].Not())  # first cell cannot be a change
-				for i in range(1,self.boardWidth):
-					self.model.Add(self.cellParity[row+i*vStep][col+i*hStep] != self.cellParity[row+(i-1)*vStep][col+(i-1)*hStep]).OnlyEnforceIf(isInstance[i])
-					self.model.Add(self.cellParity[row+i*vStep][col+i*hStep] == self.cellParity[row+(i-1)*vStep][col+(i-1)*hStep]).OnlyEnforceIf(isInstance[i].Not())
+				myCells = getattr(self,'cell'+terminator[0][0:-13])
+				for i in range(1,len(L)):
+					self.model.Add(myCells[L[i][0]][L[i][1]] != myCells[L[i-1][0]][L[i-1][1]]).OnlyEnforceIf(isInstance[i])
+					self.model.Add(myCells[L[i][0]][L[i][1]] == myCells[L[i-1][0]][L[i-1][1]]).OnlyEnforceIf(isInstance[i].Not())
 				self.model.Add(instanceCount[0] == 1).OnlyEnforceIf(isInstance[0])
 				self.model.Add(instanceCount[0] == 0).OnlyEnforceIf(isInstance[0].Not())
-				for i in range(1,self.boardWidth):
+				for i in range(1,len(L)):
 					self.model.Add(instanceCount[i] == instanceCount[i-1]+1).OnlyEnforceIf(isInstance[i])
 					self.model.Add(instanceCount[i] == instanceCount[i-1]).OnlyEnforceIf(isInstance[i].Not())
 				self.model.Add(instanceCount[0] == terminator[1]).OnlyEnforceIf(termBools[0])
 				self.model.Add(instanceCount[0] < terminator[1]).OnlyEnforceIf(termBools[0].Not())
-				for i in range(1,self.boardWidth):
-					self.model.Add(instanceCount[i-1] < terminator[1]).OnlyEnforceIf(termBools[i])
-					self.model.Add(instanceCount[i] == terminator[1]).OnlyEnforceIf(termBools[i])
-					c = self.model.NewBoolVar('switch')
-					self.allVars = self.allVars + [c]
-					self.model.Add(instanceCount[i-1] >= terminator[1]).OnlyEnforceIf([c,termBools[i].Not()])
-					self.model.Add(instanceCount[i] < terminator[1]).OnlyEnforceIf([c.Not(),termBools[i].Not()])
-					self.model.AddBoolAnd(c).OnlyEnforceIf(termBools[i])
-			case 'EntropyChangeReached':
-				if 'Entropy' not in self._propertyInitialized:
-					self._setEntropy()
-				instanceCount = [self.model.NewIntVar(0,self.boardWidth,'entropyChangeInstanceCount') for j in range(self.boardWidth)]
-				isInstance = [self.model.NewBoolVar('entropyChangeInstanceTest') for j in range(self.boardWidth)]
-				self.allVars = self.allVars + instanceCount + isInstance
-				self.model.AddBoolAnd(isInstance[0].Not())  # first cell cannot be a change
-				for i in range(1,self.boardWidth):
-					self.model.Add(self.cellEntropy[row+i*vStep][col+i*hStep] != self.cellEntropy[row+(i-1)*vStep][col+(i-1)*hStep]).OnlyEnforceIf(isInstance[i])
-					self.model.Add(self.cellEntropy[row+i*vStep][col+i*hStep] == self.cellEntropy[row+(i-1)*vStep][col+(i-1)*hStep]).OnlyEnforceIf(isInstance[i].Not())
-				self.model.Add(instanceCount[0] == 1).OnlyEnforceIf(isInstance[0])
-				self.model.Add(instanceCount[0] == 0).OnlyEnforceIf(isInstance[0].Not())
-				for i in range(1,self.boardWidth):
-					self.model.Add(instanceCount[i] == instanceCount[i-1]+1).OnlyEnforceIf(isInstance[i])
-					self.model.Add(instanceCount[i] == instanceCount[i-1]).OnlyEnforceIf(isInstance[i].Not())
-				self.model.Add(instanceCount[0] == terminator[1]).OnlyEnforceIf(termBools[0])
-				self.model.Add(instanceCount[0] < terminator[1]).OnlyEnforceIf(termBools[0].Not())
-				for i in range(1,self.boardWidth):
-					self.model.Add(instanceCount[i-1] < terminator[1]).OnlyEnforceIf(termBools[i])
-					self.model.Add(instanceCount[i] == terminator[1]).OnlyEnforceIf(termBools[i])
-					c = self.model.NewBoolVar('switch')
-					self.allVars = self.allVars + [c]
-					self.model.Add(instanceCount[i-1] >= terminator[1]).OnlyEnforceIf([c,termBools[i].Not()])
-					self.model.Add(instanceCount[i] < terminator[1]).OnlyEnforceIf([c.Not(),termBools[i].Not()])
-					self.model.AddBoolAnd(c).OnlyEnforceIf(termBools[i])
-			case 'ModularChangeReached':
-				if 'Modular' not in self._propertyInitialized:
-					self._setModular()
-				instanceCount = [self.model.NewIntVar(0,self.boardWidth,'modularChangeInstanceCount') for j in range(self.boardWidth)]
-				isInstance = [self.model.NewBoolVar('modularChangeInstanceTest') for j in range(self.boardWidth)]
-				self.allVars = self.allVars + instanceCount + isInstance
-				self.model.AddBoolAnd(isInstance[0].Not())  # first cell cannot be a change
-				for i in range(1,self.boardWidth):
-					self.model.Add(self.cellModular[row+i*vStep][col+i*hStep] != self.cellModular[row+(i-1)*vStep][col+(i-1)*hStep]).OnlyEnforceIf(isInstance[i])
-					self.model.Add(self.cellModular[row+i*vStep][col+i*hStep] == self.cellModular[row+(i-1)*vStep][col+(i-1)*hStep]).OnlyEnforceIf(isInstance[i].Not())
-				self.model.Add(instanceCount[0] == 1).OnlyEnforceIf(isInstance[0])
-				self.model.Add(instanceCount[0] == 0).OnlyEnforceIf(isInstance[0].Not())
-				for i in range(1,self.boardWidth):
-					self.model.Add(instanceCount[i] == instanceCount[i-1]+1).OnlyEnforceIf(isInstance[i])
-					self.model.Add(instanceCount[i] == instanceCount[i-1]).OnlyEnforceIf(isInstance[i].Not())
-				
-				self.model.Add(instanceCount[0] == terminator[1]).OnlyEnforceIf(termBools[0])
-				self.model.Add(instanceCount[0] < terminator[1]).OnlyEnforceIf(termBools[0].Not())
-				for i in range(1,self.boardWidth):
+				for i in range(1,len(L)):
 					self.model.Add(instanceCount[i-1] < terminator[1]).OnlyEnforceIf(termBools[i])
 					self.model.Add(instanceCount[i] == terminator[1]).OnlyEnforceIf(termBools[i])
 					c = self.model.NewBoolVar('switch')
@@ -463,22 +391,22 @@ def _terminateCellsInRowCol(self,row,col,rc,selectTerminator):
 				self.model.AddBoolOr(depthVars)
 				self.model.AddBoolOr(termBools)
 
-				for i in range(self.boardWidth):
+				for i in range(len(L)):
 					for j in range(len(depthVars)):
-						self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] == i+1).OnlyEnforceIf([termBools[i], depthVars[j]])
-						self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] != i+1).OnlyEnforceIf([termBools[i], depthVars[j].Not()])
+						self.model.Add(self.cellValues[L[depthIndices[j]][0]][L[depthIndices[j]][1]] == i+1).OnlyEnforceIf([termBools[i], depthVars[j]])
+						self.model.Add(self.cellValues[L[depthIndices[j]][0]][L[depthIndices[j]][1]] != i+1).OnlyEnforceIf([termBools[i], depthVars[j].Not()])
 						
 				if len(terminator) > 2:
 					if terminator[2]== 'Smallest':
 						for j in range(len(depthIndices)):
 							for k in range(len(depthIndices)):
 								if k != j:
-									self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] < self.cellValues[row+depthIndices[k]*vStep][col+depthIndices[k]*hStep]).OnlyEnforceIf(depthVars[j])
+									self.model.Add(self.cellValues[L[depthIndices[j]][0]][L[depthIndices[j]][1]] < self.cellValues[L[depthIndices[k]][0]][L[depthIndices[k]][1]]).OnlyEnforceIf(depthVars[j])
 					elif terminator[2] == 'Largest':
 						for j in range(len(depthIndices)):
 							for k in range(len(depthIndices)):
 								if k != j:
-									self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] > self.cellValues[row+depthIndices[k]*vStep][col+depthIndices[k]*hStep]).OnlyEnforceIf(depthVars[j])
+									self.model.Add(self.cellValues[L[depthIndices[j]][0]][L[depthIndices[j]][1]] > self.cellValues[L[depthIndices[k]][0]][L[depthIndices[k]][1]]).OnlyEnforceIf(depthVars[j])
 					
 		terminatorBools.insert(terminatorNumber,termBools)
 		terminatorNumber = terminatorNumber + 1
@@ -491,6 +419,14 @@ def _terminateCellsInRowCol(self,row,col,rc,selectTerminator):
 	# Ensure some terminator cell is picked
 	self.model.AddBoolOr(terminatorCells)
 	
+	return terminatorCells
+	
+def _terminateCellsInRowCol(self,row,col,rc,selectTerminator):
+	
+	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
+	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
+	L = [(row+i*vStep,col+i*hStep) for i in range(self.boardWidth)]
+	terminatorCells = self._terminateCellsOnLine(L,selectTerminator)
 	return terminatorCells
 	
 def _evaluateHangingClues(self,partial,terminatorCells,value,terminateOnFirst,includeTerminator):

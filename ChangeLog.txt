@@ -1,3 +1,9 @@
+1/25/2025
+	Reconfigured select and terminate criteria to unify code behind Parity, Modular, Entropy and Primality. Makes addition of
+	any other digit classifications pretty straightforward.
+	Implemented new selection criteria: 'ParityMatch' (and EntropyMatch...), and Unique Digits.
+	Implemented support for lot lines (Issue #60) 
+	
 1/24/2025
 	Added depth support to skyscrapers clues, so that clues only "see" a fixed number of cells into the puzzle
 	Added test cases.

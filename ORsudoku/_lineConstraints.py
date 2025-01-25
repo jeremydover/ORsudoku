@@ -575,3 +575,26 @@ def setIndexLine(self,inlist):
 	for i in range(len(inlist)):
 		self.model.Add(myVars[i] == self.cellValues[inlist[i][0]][inlist[i][1]] - self.minDigit)
 	self.model.AddInverse(myVars,myVars)
+	
+def setLotLine(self,inlist,lotIndex,prop):
+	inlist = self._procCellList(inlist)
+	match prop:
+		case 'ParityChange' | 'EntropyChange' | 'ModularChange' | 'PrimalityChange':
+			countBools = self._selectCellsOnLine(inlist,[(prop,'before')])
+		case 'MatchParity' | 'MatchEntropy' | 'MatchModular' | 'MatchPrimality':
+			countBools = self._selectCellsOnLine(inlist,[(prop,lotIndex)])
+		case 'UniqueDigits':
+			countBools = self._selectCellsOnLine(inlist,[('DigitInstance','First')])
+		case 'Even' | 'Odd':
+			countBools = self._selectCellsOnLine(inlist,[('Parity',self.EQ,getattr(self,prop))])
+		case 'Low' | 'Middle' | 'High':
+			countBools = self._selectCellsOnLine(inlist,[('Entropy',self.EQ,getattr(self,prop))])
+		case 'Mod0' | 'Mod1' | 'Mod2':
+			countBools = self._selectCellsOnLine(inlist,[('Modular',self.EQ,int(prop[-1]))])
+
+			
+	countInts = [self.model.NewIntVar(0,1,'lotCellCount') for j in range(len(countBools))]
+	for i in range(len(countBools)):
+		self.model.Add(countInts[i] == 1).OnlyEnforceIf(countBools[i])
+		self.model.Add(countInts[i] == 0).OnlyEnforceIf(countBools[i].Not())
+	self.model.Add(self.cellValues[inlist[lotIndex-1][0]][inlist[lotIndex-1][1]] == sum(countInts))
