@@ -79,7 +79,7 @@ Global Modular (see Global Entropy)
 Global Neighbor Sums
 Global Whispers (Dutch, et. al.)
 Gurth's Symmetric Placement (GSP)
-Hanging Sums
+Hanging Sums/Counts/Averages
 Indexing
 Irregular Sudoku
 Isotopes
@@ -192,6 +192,7 @@ Weak Palindrome Lines
 Windoku
 X-Average - see X-Sum
 X-Kropki
+X-Outside
 XSudoku
 X-Sum
 XV (see XV Pairs)
@@ -841,13 +842,13 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=
   each tuple starts with a sting containing a property name, and is followed by values specific to that property. Note that multiple
   selection criteria may be given, and they are combined with a logical AND, so a cell must meet ALL given conditions to be included
   in the sum. selectSummands may be an empty list.
-    Property: 'Index'
+    Property: 'Location'
 	  For this property, we are picking cells based on their position within the clued row/column.
 	  Values[0]: A comparator: use the class variables GE, EQ or LE, or NE if you really think that's useful
 	  Values[1]: index to stop
 	  So for example, ('Index',p.GE,4) would include all cells in the two boxes not adjacent to the clue. Yes, this is just a cage. I get it.
 	
-	Property: 'IndexSkip'
+	Property: 'LocationSkip'
 	  Hah, it's not just cages.
 	  For this property, we can pick every other, every third, etc. cell
 	  Values[0]: Skip number, 2 skips every other, etc.
@@ -888,6 +889,18 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=
 	Property: 'MatchModular'
 	For this property, we pick cells if they match the modularity of the cell specified in value
 	Value: cell whose parity to match
+	
+	Property: 'DigitSet'
+	For this property, we pick cells if their corresponding digit is in the given list of digits
+	Value: list of digits to match
+	
+	Property: 'BeforeDigit'
+	For this property, we pick cells that appear before the given digit in the row/column, as seen from the clue
+	Value: digit to seek
+	
+	Property: 'AfterDigit'
+	For this property, we pick cells that appear after the given digit in the row/column, as seen from the clue
+	Value: digit to seek
 
   selectTerminator: a *list* of conditions (tuples) which describe when the sum should stop. As with summand selection,
   each tuple starts with a sting containing a property name, and is followed by values specific to that property. Note that multiple
@@ -921,6 +934,14 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=
 	Terminator: 'ModularChangeReached'
 	Terminate when some numbered instance of a change in modular occurs
 	Value: nth instance of target
+	
+	Terminator: 'Indexed'
+	Terminate at a value indexed by a set of indices
+	Values[0]: list of cell indexes whose digit can be used to index the length of the sum
+	Values[1] (optional): determine how to pick which of the index cells defines the sum. Options are 'Any' (default), 'Largest' or 'Smallest'
+	  'Any' - any sum defined by a digit in any index cell may match the clue
+	  'Largest' - the largest digit in the index cells defines the length of the sum that matches the clue
+	  'Smallest' - the smallest digit in the index cells defines the length of the sum that matches the clue
 	
   terminateOnFirst: by default, the sum will terminate at the first cell that matches one of the termination criteria. However, in hindsight,
   the behavior seen in actual puzzles seems to be ambiguity, where the sum can terminate based on any of the given criteria, determined on a
@@ -1712,15 +1733,17 @@ setShiftLine(inlist): sets a shift line constraint; like a palindrome, but one s
 
 Skyscrapers
 -----------
-setSkyscraper(row,col,rc,value): sets a skyscraper constraint, specifying the number of digits that can be "seen" from the clue, where seen means greater than all digits between it and the clue
+setSkyscraper(row,col,rc,value,depth): sets a skyscraper constraint, specifying the number of digits that can be "seen" from the clue, where seen means greater than all digits between it and the clue
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: the number of digits that can be seen
+  depth (optional): only skyscrapers at most <depth> cells from the puzzle edge can be seen. Defaults to whole board.
   
-setSkyscraperSum(row,col,rc,value): sets a skyscraper sum constraint, specifying the SUM OF the number of digits that can be "seen" from the clue, where seen means greater than all digits between it and the clue
+setSkyscraperSum(row,col,rc,value,depth): sets a skyscraper sum constraint, specifying the SUM OF the number of digits that can be "seen" from the clue, where seen means greater than all digits between it and the clue
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: the sum of digits that can be seen
+  depth (optional): only skyscrapers at most <depth> cells from the puzzle edge can be seen. Defaults to whole board.
   
 Slingshots
 ----------
@@ -1843,6 +1866,13 @@ setBentDiagonals(): assert no repeats on the bent diagonals between adjacent cor
 setAntiDiagonalMain(): assert that the main diagonal contains the minimum number of digits possible (3 for normal sudoku)
 
 setAntiDiagonalOff(): assert that the off diagonal contains the minimum number of digits possible (3 for normal sudoku)
+
+X-Outside
+---------
+setXOutside(row,col,rc,values): assert that all of the digits in values must appear in the first X cells of the clued row/column, where X is the digit in the cell next to the clue
+  row,col: The coordinates of the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  values: List of digits to appear
 
 X-Sums
 ------

@@ -1,3 +1,11 @@
+1/24/2025
+	Added depth support to skyscrapers clues, so that clues only "see" a fixed number of cells into the puzzle
+	Added test cases.
+	Moved row/col condition selector to a utility function, simplifying HangingSum implementation, and allowing code to be repurposed for XCount.
+	Added an 'Indexed' termination constraint to the hanging code, so that termination can be picked via indexing, a la XSums. While XSums can now be implemented as Hanging Sums, the implementation is quite a bit slower.
+	Implemented XCount and XAverage clues via analogous HangingCount and HangingAverage. Added test cases.
+	Added 'DigitSet', 'BeforeDigit' and 'AfterDigit' selection criteria for hanging clues.
+
 1/23/2025bis
 	Added some test cases.
 	Added support for neighbor sets, which assert a cell has a neighbor matching on some property.
