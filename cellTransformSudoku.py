@@ -301,6 +301,16 @@ class negatorSudoku(cellTransformSudoku):
 	def transformDoublerValue(self,value):
 		return {-1*value}
 		
+class copycatSudoku(cellTransformSudoku):
+	def __init__(self,boardSizeRoot,canRepeatDigits=False,irregular=None,digitSet=None):
+		cellTransformSudoku.__init__(self,boardSizeRoot,canRepeatDigits=canRepeatDigits,irregular=irregular,digitSet=digitSet)
+		
+	def transformDoublerCell(self,i,j):
+		self.model.Add(self.cellValues[i][j] == self.baseValues[self.boardWidth-1-i][self.boardWidth-1-j]).OnlyEnforceIf([self.double[i][j]])
+		
+	def transformDoublerValue(self,value):
+		return self.baseDigits
+		
 class doubleOrNothingSudoku(cellTransformSudoku):
 	
 	def __init__(self,boardSizeRoot,canRepeatDigits=False,irregular=None,digitSet=None):

@@ -1,3 +1,7 @@
+1/26/2025
+	Added support for copycat cells, and added a test case.
+	Implementation discovered a bug in selection for hanging clues/lots which is fixed.
+
 1/25/2025 bis
 	Added support for Dutch flat mates, and a test case.
 

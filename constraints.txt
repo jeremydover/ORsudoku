@@ -28,6 +28,7 @@ Close Neighbors - see Global Whispers
 Consecutive Chain Regions
 Consecutive Lines
 Consecutive Quads
+Copycat Cells - see Cell Transform Sudoku
 Corner/Edge Clues
 Count the Odds Lines
 Counting Circles
@@ -432,6 +433,10 @@ affineTransformSudoku(boardSizeRoot,ratio,shift,canRepeatDigits,irregular,digitS
   Doubler Sudoku is the same as affineTransformSudoku(3,2,0)
   Negator Sudoku is the same as affineTransformSudoku(3,-1,0)
   
+from cellTransformSudoku import copycatSudoku
+copycatSudoku(boardSizeRoot,canRepeatDigits,irregular,digitSet)
+  Transformed cells take on the value the digit placed in the grid at 180 degree rotation
+
 Special methods for Cell Transform Sudoku
 setTransform(cell): asserts that a particular cell is a transform cell
   cell: cell specification

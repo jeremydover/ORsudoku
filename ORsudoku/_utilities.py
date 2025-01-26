@@ -256,7 +256,7 @@ def _selectCellsOnLine(self,L,selectCriteria):
 		criterionNumber = criterionNumber + 1
 	
 	# Ensure selectionCells[i] is True if and only if each of the underlying criteria is
-	for i in range(self.boardWidth):
+	for i in range(len(L)):
 		self.model.AddBoolAnd([criteriaBools[j][i] for j in range(len(criteriaBools))]).OnlyEnforceIf(selectionCells[i])
 		self.model.AddBoolOr([criteriaBools[j][i].Not() for j in range(len(criteriaBools))]).OnlyEnforceIf(selectionCells[i].Not())
 		
