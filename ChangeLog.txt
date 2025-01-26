@@ -1,3 +1,6 @@
+1/25/2025 bis
+	Added support for Dutch flat mates, and a test case.
+
 1/25/2025
 	Reconfigured select and terminate criteria to unify code behind Parity, Modular, Entropy and Primality. Makes addition of
 	any other digit classifications pretty straightforward.

@@ -543,3 +543,43 @@ def setOffsetDigit(self,digit):
 		for k in range(self.boardWidth):
 			for m in range(self.boardWidth):
 				self.model.Add(self.cellValues[j][k] == abs(m-k)).OnlyEnforceIf([digitPlace[j-1][k],digitPlace[j][m]])
+				
+def setFlatMates(self,base=5,above=[1],below=[9]):
+	flatMates = []
+	for i in range(self.boardWidth):
+		t = []
+		for j in range(self.boardWidth):
+			c = self.model.NewBoolVar('flatMates{:d}{:d}'.format(i,j))
+			t.append(c)
+			self.model.Add(self.cellValues[i][j] == base).OnlyEnforceIf(c)
+			self.model.Add(self.cellValues[i][j] != base).OnlyEnforceIf(c.Not())
+		flatMates.insert(i,t)
+	
+	for i in range(self.boardWidth):
+		if i == 0:
+			for j in range(self.boardWidth):
+				for k in self.digits:
+					if k not in below:
+						self.model.Add(self.cellValues[i+1][j] != k).OnlyEnforceIf(flatMates[i][j])
+		elif i == self.boardWidth-1:
+			for j in range(self.boardWidth):
+				for k in self.digits:
+					if k not in above:
+						self.model.Add(self.cellValues[i-1][j] != k).OnlyEnforceIf(flatMates[i][j])
+		else:
+			c = self.model.NewBoolVar('flatMatesAboveRow{:d}'.format(i))
+			d = self.model.NewBoolVar('flatMatesBelowRow{:d}'.format(i))
+			for j in range(self.boardWidth):
+				for k in self.digits:
+					if k in above:
+						self.model.Add(self.cellValues[i-1][j] != k).OnlyEnforceIf([flatMates[i][j],c.Not()])
+					else:
+						self.model.Add(self.cellValues[i-1][j] != k).OnlyEnforceIf([flatMates[i][j],c])
+					if k in below:
+						self.model.Add(self.cellValues[i+1][j] != k).OnlyEnforceIf([flatMates[i][j],d.Not()])
+					else:
+						self.model.Add(self.cellValues[i+1][j] != k).OnlyEnforceIf([flatMates[i][j],d])
+			self.model.AddBoolOr([c,d])
+	
+def setDutchFlatMates(self):
+	self.setFlatMates()

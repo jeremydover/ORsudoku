@@ -48,6 +48,7 @@ DoubleDoku
 Doubler Sudoku - see Cell Transform Sudoku
 Double X Sums - see X Sums
 Doubling Lines
+Dutch Flat Mates - see Flat Mates
 Dutch Whispers Lines - see Whispers Lines
 Either-Or
 Entropic Lines
@@ -65,6 +66,7 @@ Extended Whispers Lines
 Extra Regions - see irregular Sudoku
 Fast Thermos - see Thermos
 First-Seen Parity/Entropy/Modular
+Flat Mates
 Forbidden Consecutive Sums
 Fortress
 Friendly Cells
@@ -752,6 +754,15 @@ setFirstSeenModular(row,col,rc,value): asserts the first digit with the same mod
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: first value equal to 0/1/2 mod 3 seen in the row/column
+
+Flat Mates
+----------
+setFlatMate(base,above,below): for every appearance of "base", one of the digits in above must appear above it and/or one of the digits in below must appear below it
+  base: digit
+  above: list of digits
+  below: list of digits
+  
+setDutchFlatMates(): sets the classic Dutch flat mates, with base digit 5, above digit 1 and below digit 9
 
 Forbidden Consecutive Sums
 --------------------------
