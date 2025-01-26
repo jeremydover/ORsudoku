@@ -1,3 +1,9 @@
+1/26/2025 bis
+	Added support for conditional sum lines, the line version of hanging sums.
+	Added new selection criterion for hanging sums: uniparity, where all odds or evens are chosen.
+	The same bug from implementing lots reared its head a couple more times, smashed down again.
+	Added test case.
+
 1/26/2025
 	Added support for copycat cells, and added a test case.
 	Implementation discovered a bug in selection for hanging clues/lots which is fixed.

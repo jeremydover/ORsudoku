@@ -598,3 +598,23 @@ def setLotLine(self,inlist,lotIndex,prop):
 		self.model.Add(countInts[i] == 1).OnlyEnforceIf(countBools[i])
 		self.model.Add(countInts[i] == 0).OnlyEnforceIf(countBools[i].Not())
 	self.model.Add(self.cellValues[inlist[lotIndex-1][0]][inlist[lotIndex-1][1]] == sum(countInts))
+
+def setConditionalSumLine(self,inlist,value,selectSummands=None,selectTerminator=None,terminateOnFirst=True,includeTerminator=True):
+	# Copied from setHangingSum, an external clue. Just a line version, should be straightforward since the underlying support
+	# functions were converted to lines.
+	L = self._procCellList(inlist)
+	partialSum = [self.model.NewIntVar(min(0,self.boardWidth*self.minDigit),self.boardWidth*self.maxDigit,'HangingSumPartialSum{:d}'.format(i)) for i in range(len(L))]
+		
+	selectionCells = self._selectCellsOnLine(L,selectSummands)
+	
+	# Tie the variables together
+	self.model.Add(partialSum[0] == self.cellValues[L[0][0]][L[0][1]]).OnlyEnforceIf(selectionCells[0])
+	self.model.Add(partialSum[0] == 0).OnlyEnforceIf(selectionCells[0].Not())
+	for i in range(1,len(L)):
+		self.model.Add(partialSum[i] == partialSum[i-1] + self.cellValues[L[i][0]][L[i][1]]).OnlyEnforceIf(selectionCells[i])
+		self.model.Add(partialSum[i] == partialSum[i-1]).OnlyEnforceIf(selectionCells[i].Not())
+	
+	# Now create terminator conditions
+	terminatorCells = self._terminateCellsOnLine(L,selectTerminator)
+	
+	self._evaluateHangingClues(partialSum,terminatorCells,value,terminateOnFirst,includeTerminator)

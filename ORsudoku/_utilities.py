@@ -187,6 +187,17 @@ def _selectCellsOnLine(self,L,selectCriteria):
 							self.model.Add(myCells[L[i][0]][L[i][1]] != criterion[2]).OnlyEnforceIf(criterionBools[i])
 							self.model.Add(myCells[L[i][0]][L[i][1]] == criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
 							
+			case 'Uniparity':
+				self._initializeParity()
+				c = self.model.NewBoolVar('selectionCriteriaUnipartyPickEven')
+				d = self.model.NewBoolVar('selectionCriteriaUnipartyPickOdd')
+				for i in range(len(L)):
+					self.model.Add(self.cellParity[L[i][0]][L[i][1]] == 0).OnlyEnforceIf([criterionBools[i],c])
+					self.model.Add(self.cellParity[L[i][0]][L[i][1]] == 1).OnlyEnforceIf([criterionBools[i].Not(),c])
+					self.model.Add(self.cellParity[L[i][0]][L[i][1]] == 1).OnlyEnforceIf([criterionBools[i],d])
+					self.model.Add(self.cellParity[L[i][0]][L[i][1]] == 0).OnlyEnforceIf([criterionBools[i].Not(),d])
+				self.model.AddBoolXOr([c,d])
+							
 			case 'MatchParity' | 'MatchEntropy' | 'MatchModular' | 'MatchPrimality':
 				if criterion[0][5:] not in self._propertyInitialized:
 					getattr(self,'_set'+criterion[0][5:])()
@@ -412,7 +423,7 @@ def _terminateCellsOnLine(self,L,selectTerminator):
 		terminatorNumber = terminatorNumber + 1
 	
 	# For each terminator cell, need only one of the criteria below it to be true, so it could terminate here.
-	for i in range(self.boardWidth):
+	for i in range(len(L)):
 		self.model.AddBoolOr([terminatorBools[j][i] for j in range(len(terminatorBools))]).OnlyEnforceIf(terminatorCells[i])
 		self.model.AddBoolAnd([terminatorBools[j][i].Not() for j in range(len(terminatorBools))]).OnlyEnforceIf(terminatorCells[i].Not())
 		
@@ -439,7 +450,7 @@ def _evaluateHangingClues(self,partial,terminatorCells,value,terminateOnFirst,in
 				pass
 			else:
 				self.model.AddBoolAnd(terminatorCells[0].Not()).OnlyEnforceIf(terminatorCells[0])
-		for i in range(1,self.boardWidth):
+		for i in range(1,len(partial)):
 			if includeTerminator:
 				self.model.Add(partial[i] == value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i)])
 			else:
@@ -452,7 +463,7 @@ def _evaluateHangingClues(self,partial,terminatorCells,value,terminateOnFirst,in
 		# one cannot be.
 		varBitmap = self._varBitmap('terminationPicker',self.boardWidth)
 		self.allVars = self.allVars + varBitmap[0]
-		for i in range(self.boardWidth):
+		for i in range(len(partial)):
 			self.model.Add(partial[i] == value).OnlyEnforceIf(varBitmap[i] + [terminatorCells[i]])
 			self.model.AddBoolAnd(terminatorCells[i]).OnlyEnforceIf(varBitmap[i] + [terminatorCells[i].Not()])
 			  # ensures this varBitmap cannot be chosen if terminatorCells is not set
@@ -462,6 +473,6 @@ def _evaluateHangingClues(self,partial,terminatorCells,value,terminateOnFirst,in
 				self.model.Add(partial[j] != value).OnlyEnforceIf(varBitmap[i] + [c])
 				self.model.AddBoolAnd(terminatorCells[j].Not()).OnlyEnforceIf(varBitmap[i] + [c.Not()])
 				self.model.AddBoolAnd(c.Not()).OnlyEnforceIf(varBitmap[i] + [terminatorCells[j].Not()])
-				for k in range(self.boardWidth):
+				for k in range(len(partial)):
 					if k != i:
 						self.model.AddBoolAnd(c).OnlyEnforceIf(varBitmap[k])

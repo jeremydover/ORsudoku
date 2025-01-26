@@ -25,6 +25,7 @@ Chinese Whispers Lines - see Whispers Lines
 Clock Lines
 Clone Regions
 Close Neighbors - see Global Whispers
+Conditional Sum Lines
 Consecutive Chain Regions
 Consecutive Lines
 Consecutive Quads
@@ -464,6 +465,12 @@ setShakenCloneRegion(list,noRepeat): creates a set of regions that contain the s
   list: a list OF LISTS of cell specifications
   noRepeat: OPTIONAL, defaults to False. If noRepeat, digits cannot repeat in the zone. By default, repeats are allowed.
   
+Conditional Sum Lines
+---------------------
+setConditionalSumLine(list,selectCriteria,terminationCriteria,terminateOnFirst,includeTerminator): analogous to a Hanging Sum, but along a line instead of just in a column
+  list: list of cell specifications
+  See Hanging Sums for a description of all other parameters
+
 Consecutive Chain Regions
 -------------------------
 setConsecutiveChainRegion(list): creates a region which has contains a set of consecutive digits such that an orthogonal snake can be drawn within the region from the lowest to the highest digit
@@ -903,8 +910,12 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=
 	Value: cell whose property to match
 	
 	Property: 'ParityChange', 'EntropyChange', 'ModularChange', 'PrimalityChange'
-	For this property, we pick cells if it is part of a change in the given property
+	For this property, we pick a cell if it is part of a change in the given property
 	Value: 'before' picks the first cell in the change, 'after' picks the second
+	
+	Property: 'Uniparity'
+	For this property, we pick all cells of one parity or the other
+	Value: none given, pass tuple as a list, i.e. ['Uniparity']
 	
 	Property: 'DigitSet'
 	For this property, we pick cells if their corresponding digit is in the given list of digits
