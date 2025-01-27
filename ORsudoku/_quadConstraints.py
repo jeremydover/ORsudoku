@@ -52,6 +52,17 @@ def setQuadSum(self,row,col=-1):
 	self.model.Add(self.cellValues[row+1][col+1] == self.cellValues[row][col]+self.cellValues[row+1][col]+self.cellValues[row][col+1]).OnlyEnforceIf([bit1.Not(),bit2.Not()])
 	self.model.Add(self.cellValues[row+1][col] == self.cellValues[row][col]+self.cellValues[row+1][col+1]+self.cellValues[row][col+1]).OnlyEnforceIf([bit1.Not(),bit2])
 	
+def setMaxMinQuadSum(self,row,col=-1,value=-1):
+	if col == -1:
+		T = self._procCell(row)
+		row = T[0]+1 # Need to un-proc them, because they get proc-d again
+		col = T[1]+1
+		value = int(''.join(map(str,[T[i] for i in range(2,len(T))])),10)
+	self.setMaxMinSumCage([(row,col),(row,col+1),(row+1,col),(row+1,col+1)],value,repeating=True)
+	
+def setMaxMinQuadSumArray(self,inlist):
+	for x in inlist: self.setMaxMinQuadSum(x)
+
 def setQuadSumArray(self,cells):
 	for x in cells: self.setQuadSum(x)
 

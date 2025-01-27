@@ -1,3 +1,8 @@
+1/27/2025
+	Added support for MaxMin Sum Cages, which provide the sum of the largest and smallest digits in the cage.
+	Added test cases.
+	
+
 1/26/2025 ter
 	Added additional test case, and fixed some bugs that arose from its incorporation.
 	Implemented remote clone cell contraint, and added test case.

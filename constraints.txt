@@ -107,6 +107,8 @@ Magnitude Mirror - see Diagonal Mirrors
 MaxAscending
 Maximin - see Minimax
 Maximum Runs (Maximum Triplets)
+MaxMin Sum Cages
+MaxMin Quads - see MaxMin Sum Cages
 Median Cages
 Min-Max
 Minimax
@@ -1260,6 +1262,21 @@ setMaximumRun(row,col,rc,value,length): asserts that in a row/column, the maximu
   length: number of consecutive digits to sum. Optional, default is 3.
   
 setMaximumTriplet(row,col,rc,value): original formulation, maximum Run with length 3
+
+MaxMin Sum Cages
+----------------
+setMaxMinSumCage(list,value,repeating=False): asserts the sum of the largest and smallest digits in cage defined by list is value
+  list: list of cell specifications
+  value: sum of largest and smallest digits in cage
+  repeating (optional): True if digits may repeat in cage, default is false
+  
+set MaxMinQuadSum(row,col,value): a shorthand for a cage around a 2x2 quad
+  row,col: Cell specification
+  value: sum of largest and smallest digits on quad
+  Shortcut notation is possible, e.g., MaxMinQuadSum(3312) will set a max-min sum of 12 on quad 3,3
+  
+setMaxMinQuadSumArray(list): sets multiple MaxMain Quad Sum constraints
+  list: list pf shorthand specifications for cell/values
 
 Median Cages
 ------------

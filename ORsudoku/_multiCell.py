@@ -574,6 +574,16 @@ def setCage(self,inlist,value = None):
 	if value is not None:
 		self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in inlist) == value)
 		
+def setMaxMinSumCage(self,inlist,value,repeating=False):
+	inlist = self._procCellList(inlist)
+	if not repeating:
+		self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in inlist])
+	myMax = self.model.NewIntVar(self.minDigit,self.maxDigit,'MaxMinSumCageMaximum')
+	myMin = self.model.NewIntVar(self.minDigit,self.maxDigit,'MaxMinSumCageMinimum')
+	self.model.AddMaxEquality(myMax,[self.cellValues[x[0]][x[1]] for x in inlist])
+	self.model.AddMinEquality(myMin,[self.cellValues[x[0]][x[1]] for x in inlist])
+	self.model.Add(myMax+myMin == value)
+
 def setAmbiguousCage(self,inlist,values,repeating=False):
 	inlist = self._procCellList(inlist)
 	if not repeating:
