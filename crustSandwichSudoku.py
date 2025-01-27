@@ -12,7 +12,7 @@ init()
 class crustSandwichSudoku(sudoku):
 	"""A class used to implement crust puzzles, where two cells per row/column (and optionally region) are designated crusts of a sandwich, and sandwich clues refer to the digits between the crusts."""	
 	
-	def __init__(self,boardSizeRoot,enforceRegions=True,includeCrust=False,irregular=None,digitSet=None):
+	def __init__(self,boardSizeRoot,enforceRegions=True,includeCrust=False,irregular=None,digitSet=None,selectCriteria=[['All']]):
 		self.boardSizeRoot = boardSizeRoot
 		self.boardWidth = boardSizeRoot*boardSizeRoot
 		self.enforceRegions = enforceRegions
@@ -84,21 +84,35 @@ class crustSandwichSudoku(sudoku):
 		# sandwich sum variables, since we can force the sum equation with the Booleans!
 		minSum = sum(x for x in self.digits if x <= 0)
 		maxSum = sum(x for x in self.digits if x >= 0)
-		
+
 		self.sandwichSum = [[self.model.NewIntVar(minSum,maxSum,'rowSandwich{:d}'.format(i)) for i in range(self.boardWidth)],
 			               [self.model.NewIntVar(minSum,maxSum,'colSandwich{:d}'.format(i)) for i in range(self.boardWidth)]]
+		self.allVars = self.allVars + self.sandwichSum[0] + self.sandwichSum[1]
 
 		for i in range(self.boardWidth):
-			# Working in row/column i
+			# Working in row i
+			selectionCells = self._selectCellsInRowCol(i,0,self.Row,selectCriteria)
+			thisRow = [self.model.NewIntVar(min(0,self.minDigit),self.maxDigit,'SelectionFilteredValuesRow{:d}Column{:d}'.format(i,m)) for m in range(self.boardWidth)]
+			for m in range(self.boardWidth):
+				self.model.Add(thisRow[m] == self.cellValues[i][m]).OnlyEnforceIf(selectionCells[m])
+				self.model.Add(thisRow[m] == 0).OnlyEnforceIf(selectionCells[m].Not())
+					
+			# And column i
+			selectionCells = self._selectCellsInRowCol(0,i,self.Col,selectCriteria)
+			thisCol = [self.model.NewIntVar(min(0,self.minDigit),self.maxDigit,'SelectionFilteredValuesRow{:d}Column{:d}'.format(m,i)) for m in range(self.boardWidth)]
+			for m in range(self.boardWidth):
+				self.model.Add(thisCol[m] == self.cellValues[m][i]).OnlyEnforceIf(selectionCells[m])
+				self.model.Add(thisCol[m] == 0).OnlyEnforceIf(selectionCells[m].Not())
+					
 			for j in range(self.boardWidth):
 				for k in range(j+1,self.boardWidth):
 					# Crusts are in positions j and k
 					if includeCrust:
-						self.model.Add(self.sandwichSum[0][i] == sum(self.cellValues[i][m] for m in range(self.boardWidth) if (m >= j and m <= k))).OnlyEnforceIf([self.crust[i][j],self.crust[i][k]])
-						self.model.Add(self.sandwichSum[1][i] == sum(self.cellValues[m][i] for m in range(self.boardWidth) if (m >= j and m <= k))).OnlyEnforceIf([self.crust[j][i],self.crust[k][i]])
+						self.model.Add(self.sandwichSum[0][i] == sum(thisRow[m] for m in range(self.boardWidth) if (m >= j and m <= k))).OnlyEnforceIf([self.crust[i][j],self.crust[i][k]])
+						self.model.Add(self.sandwichSum[1][i] == sum(thisCol[m] for m in range(self.boardWidth) if (m >= j and m <= k))).OnlyEnforceIf([self.crust[j][i],self.crust[k][i]])
 					else:
-						self.model.Add(self.sandwichSum[0][i] == sum(self.cellValues[i][m] for m in range(self.boardWidth) if (m > j and m < k))).OnlyEnforceIf([self.crust[i][j],self.crust[i][k]])
-						self.model.Add(self.sandwichSum[1][i] == sum(self.cellValues[m][i] for m in range(self.boardWidth) if (m > j and m < k))).OnlyEnforceIf([self.crust[j][i],self.crust[k][i]])
+						self.model.Add(self.sandwichSum[0][i] == sum(thisRow[m] for m in range(self.boardWidth) if (m > j and m < k))).OnlyEnforceIf([self.crust[i][j],self.crust[i][k]])
+						self.model.Add(self.sandwichSum[1][i] == sum(thisCol[m] for m in range(self.boardWidth) if (m > j and m < k))).OnlyEnforceIf([self.crust[j][i],self.crust[k][i]])
 			
 	def __setBoxes(self):
 		# Create rules to ensure boxes have no repeats and there are two crusts per box, if enforced

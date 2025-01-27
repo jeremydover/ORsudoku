@@ -412,7 +412,44 @@ def setShortSandwichSum(self,row1,col1,rc,value,depth=6):
 				self.model.Add(sum(self.cellValues[row+k*vStep][col+k*hStep] for k in range(myMin+1,myMax)) == value).OnlyEnforceIf(varBitmap[varTrack])
 				
 			varTrack = varTrack + 1
-			
+
+def setConditionalSandwichSum(self,row1,col1,rc,value,digits=[1,9],selectCriteria=[['All']]):
+	# So I'm gonna do this the same as hangingSum, but twice. Once for the sum up to the first instance, and then up to the second.
+	
+	# Convert from 1-base to 0-base
+	row = row1 - 1
+	col = col1 - 1
+	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
+	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
+	
+	partialSum = [self.model.NewIntVar(min(0,self.boardWidth*self.minDigit),self.boardWidth*self.maxDigit,'ConditionSandwichPartialSum{:d}'.format(i)) for i in range(self.boardWidth)]
+
+	selectionCells = self._selectCellsInRowCol(row,col,rc,selectCriteria)
+	
+	# Tie the variables together
+	self.model.Add(partialSum[0] == self.cellValues[row][col]).OnlyEnforceIf(selectionCells[0])
+	self.model.Add(partialSum[0] == 0).OnlyEnforceIf(selectionCells[0].Not())
+	for i in range(1,self.boardWidth):
+		self.model.Add(partialSum[i] == partialSum[i-1] + self.cellValues[row+i*vStep][col+i*hStep]).OnlyEnforceIf(selectionCells[i])
+		self.model.Add(partialSum[i] == partialSum[i-1]).OnlyEnforceIf(selectionCells[i].Not())
+		
+	# Now get two sets of termination variables
+	terminatorCells1 = self._terminateCellsInRowCol(row,col,rc,[('DigitSetReached',digits,1)])
+	terminatorCells2 = self._terminateCellsInRowCol(row,col,rc,[('DigitSetReached',digits,2)])
+	
+	preSum = self.model.NewIntVar(min(0,self.boardWidth*self.minDigit),self.boardWidth*self.maxDigit,'ConditionSandwichPreSum{:d}')
+	fullSum = self.model.NewIntVar(min(0,self.boardWidth*self.minDigit),self.boardWidth*self.maxDigit,'ConditionSandwichPreSum{:d}')
+	
+	# So what do we do if the first instance is at index 0? Easy, just peg preSum to 0...there will be nothing to subtract off
+	self.model.Add(preSum == 0).OnlyEnforceIf(terminatorCells1[0])
+	for i in range(1,len(partialSum)):
+		# For the pre-sum, we include the terminator in the sum, since we want to subtract it off if it meets the select criteria
+		self.model.Add(preSum == partialSum[i]).OnlyEnforceIf([terminatorCells1[i]] + [terminatorCells1[j].Not() for j in range(i)])
+		# For the post-sum, we exclude the terminator, since we want only the sum inside the sandwich
+		self.model.Add(fullSum == partialSum[i-1]).OnlyEnforceIf([terminatorCells2[i]] + [terminatorCells2[j].Not() for j in range(i)])
+	
+	self.model.Add(fullSum - preSum == value)
+	
 def setBeforeNine(self,row1,col1,rc,value):
 	self.setOpenfacedSandwichSum(row1,col1,rc,value,digit=9)
 
@@ -662,7 +699,7 @@ def _applyRossiniNegative(self):
 								varlist.append(good)
 					self.model.AddBoolOr(varlist)		# Just need one triple to be good
 								
-def setMaxAscending(self,row1,col1,rc,value):
+def setMaxAscendingRun(self,row1,col1,rc,value,lengthTest='cells',valueTest='cells'):
 	# row,col are the coordinates of the cell containing the index of the target cell
 	# rc is whether things are row/column
 	# value is the length of the longest adjacent ascending run, looking from the clue
@@ -672,25 +709,66 @@ def setMaxAscending(self,row1,col1,rc,value):
 	col = col1 - 1
 	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
 	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
-	incBools = [self.model.NewBoolVar('MaxAscendingIncBoolRow{:d}Col{:d}RC{:d}'.format(row,col,rc)) for i in range(self.boardWidth-1)]
-	incInts = [self.model.NewIntVar(0,1,'MaxAscendingIncIntRow{:d}Col{:d}RC{:d}'.format(row,col,rc)) for i in range(self.boardWidth-1)]
-	for i in range(len(incBools)):
-		self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] < self.cellValues[row+(i+1)*vStep][col+(i+1)*hStep]).OnlyEnforceIf(incBools[i])
-		self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] >= self.cellValues[row+(i+1)*vStep][col+(i+1)*hStep]).OnlyEnforceIf(incBools[i].Not())
-		self.model.Add(incInts[i] == 1).OnlyEnforceIf(incBools[i])
-		self.model.Add(incInts[i] == 0).OnlyEnforceIf(incBools[i].Not())
+	
+	incBools = [self.model.NewBoolVar('MaxAscendingIncBoolRow{:d}Col{:d}RC{:d}'.format(row,col,rc)) for i in range(self.boardWidth)]
+	self.model.AddBoolAnd(incBools[0])
+	
+	partialCounts = [self.model.NewIntVar(0,self.boardWidth,'MaxAscendingCountRow{:d}Col{:d}RC{:d}'.format(row,col,rc)) for i in range(self.boardWidth)]
+	self.model.Add(partialCounts[0] == 1)
+	
+	partialSums = [self.model.NewIntVar(min(0,self.boardWidth*self.minDigit),self.boardWidth*self.maxDigit,'MaxAscendingSumRow{:d}Col{:d}RC{:d}'.format(row,col,rc)) for i in range(self.boardWidth)]
+	self.model.Add(partialSums[0] == self.cellValues[row][col])
+	self.allVars = self.allVars + partialSums
+	
+	for i in range(1,self.boardWidth):
+		self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] > self.cellValues[row+(i-1)*vStep][col+(i-1)*hStep]).OnlyEnforceIf(incBools[i])
+		self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] <= self.cellValues[row+(i-1)*vStep][col+(i-1)*hStep]).OnlyEnforceIf(incBools[i].Not())
+		self.model.Add(partialCounts[i] == partialCounts[i-1] + 1).OnlyEnforceIf(incBools[i])
+		self.model.Add(partialCounts[i] == 1).OnlyEnforceIf(incBools[i].Not())
+		self.model.Add(partialSums[i] == partialSums[i-1] + self.cellValues[row+i*vStep][col+i*hStep]).OnlyEnforceIf(incBools[i])
+		self.model.Add(partialSums[i] == self.cellValues[row+i*vStep][col+i*hStep]).OnlyEnforceIf(incBools[i].Not())
 		
-	if value == 1:		# In this case the row/col must be strictly decreasing
-		self.model.AddBoolAnd([x.Not() for x in incBools])
-	else:
-		lenBools = [self.model.NewBoolVar('MaxAscendingLenBoolRow{:d}Col{:d}RC{:d}'.format(row,col,rc)) for i in range(self.boardWidth+1-value)]
-		for i in range(self.boardWidth+1-value):
-			self.model.Add(sum([incInts[j] for j in range(i,i+value-1)]) == value-1).OnlyEnforceIf(lenBools[i])
-			self.model.Add(sum([incInts[j] for j in range(i,i+value-1)]) < value-1).OnlyEnforceIf(lenBools[i].Not())
-		self.model.AddBoolOr(lenBools)	#There is a run of length value
+	maxCount = self.model.NewIntVar(0,self.boardWidth,'MaxAscendingMaxCountValue{:d}Col{:d}RC{:d}'.format(row,col,rc))
+	maxSum = self.model.NewIntVar(min(0,self.boardWidth*self.minDigit),self.boardWidth*self.maxDigit,'MaxAscendingMaxSumValue{:d}Col{:d}RC{:d}'.format(row,col,rc))
+
+	self.model.AddMaxEquality(maxCount,partialCounts)
+	self.model.AddMaxEquality(maxSum,partialSums)
+
+	match lengthTest:
+		case 'cells':
+			if valueTest == 'cells':
+				self.model.Add(maxCount == value)
+			else:
+				checkBools = [self.model.NewBoolVar('checkBool') for i in range(self.boardWidth)]
+				candSums = [self.model.NewIntVar(min(0,self.boardWidth*self.minDigit),self.boardWidth*self.maxDigit,'MaxAscendingCandidates{:d}Col{:d}RC{:d}'.format(row,col,rc)) for i in range(self.boardWidth)]
+				filteredMaxSum = self.model.NewIntVar(min(0,self.boardWidth*self.minDigit),self.boardWidth*self.maxDigit,'MaxAscendingFilteredMaxSumValue{:d}Col{:d}RC{:d}'.format(row,col,rc))
+				for i in range(self.boardWidth):
+					self.model.Add(partialCounts[i] == maxCount).OnlyEnforceIf(checkBools[i])
+					self.model.Add(partialCounts[i] < maxCount).OnlyEnforceIf(checkBools[i].Not())
+					self.model.Add(candSums[i] == partialSums[i]).OnlyEnforceIf(checkBools[i])
+					self.model.Add(candSums[i] == 0).OnlyEnforceIf(checkBools[i].Not())
+
+				self.model.AddMaxEquality(filteredMaxSum,candSums)
+				self.model.Add(filteredMaxSum == value)
+					
+		case 'sum':
+			if valueTest == 'sum':
+				self.model.Add(maxSum == value)
+			else:
+				checkBools = [self.model.NewBoolVar('checkBool') for i in range(self.boardWidth)]
+				candCounts = [self.model.NewIntVar(0,self.boardWidth,'MaxAscendingCandidates{:d}Col{:d}RC{:d}'.format(row,col,rc)) for i in range(self.boardWidth)]
+				filteredMaxCount = self.model.NewIntVar(0,self.boardWidth,'MaxAscendingFilteredMaxCountValue{:d}Col{:d}RC{:d}'.format(row,col,rc))
+				for i in range(self.boardWidth):
+					self.model.Add(partialSums[i] == maxSum).OnlyEnforceIf(checkBools[i])
+					self.model.Add(partialSums[i] < maxSum).OnlyEnforceIf(checkBools[i].Not())
+					self.model.Add(candCounts[i] == partialCounts[i]).OnlyEnforceIf(checkBools[i])
+					self.model.Add(candCounts[i] == 0).OnlyEnforceIf(checkBools[i].Not())
+
+				self.model.AddMaxEquality(filteredMaxCount,candCounts)
+				self.model.Add(filteredMaxCount == value)
 		
-		for i in range(self.boardWidth-value):	#There is no longer run
-			self.model.Add(sum([incInts[j] for j in range(i,i+value)]) < value)
+def setMaxAscending(self,row1,col1,rc,value):
+	self.setMaxAscendingRun(row1,col1,rc,value)
 
 def setSkyscraper(self,row1,col1,rc,value,depth=None):
 	# row,col are the coordinates of the cell containing the index of the target cell

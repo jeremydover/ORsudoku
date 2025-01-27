@@ -64,7 +64,7 @@ def getOrthogonalNeighbors(self,i,j):
 	#return [(i+k,j+m) for k in [-1,0,1] for m in [-1,0,1] if i+k >= 0 and i+k < self.boardWidth and j+m >= 0 and j+m < self.boardWidth and abs(k) != abs(m)]
 	return list({(i+k,j+m) for k in [-1,0,1] for m in [-1,0,1] if abs(k) != abs(m)} & {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)})
 	
-def _selectCellsOnLine(self,L,selectCriteria):
+def _selectCellsOnLine(self,L,selectCriteria,initiatorCells=[]):
 	
 	# Migrated from a version which worked on row/column, should not be too hard :-)
 	# I'm going to create selection Booleans to evaluate each cell against the selectCriteria criteria. 
@@ -75,13 +75,13 @@ def _selectCellsOnLine(self,L,selectCriteria):
 	# selected. Each array element is itself a tuple of at least two items: property, value.
 	# More than one value may be given, and depend on the property how they are interpreted
 	# 
-	# Property: 'Index'
+	# Property: 'Location'
 	#   For this property, we are picking cells based on their position within the clued row/column.
 	#   Values[0]: A comparator: use the class variables GE, EQ or LE, or NE if you really think that's useful
 	#   Values[1]: index to stop
 	#   So for example, ('Index',p.GE,4) would include all cells in the two boxes not adjacent to the clue. Yes, this is just a cage. I get it.
 	#
-	# Property: 'IndexSkip'
+	# Property: 'LocationSkip'
 	#   Hah, it's not just cages.
 	#   For this property, we can pick every other, every third, etc. cell
 	#   Values[0]: Skip number, 2 skips every other, etc.
@@ -132,9 +132,11 @@ def _selectCellsOnLine(self,L,selectCriteria):
 	for criterion in selectCriteria:
 		criterionBools = [self.model.NewBoolVar('Criterion{:d}{:d}'.format(criterionNumber,i)) for i in range(len(L))]
 		self.allVars = self.allVars + criterionBools
+		
 		match criterion[0]:
 			case 'All':
 				self.model.AddBoolAnd(criterionBools)
+			
 			case 'Location':
 				match criterion[1]:
 					case self.LE:
@@ -466,7 +468,7 @@ def _evaluateHangingClues(self,partial,terminatorCells,value,terminateOnFirst,in
 		# I want to make sure to pick the *first* location which meets the condition. I actually don't care which, just need to
 		# be canonical. The for j loop below ensures that if there is an earlier terminator that *could* be chosen, this
 		# one cannot be.
-		varBitmap = self._varBitmap('terminationPicker',self.boardWidth)
+		varBitmap = self._varBitmap('terminationPicker',len(partial))
 		self.allVars = self.allVars + varBitmap[0]
 		for i in range(len(partial)):
 			self.model.Add(partial[i] == value).OnlyEnforceIf(varBitmap[i] + [terminatorCells[i]])

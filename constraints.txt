@@ -25,6 +25,7 @@ Chinese Whispers Lines - see Whispers Lines
 Clock Lines
 Clone Regions
 Close Neighbors - see Global Whispers
+Conditional Sandwich Sums - see Sandwich Sums
 Conditional Sum Lines
 Consecutive Chain Regions
 Consecutive Lines
@@ -1259,6 +1260,11 @@ setMaxAscending(row,col,rc,value): sets a max ascending constraint, specifying t
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: the length of the longest run of increasing digits in the row/col
+  
+setMaxAscendingRun(row,col,rc,value,lengthTest,valueTest): like MaxAscending, but more flexible in defining length and value
+  row,col,rc,value: as in MaxAscending
+  lengthTest: 'cells' or 'sum' - one can define "longest" by either number of digits in the run, or the sum of the digits in the run; e.g. 19 would be "longer" than 234
+  valueTest: 'cells' or 'sum' - regardless of how one defines length, one can test the value of the number of digits in the run or the sum of the digits in the run
 
 Maximum Runs
 ------------
@@ -1693,17 +1699,21 @@ setOpenfacedSandwichSum(row,col,rc,value,digit): set an open-face sandwich sum c
   
 setBeforeNine(row,col,rc,value): an alias for Openfaced sandwich sums, with sandwich digit 9
 
-Another option for sandwiches is to have sepcially designated "crust cells", subject to topological conditions (typically two per row/column/box) where
+setConditionalSandwichSum(row,col,value,digits,selectCriteria): set a sandwich clue where only some cells in the sandwich may contribute to the sum
+  row,col,rc,value,digits are all as in setSandwichSum
+  selectCriteria: a list of selection criteria, as defined in setHangingSum, that defines which digits are included in the sum
+
+Another option for sandwiches is to have specially designated "crust cells", subject to topological conditions (typically two per row/column/box) where
 sandwich sum is defined as being between the two crusts. Crust sandwich requires use of a different class, like so:
 
 from crustSandwichSudoku import crustSandwichSudoku
-p = crustSandwichSudoku(boardSizeRoot,enforceRegions=True,includeCrust=False)
+p = crustSandwichSudoku(boardSizeRoot,enforceRegions=True,includeCrust=False,selectCriteria=[['All']])
   Each row and column must have exactly two crust cells. By default, each region(box) will have two crust cells as well, but this restriction 
   can be relaxed by setting enforceRegions to False. As in regular sandwich rules, the sandwich sum by default does not include the crust digits,
   but this can also be relaxed by setting includeCrust to True. This class also inherits the irregular and digitSet parameters, which may be used
   to define irregular regions and alternate digit sets. It might even work.
   
-To set a crust sandwich clue, the normal setSandwichSum call as above can be used. There is an additional method:
+To set a crust sandwich clue, the normal setSandwichSum call as above can be used, and it will be applied with the selectCriteria defined in initialization, if any. There is an additional method:
 setCrustHasLength(): asserts that one of the crust digits must equal the number of cells in the sandwich for each sandwich
   
 Scary Cells
