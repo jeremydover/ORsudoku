@@ -133,6 +133,8 @@ def _selectCellsOnLine(self,L,selectCriteria):
 		criterionBools = [self.model.NewBoolVar('Criterion{:d}{:d}'.format(criterionNumber,i)) for i in range(len(L))]
 		self.allVars = self.allVars + criterionBools
 		match criterion[0]:
+			case 'All':
+				self.model.AddBoolAnd(criterionBools)
 			case 'Location':
 				match criterion[1]:
 					case self.LE:
@@ -323,6 +325,9 @@ def _terminateCellsOnLine(self,L,selectTerminator):
 		termBools = [self.model.NewBoolVar('TermCriterion{:d}{:d}'.format(terminatorNumber,i)) for i in range(len(L))]
 		self.allVars = self.allVars + termBools
 		match terminator[0]:
+			case 'Last':
+				self.model.AddBoolAnd([termBools[j].Not() for j in range(len(L)-1)])
+				self.model.AddBoolAnd(termBools[-1])
 			case 'Fixed':
 				self.model.AddBoolAnd(termBools[terminator[1]-1])
 				self.model.AddBoolAnd([termBools[j].Not() for j in range(len(L)) if j != terminator[1]-1])
@@ -400,7 +405,7 @@ def _terminateCellsOnLine(self,L,selectTerminator):
 					depthIndices = [x-1 for x in terminator[1]]
 				depthVars = [self.model.NewBoolVar('TerminationSelectionCellRow') for j in range(len(depthIndices))]
 				self.model.AddBoolOr(depthVars)
-				self.model.AddBoolOr(termBools)
+				#self.model.AddBoolOr(termBools)
 
 				for i in range(len(L)):
 					for j in range(len(depthVars)):

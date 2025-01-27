@@ -9,20 +9,20 @@ class TestPuzzle(unittest.TestCase):
 	
 	def test_puzzle(self):
 		p = ORsudoku.sudoku(3)
-		p.setHangingSum(1,1,p.Col,8,[],[('Fixed',1),('EntropyChangeReached',1)],terminateOnFirst=False)
-		p.setHangingSum(1,2,p.Col,8,[],[('Fixed',1),('EntropyChangeReached',1)],terminateOnFirst=False)
-		p.setHangingSum(1,4,p.Col,14,[],[('Fixed',1),('EntropyChangeReached',1)],terminateOnFirst=False)
+		p.setHangingSum(1,1,p.Col,8,[['All']],[('Fixed',1),('EntropyChangeReached',1)],terminateOnFirst=False)
+		p.setHangingSum(1,2,p.Col,8,[['All']],[('Fixed',1),('EntropyChangeReached',1)],terminateOnFirst=False)
+		p.setHangingSum(1,4,p.Col,14,[['All']],[('Fixed',1),('EntropyChangeReached',1)],terminateOnFirst=False)
 		
-		p.setHangingSum(1,9,p.Row,14,[],[('Fixed',1),('EntropyChangeReached',1)],terminateOnFirst=False)
-		p.setHangingSum(2,9,p.Row,14,[],[('Fixed',1),('EntropyChangeReached',1)],terminateOnFirst=False)
-		p.setHangingSum(6,9,p.Row,10,[],[('Fixed',1),('EntropyChangeReached',1)],terminateOnFirst=False)
+		p.setHangingSum(1,9,p.Row,14,[['All']],[('Fixed',1),('EntropyChangeReached',1)],terminateOnFirst=False)
+		p.setHangingSum(2,9,p.Row,14,[['All']],[('Fixed',1),('EntropyChangeReached',1)],terminateOnFirst=False)
+		p.setHangingSum(6,9,p.Row,10,[['All']],[('Fixed',1),('EntropyChangeReached',1)],terminateOnFirst=False)
 		
-		p.setHangingSum(9,8,p.Col,8,[],[('Fixed',1),('EntropyChangeReached',1)],terminateOnFirst=False)
-		p.setHangingSum(9,9,p.Col,8,[],[('Fixed',1),('EntropyChangeReached',1)],terminateOnFirst=False)
+		p.setHangingSum(9,8,p.Col,8,[['All']],[('Fixed',1),('EntropyChangeReached',1)],terminateOnFirst=False)
+		p.setHangingSum(9,9,p.Col,8,[['All']],[('Fixed',1),('EntropyChangeReached',1)],terminateOnFirst=False)
 		
-		p.setHangingSum(4,1,p.Row,14,[],[('Fixed',1),('EntropyChangeReached',1)],terminateOnFirst=False)
-		p.setHangingSum(8,1,p.Row,10,[],[('Fixed',1),('EntropyChangeReached',1)],terminateOnFirst=False)
-		p.setHangingSum(9,1,p.Row,10,[],[('Fixed',1),('EntropyChangeReached',1)],terminateOnFirst=False)
+		p.setHangingSum(4,1,p.Row,14,[['All']],[('Fixed',1),('EntropyChangeReached',1)],terminateOnFirst=False)
+		p.setHangingSum(8,1,p.Row,10,[['All']],[('Fixed',1),('EntropyChangeReached',1)],terminateOnFirst=False)
+		p.setHangingSum(9,1,p.Row,10,[['All']],[('Fixed',1),('EntropyChangeReached',1)],terminateOnFirst=False)
 		
 		p.setEntropicLine([13,12,11,21,31])
 		p.setEntropicLine([17,18,19,29,39])

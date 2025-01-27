@@ -1,3 +1,7 @@
+1/26/2025 ter
+	Added additional test case, and fixed some bugs that arose from its incorporation.
+	Implemented remote clone cell contraint, and added test case.
+
 1/26/2025 bis
 	Added support for conditional sum lines, the line version of hanging sums.
 	Added new selection criterion for hanging sums: uniparity, where all odds or evens are chosen.

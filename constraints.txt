@@ -159,6 +159,7 @@ QuattroQuadri
 Ratio Pairs - see Kropki and Kropki pairs
 Region Sum Lines (sum of all cells along a line in a region is fixed)
 Region Segment Sum Lines - see Region Sum Lines
+Remote Clone Cell
 Remote Kropki Arrows - see Kropki
 Renban Lines
 Renrenbanban Lines (see Renban Lines)
@@ -868,8 +869,12 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=
   selectSummands: a *list* of conditions (tuples) which describe whether or not to select certain cells into the sum. Generically,
   each tuple starts with a sting containing a property name, and is followed by values specific to that property. Note that multiple
   selection criteria may be given, and they are combined with a logical AND, so a cell must meet ALL given conditions to be included
-  in the sum. selectSummands may be an empty list.
-    Property: 'Location'
+  in the sum. selectSummands should probably not be empty to ensure countSolutions works correctly; use 'All' to prevent.
+    
+	Property: 'All'
+	  This is a null property...all positions match.
+	  
+	Property: 'Location'
 	  For this property, we are picking cells based on their position within the clued row/column.
 	  Values[0]: A comparator: use the class variables GE, EQ or LE, or NE if you really think that's useful
 	  Values[1]: index to stop
@@ -933,7 +938,10 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=
   each tuple starts with a sting containing a property name, and is followed by values specific to that property. Note that multiple
   selection criteria may be given, but for termination they are combined with a logical OR. There are two styles of termination, defined
   in the terminateOnFirst parameter, described below. Currently supported properties:
-    Terminator: 'Fixed'
+    Terminator: 'Last'
+	Terminate at the last cell in the column
+	
+	Terminator: 'Fixed'
 	We're terminating at a fixed index in the row/column, e.g. the first six cells.
 	Value: index at which to terminate sum
 	
@@ -1584,6 +1592,13 @@ setRegionSumLine(list): asserts that the sum of all cells on the line in each re
 setRegionSegmentSumLine(list): asserts that the sum of cells on line in each visit to a region is fixed, with discontiguous segments in a region counted as different visits
   list: list of cell specifications
   
+Remote Clone Cell
+-----------------
+setRemoteCloneCell(row,col,dir1,dir2): if N is the digit in the cell, then the cell N cells away in dir1 and the cell N cells away in dir2 are equal
+  row,col: cell specification
+  dir1,dir2: directions; use class variables Up, Down, Left, Right
+  Shorthand is available, can be clued 2413, which would be a clue in cell 24, pointing Down and Right; Up = 0, Down = 1, Left = 2, Right = 3
+
 Renban Lines
 ------------
 setRenbanLine(list): set a Renban line constraint

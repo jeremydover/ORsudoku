@@ -464,3 +464,22 @@ def _applyNeighborSetNegative(self):
 		for j in range(self.boardWidth):
 			if (i,j) not in self.neighborSetCells:
 				self._setNeighborSetBase(i,j,-1)
+				
+def setRemoteClone(self,row1,col1=-1,dir1=-1,dir2=-1):
+	if col1 == -1:
+		(row1,col1,dir1,dir2) = self._procCell(row1)
+	row = row1 - 1
+	col = col1 - 1
+	
+	# Forces dir1 to be Up/Down, dir2 to be Left/Right
+	if dir1 > dir2:
+		dir1,dir2 = dir2,dir1
+	
+	vStep = 2*dir1 - 1 # Transforms 0,1 to -1,1
+	hStep = 2*dir2 - 5 # Transforms 2,3 to -1,1
+	maxCand = min(max(-row*vStep,(self.boardWidth-1-row)*vStep),max(-col*hStep,(self.boardWidth-1-col)*hStep))
+	varBitmap = self._varBitmap('RemoteCloneDigitPicker',maxCand)
+	for j in range(1,maxCand+1):
+		self.model.Add(self.cellValues[row][col] == j).OnlyEnforceIf(varBitmap[j-1])
+		self.model.Add(self.cellValues[row+j*vStep][col] == self.cellValues[row][col+j*hStep]).OnlyEnforceIf(varBitmap[j-1])
+		
