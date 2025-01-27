@@ -567,6 +567,48 @@ def setShakenCloneRegion(self,inlist,noRepeat=False):
 	
 		if noRepeat:
 			self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in inlist[j]])
+			
+def setHiddenClones(self,inlist,number):
+	# Given a region, assert that there exist at least number clones of it in the grid which do not overlap
+	L = self._procCellList(inlist)
+	setList = set(L)
+	vectors = {(x[0]-L[0][0],x[1]-L[0][1]) for x in L}
+	allCells = {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)}
+	candList = []
+	candSets = []
+	for i in range(self.boardWidth):
+		for j in range(self.boardWidth):
+			candSet = {(i+x[0],j+x[1]) for x in vectors}
+			if (candSet == candSet & allCells) and not candSet & setList:
+				candList.append((i,j))
+				candSets.append(candSet)
+	
+	candBools = [self.model.NewBoolVar('HiddenClone') for i in range(len(candList))]
+	candInts = [self.model.NewIntVar(0,1,'HiddenCloneInts') for i in range(len(candList))]
+	numericalCandBools = [self.model.NewBoolVar('HiddenCloneCheckDigits') for i in range(len(candList))]
+
+	for i in range(len(candList)):
+		self.model.Add(candInts[i] == 1).OnlyEnforceIf(candBools[i])
+		self.model.Add(candInts[i] == 0).OnlyEnforceIf(candBools[i].Not())
+		
+		# Clone digits
+		cellComp = [self.model.NewBoolVar('HiddenCloneNegative') for j in range(len(L))]
+		j = 0
+		for x in vectors:
+			self.model.Add(self.cellValues[L[0][0]+x[0]][L[0][1]+x[1]] == self.cellValues[candList[i][0]+x[0]][candList[i][1]+x[1]]).OnlyEnforceIf(cellComp[j])
+			self.model.Add(self.cellValues[L[0][0]+x[0]][L[0][1]+x[1]] != self.cellValues[candList[i][0]+x[0]][candList[i][1]+x[1]]).OnlyEnforceIf(cellComp[j].Not())
+			j = j + 1
+		self.model.AddBoolAnd(cellComp).OnlyEnforceIf(numericalCandBools[i])
+		self.model.AddBoolOr([x.Not() for x in cellComp]).OnlyEnforceIf(numericalCandBools[i].Not())
+		self.model.AddBoolAnd(numericalCandBools[i]).OnlyEnforceIf(candBools[i])
+		
+		# Ensure multiple clones are disjoint
+		for j in range(i+1,len(candList)):
+			if len(candSets[i] & candSets[j]) > 0: 
+				self.model.AddBoolAnd(candBools[i].Not()).OnlyEnforceIf(candBools[j])
+				self.model.AddBoolAnd(candBools[j].Not()).OnlyEnforceIf(candBools[i])
+		
+	self.model.Add(sum(candInts) >= number)
 	
 def setCage(self,inlist,value = None):
 	inlist = self._procCellList(inlist)
