@@ -63,31 +63,25 @@ def setRepeatingArrow(self,inlist,repeat=2):
 
 def setThermo(self,inlist,slow=False,missing=False,speed=False):
 	inlist = self._procCellList(inlist)
-	if missing is False:
-		for j in range(len(inlist)-1):
-			if slow is True or speed == 'slow':
-				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] <= self.cellValues[inlist[j+1][0]][inlist[j+1][1]])
-			elif slow is False and speed == 'fast':
-				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] + 1 < self.cellValues[inlist[j+1][0]][inlist[j+1][1]])
-			elif slow is False and isinstance(speed, int):
-				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] + speed < self.cellValues[inlist[j+1][0]][inlist[j+1][1]])
-			else:
-				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] < self.cellValues[inlist[j+1][0]][inlist[j+1][1]])
+	if missing is True:
+		M = [self.model.NewBoolVar('ThermoMissingSwitch')]
 	else:
-		c = self.model.NewBoolVar('MissingThermo')
-		for j in range(len(inlist)-1):
-			if slow is True or speed == 'slow':
-				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] <= self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(c)
-				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] >= self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(c.Not())
-			elif slow is False and speed == 'fast':
-				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] + 1 < self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(c)
-				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] > self.cellValues[inlist[j+1][0]][inlist[j+1][1]] + 1).OnlyEnforceIf(c.Not())
-			elif slow is False and isinstance(speed, int):
-				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] + speed < self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(c)
-				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] > self.cellValues[inlist[j+1][0]][inlist[j+1][1]] + speed).OnlyEnforceIf(c.Not())
-			else:
-				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] < self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(c)
-				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] > self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(c.Not())
+		M = [self.model.NewBoolVar('AlwaysTrue')]
+		self.model.AddBoolAnd(M[0]).OnlyEnforceIf(M[0].Not())
+	Mnot = [x.Not() for x in M]
+	for j in range(len(inlist)-1):
+		if slow is True or speed == 'slow':
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] <= self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(M)
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] >= self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(Mnot)
+		elif slow is False and speed == 'fast':
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] + 1 < self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(M)
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] > self.cellValues[inlist[j+1][0]][inlist[j+1][1]] + 1).OnlyEnforceIf(Mnot)
+		elif slow is False and isinstance(speed, int):
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] + speed < self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(M)
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] > self.cellValues[inlist[j+1][0]][inlist[j+1][1]] + speed).OnlyEnforceIf(Mnot)
+		else:
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] < self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(M)
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] > self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(Mnot)
 		
 def setSlowThermo(self,inlist,missing=False):
 	self.setThermo(inlist,True,missing)
@@ -109,9 +103,89 @@ def setSlowOddEvenThermo(self,inlist,missing=False):
 def setMissingThermo(self,inlist,slow=False):
 	self.setThermo(inlist,slow,True)
 	
-def setvariableLengthThermo(self,bulb,nextCell,slow=False,reflective=False):
-	b = self.procCell(bulb)
-	n = self.procCell(nextCell)
+def setDoubleThermo(self,inlist,slow=False,missing=False,increaseCriteria='Both'):
+	if 'Parity' not in self._propertyInitialized:
+		self._setParity()
+	L = self._procCellList(inlist)
+
+	# This Q array is almost never used, except for the weird case where we have missing thermos, and we want to allow the
+	# possibility that different parities have bulbs at different ends. So we'll default it to this never true state.
+	Q = [self.model.NewBoolVar('AlwaysFalse')]
+	self.model.AddBoolAnd(Q[0].Not()).OnlyEnforceIf(Q[0])
+	Qnot = Q
+	if missing is True:
+		M = [self.model.NewBoolVar('DoubleThermoMissingSwitch')]
+		if increaseCriteria == 'BothMissing':
+			Q = [self.model.NewBoolVar('DoubleThermoMissingOddSwitch')]
+			Qnot = [x.Not() for x in Q]
+	else:
+		M = [self.model.NewBoolVar('AlwaysTrue')]
+		self.model.AddBoolAnd(M[0]).OnlyEnforceIf(M[0].Not())
+	Mnot = [x.Not() for x in M]
+	parityBools = [self.model.NewBoolVar('DoubleThermoParityBools') for j in range(len(L))]
+	for i in range(len(L)):
+		self.model.Add(self.cellParity[L[i][0]][L[i][1]] == 1).OnlyEnforceIf(parityBools[i])
+		self.model.Add(self.cellParity[L[i][0]][L[i][1]] == 0).OnlyEnforceIf(parityBools[i].Not())
+
+		match increaseCriteria:
+			case 'Both':
+				P = []
+			case 'BothMissing':
+				P = [parityBools[i].Not()] # For even digits, we let the M array determine what to do
+				myQ = Q + [parityBools[i]]
+				myQnot = Qnot + [parityBools[i]]
+			case 'MissingOpposite':
+				P = [parityBools[i].Not()] # For even digits, we let the M array determine what to do
+				myQ = Mnot+[parityBools[i]]	# This forces the odds to increase in the other direction
+				myQnot = M+[parityBools[i]]
+			case 'Even':
+				P = [parityBools[i].Not()]
+			case 'Odd':
+				P = [parityBools[i]]
+			case 'First':
+				P = [self.model.NewBoolVar('DoubleThermoParityFirstMatch')]
+				self.model.AddBoolAnd(P).OnlyEnforceIf([parityBools[0],parityBools[i]]+M)
+				self.model.AddBoolAnd(P).OnlyEnforceIf([parityBools[-1],parityBools[i]]+Mnot)
+				self.model.AddBoolAnd(P).OnlyEnforceIf([parityBools[0].Not(),parityBools[i].Not()]+M)
+				self.model.AddBoolAnd(P).OnlyEnforceIf([parityBools[-1].Not(),parityBools[i].Not()]+Mnot)
+				self.model.AddBoolAnd(P[0].Not()).OnlyEnforceIf([parityBools[0].Not(),parityBools[i]]+M)
+				self.model.AddBoolAnd(P[0].Not()).OnlyEnforceIf([parityBools[-1].Not(),parityBools[i]]+Mnot)
+				self.model.AddBoolAnd(P[0].Not()).OnlyEnforceIf([parityBools[0],parityBools[i].Not()]+M)
+				self.model.AddBoolAnd(P[0].Not()).OnlyEnforceIf([parityBools[-1],parityBools[i].Not()]+Mnot)				
+		for j in range(i+1,len(L)):
+			c = self.model.NewBoolVar('DoubleThermoParitySwitch')
+			self.model.Add(self.cellParity[L[i][0]][L[i][1]] == self.cellParity[L[j][0]][L[j][1]]).OnlyEnforceIf(c)
+			self.model.Add(self.cellParity[L[i][0]][L[i][1]] != self.cellParity[L[j][0]][L[j][1]]).OnlyEnforceIf(c.Not())
+			if slow is True:
+				self.model.Add(self.cellValues[L[i][0]][L[i][1]] <= self.cellValues[L[j][0]][L[j][1]]).OnlyEnforceIf([c]+M+P)
+				self.model.Add(self.cellValues[L[i][0]][L[i][1]] >= self.cellValues[L[j][0]][L[j][1]]).OnlyEnforceIf([c]+Mnot+P)
+				self.model.Add(self.cellValues[L[i][0]][L[i][1]] <= self.cellValues[L[j][0]][L[j][1]]).OnlyEnforceIf([c]+myQ)
+				self.model.Add(self.cellValues[L[i][0]][L[i][1]] >= self.cellValues[L[j][0]][L[j][1]]).OnlyEnforceIf([c]+myQnot)
+			else:
+				self.model.Add(self.cellValues[L[i][0]][L[i][1]] < self.cellValues[L[j][0]][L[j][1]]).OnlyEnforceIf([c]+M+P)
+				self.model.Add(self.cellValues[L[i][0]][L[i][1]] > self.cellValues[L[j][0]][L[j][1]]).OnlyEnforceIf([c]+Mnot+P)
+				self.model.Add(self.cellValues[L[i][0]][L[i][1]] < self.cellValues[L[j][0]][L[j][1]]).OnlyEnforceIf([c]+myQ)
+				self.model.Add(self.cellValues[L[i][0]][L[i][1]] > self.cellValues[L[j][0]][L[j][1]]).OnlyEnforceIf([c]+myQnot)
+				
+def setRemovedBulbThermo(self,inlist,slow=False):
+	L = self._procCellList(inlist)
+	minCell = self.model.NewIntVar(self.minDigit,self.maxDigit,'RemovedBulbMinimum')
+	self.model.AddMinEquality(minCell,[self.cellValues[x[0]][x[1]] for x in L])
+	varBitmap = self._varBitmap('RemovedBulbCellSelection',len(L))
+	for i in range(len(L)):
+		for j in range(i):
+			if slow is True:
+				self.model.Add(self.cellValues[L[j][0]][L[j][1]] >= self.cellValues[L[j+1][0]][L[j+1][1]]).OnlyEnforceIf(varBitmap[i])
+			else:
+				self.model.Add(self.cellValues[L[j][0]][L[j][1]] > self.cellValues[L[j+1][0]][L[j+1][1]]).OnlyEnforceIf(varBitmap[i])
+		if i > 0:
+			self.model.Add(self.cellValues[L[i-1][0]][L[i-1][1]] > self.cellValues[L[i][0]][L[i][1]]).OnlyEnforceIf(varBitmap[i])
+			# Even if thermo is slow, we insist on strict inequality so bulb placement is unique
+		for j in range(i+1,len(L)):
+			if slow is True:
+				self.model.Add(self.cellValues[L[j-1][0]][L[j-1][1]] <= self.cellValues[L[j][0]][L[j][1]]).OnlyEnforceIf(varBitmap[i])
+			else:
+				self.model.Add(self.cellValues[L[j-1][0]][L[j-1][1]] < self.cellValues[L[j][0]][L[j][1]]).OnlyEnforceIf(varBitmap[i])
 				
 def setCountTheOddsLine(self,inlist):
 	if 'Parity' not in self._propertyInitialized:

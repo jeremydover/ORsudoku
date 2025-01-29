@@ -49,6 +49,7 @@ Double Arrows - see Arrows
 Double or Nothing Sudoku - see Cell Transform Sudoku
 DoubleDoku
 Doubler Sudoku - see Cell Transform Sudoku
+Double Thermos - see Thermos
 Double X Sums - see X Sums
 Doubling Lines
 Dutch Flat Mates - see Flat Mates
@@ -165,6 +166,7 @@ Region Sum Lines (sum of all cells along a line in a region is fixed)
 Region Segment Sum Lines - see Region Sum Lines
 Remote Clone Cell
 Remote Kropki Arrows - see Kropki
+Removed Bulb Thermos - see Thermos
 Renban Lines
 Renrenbanban Lines (see Renban Lines)
 Repeating Arrows - see Arrows
@@ -1888,8 +1890,24 @@ setSlowOddEvenThermo(list): asserts that the values in cells do not decrease fro
   list: list of cell specifications, with bulb end of thermo being the first element
   
 setMissingThermo(list,slow): asserts that the values increase from one end of the thermo to the other, but which end is which is not determined
-  list: list of cell specifications, with bulb end of thermo being the first element
+  list: list of cell specifications
   slow: set thermo to slow (i.e., nondecreasing vs. increasing); Optional: defaults to False
+  
+setRemovedBulbThermo(list,slow): a thermo on which the bulb may appear anywhere, forming one or two thermos 
+  list: list of cell specifications
+  slow: may set thermos to slow, default is False
+  
+setDoubleThermo(list,slow,missing,increaseCriteria): sets a thermo where even and odd numbers are treated independently
+  list: list of cell specifications, first cell is bulb end unless missing is True
+  slow (optional): Default is False. Thermos are slow, i.e. nondecreasing instead of strictly increasing
+  missing (optional): Default is False. Either end of the line may be the bulb.
+  increaseCriteria (optional): Default is 'Both'. Determines how the different parities act. Options are:
+    'Both': While they may be interleaved, the odd digits and even digits each form a thermo in the same direction
+	'Even': The even digits form a thermo, the odd digits have no constraint
+	'Odd': The odd digits form a thermo, the even digits have no constraint
+	'First': Cells with the same parity as the first cell form a thermo, the other parity has no constraint. If paired with the missing option, the "first" cell may appear at either end.
+	'BothMissing': OK, this was a weird corner case that took up a lot of code, but it's *cool*. In the case of missing thermos, the default 'Both' option will order the evens and odds in thermos, but both thermos will increase in the same direction. This option allows (but does not force) the even and odd thermos to start at different ends of the missing thermo.
+	'MissingOpposite': Like BothMissing, but the odds and evens are forced to start at different ends of the missing thermo.
   
 Triple Tabs
 -----------
