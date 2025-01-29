@@ -1,3 +1,7 @@
+1/29/2025
+	Added support for Broken Thermos.
+	Added additional test cases.
+
 1/28/2025
 	Added support for Double Thermos, which interleave an even and an odd thermo, which act independently. Added test cases.
 	Added support for Removed Bulb Thermos, where a bulb may be placed anywhere on the thermo, resulting in one or two thermos.

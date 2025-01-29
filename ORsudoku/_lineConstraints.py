@@ -61,7 +61,15 @@ def setRepeatingArrow(self,inlist,repeat=2):
 		comb = cI.getNext()
 		varTrack = varTrack + 1
 
-def setThermo(self,inlist,slow=False,missing=False,speed=False):
+def setThermo(self,inlist,slow=False,missing=False,speed=False,broken=False,brokenThreshold=None,brokenMinDrop=None):
+	if broken is True:
+		if brokenThreshold is None:
+			brokenThreshold = self.maxDigit
+		if brokenMinDrop is None:
+			brokenMinDrop = brokenThreshold - self.minDigit
+	else:
+		brokenThreshold = 0
+		brokenMinDrop = 0
 	inlist = self._procCellList(inlist)
 	if missing is True:
 		M = [self.model.NewBoolVar('ThermoMissingSwitch')]
@@ -69,19 +77,44 @@ def setThermo(self,inlist,slow=False,missing=False,speed=False):
 		M = [self.model.NewBoolVar('AlwaysTrue')]
 		self.model.AddBoolAnd(M[0]).OnlyEnforceIf(M[0].Not())
 	Mnot = [x.Not() for x in M]
+
+	# We're setting up an array to allow us to have a structure to decide whether to break or not if we're doing broken thermos
+	# For any case, we start with the default. If we are actually broken and have a chance to break due to the region topology
+	# we'll replace B and Bnot within the loop.
+	baseB = [self.model.NewBoolVar('AlwaysTrue')]
+	self.model.AddBoolAnd(baseB[0]).OnlyEnforceIf(baseB[0].Not())
+	baseBnot = [x.Not() for x in baseB]
+
 	for j in range(len(inlist)-1):
-		if slow is True or speed == 'slow':
-			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] <= self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(M)
-			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] >= self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(Mnot)
-		elif slow is False and speed == 'fast':
-			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] + 1 < self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(M)
-			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] > self.cellValues[inlist[j+1][0]][inlist[j+1][1]] + 1).OnlyEnforceIf(Mnot)
-		elif slow is False and isinstance(speed, int):
-			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] + speed < self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(M)
-			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] > self.cellValues[inlist[j+1][0]][inlist[j+1][1]] + speed).OnlyEnforceIf(Mnot)
+		if broken is True and self.getRegion(inlist[j][0],inlist[j][1]) != self.getRegion(inlist[j+1][0],inlist[j+1][1]):
+			b = self.model.NewBoolVar('ThermoBreakSwitch')
+			B = [b]
+			Bnot = [b.Not()]
+			# The only way breaking is a choice is if the last cell in the region is at the brokenThreshold
+			# so we enforce that. However, we do not have the complimentary choice, since even if we are above the
+			# threshold we have the opportunity to keep going normally
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] >= brokenThreshold).OnlyEnforceIf(M+Bnot)
+			self.model.Add(self.cellValues[inlist[j+1][0]][inlist[j+1][1]] >= brokenThreshold).OnlyEnforceIf(Mnot+Bnot)
 		else:
-			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] < self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(M)
-			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] > self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(Mnot)
+			B = baseB
+			Bnot = baseBnot
+		# This is normal processing, when B is true.
+		if slow is True or speed == 'slow':
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] <= self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(M+B)
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] >= self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(Mnot+B)
+		elif slow is False and speed == 'fast':
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] + 1 < self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(M+B)
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] > self.cellValues[inlist[j+1][0]][inlist[j+1][1]] + 1).OnlyEnforceIf(Mnot+B)
+		elif slow is False and isinstance(speed, int):
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] + speed < self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(M+B)
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] > self.cellValues[inlist[j+1][0]][inlist[j+1][1]] + speed).OnlyEnforceIf(Mnot+B)
+		else:
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] < self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(M+B)
+			self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] > self.cellValues[inlist[j+1][0]][inlist[j+1][1]]).OnlyEnforceIf(Mnot+B)
+		
+		# Now the processing if there's a break
+		self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] >= brokenMinDrop).OnlyEnforceIf(M+Bnot)
+		self.model.Add(self.cellValues[inlist[j+1][0]][inlist[j+1][1]] - self.cellValues[inlist[j][0]][inlist[j][1]] >= brokenMinDrop).OnlyEnforceIf(Mnot+Bnot)
 		
 def setSlowThermo(self,inlist,missing=False):
 	self.setThermo(inlist,True,missing)
@@ -102,6 +135,9 @@ def setSlowOddEvenThermo(self,inlist,missing=False):
 	
 def setMissingThermo(self,inlist,slow=False):
 	self.setThermo(inlist,slow,True)
+	
+def setBrokenThermo(self,inlist,b1=None,b2=None):
+	self.setThermo(inlist,broken=True,brokenThreshold=b1,brokenMinDrop=b2)
 	
 def setDoubleThermo(self,inlist,slow=False,missing=False,increaseCriteria='Both'):
 	if 'Parity' not in self._propertyInitialized:
@@ -126,7 +162,8 @@ def setDoubleThermo(self,inlist,slow=False,missing=False,increaseCriteria='Both'
 	for i in range(len(L)):
 		self.model.Add(self.cellParity[L[i][0]][L[i][1]] == 1).OnlyEnforceIf(parityBools[i])
 		self.model.Add(self.cellParity[L[i][0]][L[i][1]] == 0).OnlyEnforceIf(parityBools[i].Not())
-
+		myQ = Q
+		myQnot = Qnot
 		match increaseCriteria:
 			case 'Both':
 				P = []

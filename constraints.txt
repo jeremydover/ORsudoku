@@ -17,6 +17,7 @@ Before Nine - see Sandwich Sums
 Bent Diagonals - see XSudoku
 Between Lines
 Block Cages
+Broken Thermos - see Thermometers
 Bust
 Capsules
 Cell Index Lines
@@ -1865,14 +1866,18 @@ setSumSandwich(row,col,rc,values,neg=False): sets a sum sandwich - in a row/colu
   
 Thermometers
 ------------
-setThermo(list,slow,missing,speed): asserts that the values in cells increase from the beginning of the line to the end
+setThermo(list,slow,missing,speed,broken,brokenThreshold,brokenMinDrop): asserts that the values in cells increase from the beginning of the line to the end
   list: list of cell specifications, with bulb end of thermo being the first element
-  slow: set thermo to slow (i.e., nondecreasing vs. increasing); Optional: defaults to False, can also use setSlowThermo
-  missing: set thermo to have missing bulb, so increase may start from either end; Optional: defaults to False, can also use setMissingThermo.
-  speed: provides several options about the speed of the thermo, i.e., the level of difference between consecutive values. Allowable values are:
+  slow (optional): set thermo to slow (i.e., nondecreasing vs. increasing); Optional: defaults to False, can also use setSlowThermo
+  missing (optional): set thermo to have missing bulb, so increase may start from either end; Optional: defaults to False, can also use setMissingThermo.
+  speed (optional): provides several options about the speed of the thermo, i.e., the level of difference between consecutive values.      
+    Allowable values are:
     'slow': Same as setting slow=True
 	'fast': Ensures that each value along a fast thermo is at least two larger than the previous cell, can also use setFastThermo
 	integer: Each value along a thermo is strictly greater than the previous value plus the speed. So speed=1 is equivalent to speed='fast'
+  broken (optional): set thermo to allow breaks when passing between regions, if value of last cell of thermo in region is at least brokenThreshold. First cell in next region must be at least brokenMinDrop less. Defaults to False. See also setBrokenThermo.
+  brokenThreshold (optional): sets threshold at which thermo can break. Defaults to largest allowable digit, typically 9.
+  brokenMinDrop (optional): sets minimum amount by which value has to drop across a break. Defaults to threshold - smallest allowable digit, i.e., by default we must go to the minimum digit. typically 1.
   
 setSlowThermo(list,missing): asserts that the values in cells do not decrease from the beginning of the line to the end
   list: list of cell specifications, with bulb end of thermo being the first element
@@ -1893,6 +1898,8 @@ setSlowOddEvenThermo(list): asserts that the values in cells do not decrease fro
 setMissingThermo(list,slow): asserts that the values increase from one end of the thermo to the other, but which end is which is not determined
   list: list of cell specifications
   slow: set thermo to slow (i.e., nondecreasing vs. increasing); Optional: defaults to False
+  
+setBrokenThermo(list,brokenThreshold,brokenMinDrop): sets broken thermo constraint. See setThermo for details on parameters.
   
 setRemovedBulbThermo(list,slow): a thermo on which the bulb may appear anywhere, forming one or two thermos 
   list: list of cell specifications
