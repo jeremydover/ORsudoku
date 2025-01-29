@@ -882,9 +882,10 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=
 	  
 	Property: 'Location'
 	  For this property, we are picking cells based on their position within the clued row/column.
-	  Values[0]: A comparator: use the class variables GE, EQ or LE, or NE if you really think that's useful
-	  Values[1]: index to stop
+	  Values[0]: A comparator: use the class variables GE, EQ or LE, or NE, or the string 'Indexed'
+	  Values[1]: For comparators, provides the limit of comparison for fixed locations in the column; for index, provides a cell which indexes the location to be selected
 	  So for example, ('Index',p.GE,4) would include all cells in the two boxes not adjacent to the clue. Yes, this is just a cage. I get it.
+	  This property can be extended with additional value specifications, all of which will be joined with logical OR, so for example, the tuple ('Location',EQ,1,'Indexed',1) selects the first cell, and the cell indexed by the digit in the first cell. If multiple criteria point to cell, it is only selected once...its value is not multiplied.
 	
 	Property: 'LocationSkip'
 	  Hah, it's not just cages.

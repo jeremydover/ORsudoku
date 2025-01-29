@@ -78,8 +78,8 @@ def _selectCellsOnLine(self,L,selectCriteria,initiatorCells=[]):
 	# Property: 'Location'
 	#   For this property, we are picking cells based on their position within the clued row/column.
 	#   Values[0]: A comparator: use the class variables GE, EQ or LE, or NE if you really think that's useful
-	#   Values[1]: index to stop
-	#   So for example, ('Index',p.GE,4) would include all cells in the two boxes not adjacent to the clue. Yes, this is just a cage. I get it.
+	#   Values[1]: location to stop
+	#   So for example, ('Location',p.GE,4) would include all cells in the two boxes not adjacent to the clue. Yes, this is just a cage. I get it.
 	#
 	# Property: 'LocationSkip'
 	#   Hah, it's not just cages.
@@ -138,20 +138,35 @@ def _selectCellsOnLine(self,L,selectCriteria,initiatorCells=[]):
 				self.model.AddBoolAnd(criterionBools)
 			
 			case 'Location':
-				match criterion[1]:
-					case self.LE:
-						self.model.AddBoolAnd([criterionBools[j] for j in range(criterion[2])])
-						self.model.AddBoolAnd([criterionBools[j].Not() for j in range(criterion[2],len(L))])
-					case self.EQ:
-						self.model.AddBoolAnd([criterionBools[criterion[2]]])
-						self.model.AddBoolAnd([criterionBools[j].Not() for j in range(len(L)) if j != criterion[2]])
-					case self.GE:
-						self.model.AddBoolAnd([criterionBools[j].Not() for j in range(criterion[2]-1)])
-						self.model.AddBoolAnd([criterionBools[j] for j in range(criterion[2]-1,len(L))])
-					case self.NE:
-						self.model.AddBoolAnd([criterionBools[criterion[2]].Not()])
-						self.model.AddBoolAnd([criterionBools[j] for j in range(len(L)) if j != criterion[2]])
+				thisCriterion = 0
+				theseCriteria = []
+				for n in range(1,len(criterion),2):
+					thisCriterionBools = [self.model.NewBoolVar('Criterion{:d}{:d}'.format(criterionNumber,i)) for i in range(len(L))]
+					
+					match criterion[n]:
+						case self.LE:
+							self.model.AddBoolAnd([thisCriterionBools[j] for j in range(criterion[n+1])])
+							self.model.AddBoolAnd([thisCriterionBools[j].Not() for j in range(criterion[n+1],len(L))])
+						case self.EQ:
+							self.model.AddBoolAnd([thisCriterionBools[criterion[n+1]-1]])
+							self.model.AddBoolAnd([thisCriterionBools[j].Not() for j in range(len(L)) if j != criterion[n+1]-1])
+						case self.GE:
+							self.model.AddBoolAnd([thisCriterionBools[j].Not() for j in range(criterion[n+1]-1)])
+							self.model.AddBoolAnd([thisCriterionBools[j] for j in range(criterion[n+1]-1,len(L))])
+						case self.NE:
+							self.model.AddBoolAnd([thisCriterionBools[criterion[n+1]-1].Not()])
+							self.model.AddBoolAnd([thisCriterionBools[j] for j in range(len(L)) if j != criterion[n+1]-1])
+						case 'Indexed':
+							for i in range(len(L)):
+								self.model.Add(self.cellValues[L[criterion[n+1]-1][0]][L[criterion[n+1]-1][1]] == i+1).OnlyEnforceIf(thisCriterionBools[i])
+								self.model.Add(self.cellValues[L[criterion[n+1]-1][0]][L[criterion[n+1]-1][1]] != i+1).OnlyEnforceIf(thisCriterionBools[i].Not())
 			
+					theseCriteria.insert(thisCriterion,thisCriterionBools)
+					thisCriterion = thisCriterion + 1
+				for i in range(len(L)):
+					self.model.AddBoolOr([theseCriteria[j][i] for j in range(len(theseCriteria))]).OnlyEnforceIf(criterionBools[i])
+					self.model.AddBoolAnd([theseCriteria[j][i].Not() for j in range(len(theseCriteria))]).OnlyEnforceIf(criterionBools[i].Not())
+					
 			case 'LocationSkip':
 				self.model.AddBoolAnd([criterionBools[j] for j in range(len(L)) if (j % criterion[1]) == criterion[2]])
 				self.model.AddBoolAnd([criterionBools[j].Not() for j in range(len(L)) if (j % criterion[1]) != criterion[2]])

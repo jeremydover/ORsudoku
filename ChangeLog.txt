@@ -2,6 +2,9 @@
 	Added support for Double Thermos, which interleave an even and an odd thermo, which act independently. Added test cases.
 	Added support for Removed Bulb Thermos, where a bulb may be placed anywhere on the thermo, resulting in one or two thermos.
 	
+1/27/2025 ter-ducken?
+	Extended hangingSum 'Location' option to allow multiple specifications, including a new indexing option. Multiple specifications are joined with logical OR. Added test case.
+
 1/27/2025 ter
 	Added support for conditional sandwich sums. Sandwich is defined by a pair of digits as normal, but the digits to be summed can be selected using any method from hanging sums. Available as an option for crust sandwich sudoku as well, where sandwich clues defined by crusts are filtered with the selection criteria. Added test case.
 	Re-wrote max ascending clues to be more efficient (using the ORTools internal MaxEquality instead of rolling my own), and also more flexible. Now one can test the "length" of a run on either the number of digits, or the sum of the digits: e.g., 19 would be considered "longer" than 234 because it has a higher sum. Moreover, one can compare the value against either length or sum, independent of which is tested. Added test case.	
