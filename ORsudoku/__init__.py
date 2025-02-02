@@ -304,6 +304,45 @@ class sudoku:
 		# Returns the model variable associated with a cell value. Useful when tying several puzzles together, e.g. Samurai
 		return self.cellValues[i][j]
 		
+	def assertNoRoping(self,rc):
+		if rc == self.Row:
+			rows = [[(3*j,i) for i in range(3)] for j in range(3)]
+		else:
+			rows = [[(i,3*j) for i in range(3)] for j in range(3)]
+
+		minVars = [self.model.NewIntVar(self.minDigit,self.maxDigit,'roping') for j in range(3)]
+		for i in range(3):
+			self.model.AddMinEquality(minVars[i],[self.cellValues[x[0]][x[1]] for x in rows[i]])
+		maxVars = [self.model.NewIntVar(self.minDigit,self.maxDigit,'roping') for j in range(3)]
+		for i in range(3):
+			self.model.AddMaxEquality(maxVars[i],[self.cellValues[x[0]][x[1]] for x in rows[i]])
+		sumVars = [self.model.NewIntVar(3*self.minDigit,3*self.maxDigit,'roping') for j in range(3)]
+		for i in range(3):
+			self.model.Add(sumVars[i] == sum([self.cellValues[x[0]][x[1]] for x in rows[i]]))
+		
+		hStep = 0 if rc == self.Col else 1
+		vStep = 0 if rc == self.Row else 1
+		
+		for i in range(3):
+			for j in range(1,3):
+				myMinVar = self.model.NewIntVar(self.minDigit,self.maxDigit,'roping')
+				myMaxVar = self.model.NewIntVar(self.minDigit,self.maxDigit,'roping')
+				mySumVar = self.model.NewIntVar(3*self.minDigit,3*self.maxDigit,'roping')
+				myTestRow = [(x[0]+j*hStep+3*vStep,x[1]+j*vStep+3*hStep) for x in rows[i]]
+
+				self.model.AddMinEquality(myMinVar,[self.cellValues[x[0]][x[1]] for x in myTestRow])
+				self.model.AddMaxEquality(myMaxVar,[self.cellValues[x[0]][x[1]] for x in myTestRow])
+				self.model.Add(mySumVar == sum([self.cellValues[x[0]][x[1]] for x in myTestRow]))
+				
+				compVars = [self.model.NewBoolVar('roping') for k in range(3)]
+				self.model.Add(minVars[i] == myMinVar).OnlyEnforceIf(compVars[0].Not())
+				self.model.Add(minVars[i] != myMinVar).OnlyEnforceIf(compVars[0])
+				self.model.Add(maxVars[i] == myMaxVar).OnlyEnforceIf(compVars[1].Not())
+				self.model.Add(maxVars[i] != myMaxVar).OnlyEnforceIf(compVars[1])
+				self.model.Add(sumVars[i] == mySumVar).OnlyEnforceIf(compVars[2].Not())
+				self.model.Add(sumVars[i] != mySumVar).OnlyEnforceIf(compVars[2])
+				self.model.AddBoolOr(compVars)
+				
 	from ._globalConstraints import setXSudokuMain,setXSudokuOff,setBentDiagonals,setAntiDiagonalMain,setAntiDiagonalOff,setMagnitudeMirrorMain,setMagnitudeMirrorOff,setMagnitudeAntiMirrorMain,setMagnitudeAntiMirrorOff,setParityMirrorMain,setParityMirrorOff,setEntropyMirrorMain,setEntropyMirrorOff,setEntropyAntiMirrorMain,setEntropyAntiMirrorOff,setPrimalityMirrorMain,setPrimalityMirrorOff,setPrimalityAntiMirrorMain,setPrimalityAntiMirrorOff,setAntiKing,setAntiKnight,setKnightMare,setGeneralizedKnightMare,setDisjointGroups,setNonConsecutive,setWindoku,_setIndexCell,_setNonIndexCell,setIndexRow,setIndexColumn,setGlobalWhispers,setCloseNeighbors,setCloseNeighbours,setGlobalNeighborSum,setGlobalNeighbourSum,setGlobalEntropy,setGlobalModular,setQuadro,setUnicornDigit,setRepellingDigit,setAntiQueenDigit,setGSP,setRotationalPairs,setNoThreeInARowParity,setIsotopic,setNoConsecutiveSum,setNoSeven,setCountingCircles,setOffsetDigit,setFlatMates,setDutchFlatMates
 	
 	from ._singleCell import setGiven,setGivenArray,setMinMaxCell,setMinCell,setMaxCell,setMinMaxArray,setMaxMinArray,setMinArray,setMaxArray,setEvenOdd,setOddEven,setEven,setOdd,setEvenArray,setOddArray,setEvenOddArray,setOddEvenArray,setNeighborSum,setNeighbourSum,setNeighborSumArray,setNeighbourSumArray,setFriendly,setFriendlyArray,setUnfriendly,setUnfriendlyArray,setFriendlyNegative,_applyFriendlyNegative,setScary,setPencilmarks,setPencilmarksArray,setSearchNine,setLogicBomb,assertNumberOfLogicBombs,setCupid,setNearestNeighbor,setNearestNeighbour,setDifferentNeighbors,setDifferentNeighbours,setSlingshot,_initializeNeighborSet,_setNeighborSetBase,setPosNeighborSet,setPosNeighbourSet,setNegNeighborSet,setNegNeighbourSet,setPosNeighborSetArray,setPosNeighbourSetArray,setNegNeighborSetArray,setNegNeighbourSetArray,setNeighborSetArray,setNeighbourSetArray,setNeighborSetProperty,setNeighbourSetProperty,setNeighborSetNegative,setNeighbourSetNegative,_applyNeighborSetNegative,setRemoteClone

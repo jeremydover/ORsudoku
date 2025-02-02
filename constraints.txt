@@ -175,6 +175,7 @@ Repelling Digits
 Reverse Numbered Rooms - see Numbered Rooms
 Reverse X-Sums - see X-Sums
 Roman Sums - see XV/XV Pairs
+Roping
 Rossini Clues
 Rotational Pairs - see Gurth's Symmetric Placement
 Run-On Renban Lines - see Renban Lines
@@ -287,6 +288,7 @@ configurePrimality(whatIsOne): set behavior of 1 in primality constraints. Optio
 set10Line(inlist,value): asserts a line that can be partitioned into non-overlapping segments, each of whose cells sum to the given value
   inlist: list of cell specifications
   value: Optional, default is 10. Value to which chunks on the line need to sum to
+Note: If the 10 line closes back on itself, ensure that the first and last cell in the list are the same. The code is aware of this case and will not add the endpoint a second time.
 
 All Odd or Even
 ---------------
@@ -1654,6 +1656,11 @@ Repelling Digits
 setRepellingDigit(value,list): assert that no cell containing digit value can be orthogonally adjacent to a cell containing a digit from list
   value: the value of the repelling digit
   list: list of digits that value repels
+
+Roping
+------
+assertNoRoping(rc): assert that there is no roping (three values appearing together in a row/column in all three boxes across or down
+  rc: row/column specification, use class variables Row and Col
 
 Rossini Clues
 -------------

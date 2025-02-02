@@ -555,17 +555,56 @@ def setParityCountLine(self,inlist):
 	
 def set10Line(self,inlist,value=10):
 	inlist = self._procCellList(inlist)
-	varBitmap = self._varBitmap('10Line',2**(len(inlist)-1))
-	varTrack = 0
-	for i in range(len(inlist)):
-		cI = CombinationIterator(len(inlist)-2,i)
-		comb = cI.getNext()
-		while comb is not None:
-			ind = [-1] + comb + [len(inlist)-1]
-			for j in range(len(ind)-1):
-				self.model.Add(sum(self.cellValues[inlist[k][0]][inlist[k][1]] for k in range(ind[j]+1,ind[j+1]+1)) == value).OnlyEnforceIf(varBitmap[varTrack])
-			comb = cI.getNext()
-			varTrack = varTrack + 1
+	if inlist[0] == inlist[-1]:
+		# This is the cyclic case
+		del inlist[-1] # Don't want the second iteration screwing up our sum
+		cyclic = True
+	else:
+		cyclic = False
+	
+	smSeg = value // self.maxDigit + (0 if value % self.maxDigit == 0 else 1)
+	maxNumSeg = len(inlist) // smSeg + (0 if len(inlist) % smSeg == 0 else 1)
+	segment = [self.model.NewIntVar(0,maxNumSeg,'10LineSegmentNumber') for j in range(len(inlist))]
+	self.model.Add(segment[0] == 0)
+	
+	# Man, allowing cyclic 10 lines is a pain in the botox. Normally I'd just make all the variables and jam, but it's
+	# so much model clutter in the line case. I think I'm just going to accept the clutter here.
+	if cyclic:
+		backInSeg0 = [self.model.NewBoolVar('10LineReturnToSegment0') for i in range(len(inlist))]
+		self.model.AddBoolAnd(backInSeg0[0].Not()).OnlyEnforceIf(backInSeg0[0]) # Bury the first one
+		for i in range(1,len(inlist)):
+			self.model.AddBoolAnd([backInSeg0[j].Not() for j in range(len(inlist)) if j != i]).OnlyEnforceIf(backInSeg0[i])
+			self.model.Add(segment[i] - segment[i-1] <= 1).OnlyEnforceIf(backInSeg0[i].Not())
+			self.model.Add(segment[i] - segment[i-1] >= 0).OnlyEnforceIf(backInSeg0[i].Not())
+			for j in range(i,len(inlist)):
+				self.model.Add(segment[j] == 0).OnlyEnforceIf(backInSeg0[i])
+	else:
+		for i in range(1,len(inlist)):
+			self.model.Add(segment[i] - segment[i-1] <= 1)
+			self.model.Add(segment[i] - segment[i-1] >= 0)
+	
+	# Not needed in the pure line case, but in the cyclic case
+	segMax = self.model.NewIntVar(0,maxNumSeg,'10LineMaxSegUsed')
+	self.model.AddMaxEquality(segMax,segment)
+	# This is not strictly needed, but I think it might actually help speed things up
+	self.model.Add(sum(self.cellValues[inlist[i][0]][inlist[i][1]] for i in range(len(inlist))) == value*segMax+value)
+	
+	for j in range(maxNumSeg):
+		# Decide if segment is used
+		c = self.model.NewBoolVar('10LineSegmentUsed')
+		self.model.Add(segMax >= j).OnlyEnforceIf(c)
+		self.model.Add(segMax < j).OnlyEnforceIf(c.Not())
+		segBool = [self.model.NewBoolVar('10LineSegmentTest{:d}'.format(j)) for k in range(len(inlist))]
+		segInts = [self.model.NewIntVar(min(self.minDigit,0),self.maxDigit,'10LineSegmentSum{:d}'.format(j)) for k in range(len(inlist))]
+		for i in range(len(inlist)):
+			self.model.Add(segment[i] == j).OnlyEnforceIf(segBool[i])
+			self.model.Add(segment[i] != j).OnlyEnforceIf(segBool[i].Not())
+			self.model.Add(segInts[i] == self.cellValues[inlist[i][0]][inlist[i][1]]).OnlyEnforceIf(segBool[i])
+			self.model.Add(segInts[i] == 0).OnlyEnforceIf(segBool[i].Not())
+		
+		self.model.Add(sum(segInts) == value).OnlyEnforceIf(c)
+		self.model.Add(sum(segInts) == 0).OnlyEnforceIf(c.Not())
+			
 			
 def setClockLine(self,inlist):
 	inlist = self._procCellList(inlist)
