@@ -562,7 +562,8 @@ def set10Line(self,inlist,value=10):
 	else:
 		cyclic = False
 	
-	smSeg = value // self.maxDigit + (0 if value % self.maxDigit == 0 else 1)
+	myMaxDigit = max(self.digits)
+	smSeg = value // myMaxDigit + (0 if value % myMaxDigit == 0 else 1)
 	maxNumSeg = len(inlist) // smSeg + (0 if len(inlist) % smSeg == 0 else 1)
 	segment = [self.model.NewIntVar(0,maxNumSeg,'10LineSegmentNumber') for j in range(len(inlist))]
 	self.model.Add(segment[0] == 0)
@@ -595,7 +596,7 @@ def set10Line(self,inlist,value=10):
 		self.model.Add(segMax >= j).OnlyEnforceIf(c)
 		self.model.Add(segMax < j).OnlyEnforceIf(c.Not())
 		segBool = [self.model.NewBoolVar('10LineSegmentTest{:d}'.format(j)) for k in range(len(inlist))]
-		segInts = [self.model.NewIntVar(min(self.minDigit,0),self.maxDigit,'10LineSegmentSum{:d}'.format(j)) for k in range(len(inlist))]
+		segInts = [self.model.NewIntVar(min(self.minDigit,0),myMaxDigit,'10LineSegmentSum{:d}'.format(j)) for k in range(len(inlist))]
 		for i in range(len(inlist)):
 			self.model.Add(segment[i] == j).OnlyEnforceIf(segBool[i])
 			self.model.Add(segment[i] != j).OnlyEnforceIf(segBool[i].Not())
