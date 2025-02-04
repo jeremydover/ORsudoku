@@ -64,6 +64,14 @@ def getOrthogonalNeighbors(self,i,j):
 	#return [(i+k,j+m) for k in [-1,0,1] for m in [-1,0,1] if i+k >= 0 and i+k < self.boardWidth and j+m >= 0 and j+m < self.boardWidth and abs(k) != abs(m)]
 	return list({(i+k,j+m) for k in [-1,0,1] for m in [-1,0,1] if abs(k) != abs(m)} & {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)})
 	
+def _selectCellsMatchDigitSet(self,myVars,L,values):
+	for i in range(len(myVars)):
+		for j in self.digits:
+			if j in values:
+				self.model.Add(self.cellValues[L[i][0]][L[i][1]] != j).OnlyEnforceIf(myVars[i].Not())
+			else:
+				self.model.Add(self.cellValues[L[i][0]][L[i][1]] != j).OnlyEnforceIf(myVars[i])
+
 def _selectCellsOnLine(self,L,selectCriteria,initiatorCells=[]):
 	
 	# Migrated from a version which worked on row/column, should not be too hard :-)
@@ -243,45 +251,48 @@ def _selectCellsOnLine(self,L,selectCriteria,initiatorCells=[]):
 						self.model.Add(myCells[L[i][0]][L[i][1]] == myCells[L[i-1][0]][L[i-1][1]]).OnlyEnforceIf(criterionBools[i].Not())
 					
 			case 'DigitSet':
-				for i in range(len(L)):
-					for j in self.digits:
-						if j in criterion[1]:
-							self.model.Add(self.cellValues[L[i][0]][L[i][1]] != j).OnlyEnforceIf(criterionBools[i].Not())
-						else:
-							self.model.Add(self.cellValues[L[i][0]][L[i][1]] != j).OnlyEnforceIf(criterionBools[i])
+				self._selectCellsMatchDigitSet(criterionBools,L,criterion[1])
 							
-			case 'BeforeDigit':
-				self.model.Add(self.cellValues[L[0][0]][L[0][1]] != criterion[1]).OnlyEnforceIf(criterionBools[0])
-				self.model.Add(self.cellValues[L[0][0]][L[0][1]] == criterion[1]).OnlyEnforceIf(criterionBools[0].Not())
+			case 'BeforeDigits':
+				matchDigit = [self.model.NewBoolVar('BeforeDigitsMatch') for i in range(len(L))]
+				self._selectCellsMatchDigitSet(matchDigit,L,criterion[1])
+				self.model.AddBoolAnd(criterionBools[-1].Not()).OnlyEnforceIf(criterionBools[-1])
 				for i in range(1,len(L)):
-					self.model.Add(self.cellValues[L[i][0]][L[i][1]] != criterion[1]).OnlyEnforceIf(criterionBools[i])
-					self.model.AddBoolAnd(criterionBools[i-1]).OnlyEnforceIf(criterionBools[i])
-					for j in range(i+1,len(L)):
-						self.model.Add(self.cellValues[L[j][0]][L[j][1]] != criterion[1]).OnlyEnforceIf(criterionBools[i].Not())
+					self.model.AddBoolAnd(criterionBools[i-1]).OnlyEnforceIf(matchDigit[i])
+					self.model.AddBoolAnd(criterionBools[i-1].Not()).OnlyEnforceIf(matchDigit[i].Not())
 
-			case 'AfterDigit':
-				self.model.Add(self.cellValues[L[-1][0]][L[-1][1]] != criterion[1]).OnlyEnforceIf(criterionBools[-1])
-				self.model.Add(self.cellValues[L[-1][0]][L[-1][1]] == criterion[1]).OnlyEnforceIf(criterionBools[-1].Not())
+			case 'AfterDigits':
+				matchDigit = [self.model.NewBoolVar('AfterDigitsMatch') for i in range(len(L))]
+				self._selectCellsMatchDigitSet(matchDigit,L,criterion[1])
+				self.model.AddBoolAnd(criterionBools[0].Not()).OnlyEnforceIf(criterionBools[0])
 				for i in range(len(L)-1):
-					self.model.Add(self.cellValues[L[i][0]][L[i][1]] != criterion[1]).OnlyEnforceIf(criterionBools[i])
-					self.model.AddBoolAnd(criterionBools[i+1]).OnlyEnforceIf(criterionBools[i])
-					for j in range(i):
-						self.model.Add(self.cellValues[L[j][0]][L[j][1]] != criterion[1]).OnlyEnforceIf(criterionBools[i].Not())
+					self.model.AddBoolAnd(criterionBools[i+1]).OnlyEnforceIf(matchDigit[i])
+					self.model.AddBoolAnd(criterionBools[i+1].Not()).OnlyEnforceIf(matchDigit[i].Not())
+					
+			case 'NextToDigits':
+				matchDigit = [self.model.NewBoolVar('AfterDigitsMatch') for i in range(len(L))]
+				self._selectCellsMatchDigitSet(matchDigit,L,criterion[1])
+				self.model.AddBoolAnd(criterionBools[0]).OnlyEnforceIf(matchDigit[1])
+				self.model.AddBoolAnd(criterionBools[0].Not()).OnlyEnforceIf(matchDigit[1].Not())
+				self.model.AddBoolAnd(criterionBools[-1]).OnlyEnforceIf(matchDigit[-2])
+				self.model.AddBoolAnd(criterionBools[-1].Not()).OnlyEnforceIf(matchDigit[-2].Not())
+				for i in range(1,len(L)-1):
+					self.model.AddBoolOr([matchDigit[i-1],matchDigit[i+1]]).OnlyEnforceIf(criterionBools[i])
+					self.model.AddBoolAnd([matchDigit[i-1].Not(),matchDigit[i+1].Not()]).OnlyEnforceIf(criterionBools[i].Not())
 						
 			case 'DigitInstance':
-				if criterion[1] == 'First':
-					myL = L
+				if len(criterion) == 3:
+					trackDigits = criterion[2]
 				else:
-					myL = L.reverse()
-				self.model.AddBoolAnd(criterionBools[0])
+					trackDigits = self.digits
+				instanceCount = [self.model.NewIntVar(0,len(L),'SelectionCriterionInstanceCount') for i in range(len(L))]
 				for i in range(1,len(L)):
-					checkVars = [self.model.NewBoolVar('check') for j in range(i)]
+					lastMatch = [self.model.NewBoolVar('SelectionCriterionLastMatch') for j in range(i)]
 					for j in range(i):
-						self.model.Add(self.cellValues[L[i][0]][L[i][1]] != self.cellValues[L[j][0]][L[j][1]]).OnlyEnforceIf(checkVars[j])
-						self.model.Add(self.cellValues[L[i][0]][L[i][1]] == self.cellValues[L[j][0]][L[j][1]]).OnlyEnforceIf(checkVars[j].Not())
-					self.model.AddBoolAnd(checkVars).OnlyEnforceIf(criterionBools[i])
-					self.model.AddBoolOr([x.Not() for x in checkVars]).OnlyEnforceIf(criterionBools[i].Not())
-										
+						self.model.Add(self.cellValue[L[j][0]][L[j][1]] == self.cellValue[L[i][0]][L[i][1]]).OnlyEnforceIf(lastMatch[j])
+						for k in range(j+1,i):
+							self.model.Add(self.cellValue[L[k][0]][L[k][1]] != self.cellValue[L[i][0]][L[i][1]]).OnlyEnforceIf(lastMatch[j])
+																
 		criteriaBools.insert(criterionNumber,criterionBools)
 		criterionNumber = criterionNumber + 1
 	

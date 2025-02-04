@@ -72,6 +72,7 @@ def findSolution(self,test=False,debug=False):
 	elif debug is True:
 		for v in self.allVars:
 			print('%s=%i' % (v,self.solver.Value(v)))
+		return self.solveStatus
 	else:
 		print('Solver status = %s' % self.solver.StatusName(self.solveStatus))
 		if self.solveStatus == cp_model.OPTIMAL:
@@ -105,6 +106,7 @@ def countSolutions(self,printAll = False,debug = False,test=False):
 		if printAll is False and self.solveStatus == cp_model.OPTIMAL:
 			print('Sample solution')
 			self.printCurrentSolution()
+		return solution_printer.SolutionCount()
 			
 def printCurrentSolution(self):
 	dW = max([len(str(x)) for x in self.digits])
@@ -143,6 +145,7 @@ def listCandidates(self):
 	
 	print('To avoid retesting these cases when adding new constraints, add this code:')
 	print('addExcludedDigitArray([' + ','.join(list(map(lambda s: ''.join(s),self.candToExclude))) + '])')
+	return self.candToExclude
 	
 def addExcludedDigit(self,row,col=-1,value=-1):
 	# Strictly for listing candidates, sets a value that has been excluded from a cell
@@ -183,5 +186,4 @@ def listCellCandidates(self,row,col=-1,quiet=False):
 			good.append(' ')
 	if quiet is False:
 		print('Possible values for cell {:d},{:d}: '.format(row+1,col+1) + ''.join(good))
-	else:
-		return good
+	return good

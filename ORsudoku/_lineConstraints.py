@@ -769,3 +769,23 @@ def setConditionalSumLine(self,inlist,value,selectSummands=None,selectTerminator
 	terminatorCells = self._terminateCellsOnLine(L,selectTerminator)
 	
 	self._evaluateHangingClues(partialSum,terminatorCells,value,terminateOnFirst,includeTerminator)
+	
+def setConditionalCountLine(self,inlist,value,selectSummands=None,selectTerminator=None,terminateOnFirst=True,includeTerminator=True):
+	# Copied from setConditionalSumLine, for counts instead of sums
+	
+	L = self._procCellList(inlist)
+	partialCount = [self.model.NewIntVar(0,len(L),'ConditionalCountPartialCounts{:d}'.format(i)) for i in range(len(L))]
+		
+	selectionCells = self._selectCellsOnLine(L,selectSummands)
+	
+	# Tie the variables together
+	self.model.Add(partialCount[0] == 1).OnlyEnforceIf(selectionCells[0])
+	self.model.Add(partialCount[0] == 0).OnlyEnforceIf(selectionCells[0].Not())
+	for i in range(1,len(L)):
+		self.model.Add(partialCount[i] == partialCount[i-1] + 1).OnlyEnforceIf(selectionCells[i])
+		self.model.Add(partialCount[i] == partialCount[i-1]).OnlyEnforceIf(selectionCells[i].Not())
+	
+	# Now create terminator conditions
+	terminatorCells = self._terminateCellsOnLine(L,selectTerminator)
+	
+	self._evaluateHangingClues(partialCount,terminatorCells,value,terminateOnFirst,includeTerminator)

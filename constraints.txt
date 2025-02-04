@@ -937,14 +937,23 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=
 	For this property, we pick cells if their corresponding digit is in the given list of digits
 	Value: list of digits to match
 	
-	Property: 'BeforeDigit'
-	For this property, we pick cells that appear before the given digit in the row/column, as seen from the clue
-	Value: digit to seek
+	Property: 'BeforeDigits'
+	For this property, we pick cells that appear before any digit in a given list in the row/column, as seen from the clue
+	Value: list of digits to seek
 	
-	Property: 'AfterDigit'
-	For this property, we pick cells that appear after the given digit in the row/column, as seen from the clue
-	Value: digit to seek
-
+	Property: 'AfterDigits'
+	For this property, we pick cells that appear after any digit in a given list in the row/column, as seen from the clue
+	Value: list of digits to seek
+	
+	Property: 'NextToDigits'
+	For this property, we pick cells that appear next to any digit in a given list in the row/column, as seen from the clue
+	Value: list of digits to seek
+	
+	Property: 'DigitInstance'
+	For this property, we select cells which are the nth instance of their appearance in the list
+	Value: instance number
+	Value: list of digits whose instance to match (optional, defaults to all digits)
+	
   selectTerminator: a *list* of conditions (tuples) which describe when the sum should stop. As with summand selection,
   each tuple starts with a sting containing a property name, and is followed by values specific to that property. Note that multiple
   selection criteria may be given, but for termination they are combined with a logical OR. There are two styles of termination, defined
