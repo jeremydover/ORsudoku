@@ -1,3 +1,6 @@
+2/4/2025
+	Added support for InOrder clues.
+
 2/2/2025
 	Added assertion to ensure solutions are not roped. Not so much a constraint, as much as for grid searching.
 	Greatly improved performance for 10 Lines, added test case, and added support for closed loop 10 lines.

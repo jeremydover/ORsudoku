@@ -88,6 +88,7 @@ Global Whispers (Dutch, et. al.)
 Gurth's Symmetric Placement (GSP)
 Hanging Sums/Counts/Averages
 Hidden Clones
+In Order
 Indexing
 Irregular Sudoku
 Isotopes
@@ -1017,6 +1018,13 @@ Hidden Clones
 setHiddenClones(list,number): assert that the region of cells defined via list has at least number exact clones (same digits in same position, no rotation or reflection)
   list: list of cell specifications
   number: minimum number of clones to assert
+
+In Order
+--------
+setInOrder(row,col,rc,values): when viewed from the clue location, the digits in values are seen in order
+  row,col: The coordinates of the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  values: list of digits in the order that they are to be seen
 
 Indexing (159)
 --------------

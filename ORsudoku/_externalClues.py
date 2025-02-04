@@ -1254,3 +1254,17 @@ def setHangingAverage(self,row1,col1,rc,value,selectCounts=None,selectTerminator
 						
 def setXOutside(self,row,col,rc,values):
 	self.setHangingCount(row,col,rc,len(values),[('DigitSet',values)],[('Indexed',1)])
+	
+def setInOrder(self,row1,col1,rc,values):
+	row = row1 - 1
+	col = col1 - 1
+	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
+	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
+	
+	cells0 = [self.model.NewIntVar(0,self.digitRange,'InOrderZeroBase') for i in range(self.boardWidth)]
+	for i in range(self.boardWidth):
+		self.model.Add(cells0[i] == self.cellValues[row+i*vStep][col+i*hStep] - self.minDigit)
+	digitPositions = [self.model.NewIntVar(0,self.digitRange,'InOrderPositions') for i in range(self.boardWidth)]
+	self.model.AddInverse(cells0,digitPositions)
+	for j in range(1,len(values)):
+		self.model.Add(digitPositions[values[j-1] - self.minDigit] < digitPositions[values[j] - self.minDigit])
