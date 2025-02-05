@@ -281,17 +281,39 @@ def _selectCellsOnLine(self,L,selectCriteria,initiatorCells=[]):
 					self.model.AddBoolAnd([matchDigit[i-1].Not(),matchDigit[i+1].Not()]).OnlyEnforceIf(criterionBools[i].Not())
 						
 			case 'DigitInstance':
-				if len(criterion) == 3:
-					trackDigits = criterion[2]
-				else:
-					trackDigits = self.digits
 				instanceCount = [self.model.NewIntVar(0,len(L),'SelectionCriterionInstanceCount') for i in range(len(L))]
+				self.model.Add(instanceCount[0] == 1)
 				for i in range(1,len(L)):
-					lastMatch = [self.model.NewBoolVar('SelectionCriterionLastMatch') for j in range(i)]
+					isFirst = self.model.NewBoolVar('SelectionCriterionIsFirst')
 					for j in range(i):
-						self.model.Add(self.cellValue[L[j][0]][L[j][1]] == self.cellValue[L[i][0]][L[i][1]]).OnlyEnforceIf(lastMatch[j])
+						self.model.Add(self.cellValues[L[j][0]][L[j][1]] != self.cellValues[L[i][0]][L[i][1]]).OnlyEnforceIf(isFirst)
+					self.model.Add(instanceCount[i] == 1).OnlyEnforceIf(isFirst)
+					
+					lastMatch = [self.model.NewBoolVar('SelectionCriterionLastMatch') for j in range(i)]
+					self.model.AddBoolOr(lastMatch).OnlyEnforceIf(isFirst.Not())
+					self.model.AddBoolAnd([x.Not() for x in lastMatch]).OnlyEnforceIf(isFirst)
+					
+					for j in range(i):
+						self.model.Add(self.cellValues[L[j][0]][L[j][1]] == self.cellValues[L[i][0]][L[i][1]]).OnlyEnforceIf(lastMatch[j])
 						for k in range(j+1,i):
-							self.model.Add(self.cellValue[L[k][0]][L[k][1]] != self.cellValue[L[i][0]][L[i][1]]).OnlyEnforceIf(lastMatch[j])
+							self.model.Add(self.cellValues[L[k][0]][L[k][1]] != self.cellValues[L[i][0]][L[i][1]]).OnlyEnforceIf(lastMatch[j])
+						self.model.Add(instanceCount[i] == instanceCount[j] + 1).OnlyEnforceIf(lastMatch[j])
+					
+				for i in range(len(L)):
+					match criterion[1]:
+						case self.LE:
+							self.model.Add(instanceCount[i] <= criterion[2]).OnlyEnforceIf(criterionBools[i])
+							self.model.Add(instanceCount[i] > criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
+						case self.EQ:
+							self.model.Add(instanceCount[i] == criterion[2]).OnlyEnforceIf(criterionBools[i])
+							self.model.Add(instanceCount[i] != criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
+						case self.GE:
+							self.model.Add(instanceCount[i] >= criterion[2]).OnlyEnforceIf(criterionBools[i])
+							self.model.Add(instanceCount[i] < criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
+						case self.NE:
+							self.model.Add(instanceCount[i] != criterion[2]).OnlyEnforceIf(criterionBools[i])
+							self.model.Add(instanceCount[i] == criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
+					
 																
 		criteriaBools.insert(criterionNumber,criterionBools)
 		criterionNumber = criterionNumber + 1
@@ -451,6 +473,32 @@ def _terminateCellsOnLine(self,L,selectTerminator):
 							for k in range(len(depthIndices)):
 								if k != j:
 									self.model.Add(self.cellValues[L[depthIndices[j]][0]][L[depthIndices[j]][1]] > self.cellValues[L[depthIndices[k]][0]][L[depthIndices[k]][1]]).OnlyEnforceIf(depthVars[j])
+			case 'RepeatReached':
+				isRepeat = [self.model.NewBoolVar('TerminationRepeatReachedTest') for j in range(len(L))]
+				repeatCount = [self.model.NewIntVar(0,len(L),'TerminationRepeatReachedCount') for j in range(len(L))]
+				self.model.AddBoolAnd(isRepeat[0].Not())
+				self.model.Add(repeatCount[0] == 0)
+				self.model.AddBoolAnd(termBools[0].Not())
+
+				if terminator[1] == 'Last':
+					myTarget = self.model.NewIntVar(0,len(L),'TerminationRepeatReachedMaxCount')
+					self.model.AddMaxEquality(myTarget,repeatCount)
+				else:
+					myTarget = terminator[1]
+				
+				for j in range(1,len(L)):
+					isEqual = [self.model.NewBoolVar('TerminationRepeatReachedEqualityChecker') for k in range(j)]
+					for k in range(j):
+						self.model.Add(self.cellValues[L[k][0]][L[k][1]] == self.cellValues[L[j][0]][L[j][1]]).OnlyEnforceIf(isEqual[k])
+						self.model.Add(self.cellValues[L[k][0]][L[k][1]] != self.cellValues[L[j][0]][L[j][1]]).OnlyEnforceIf(isEqual[k].Not())
+					self.model.AddBoolOr(isEqual).OnlyEnforceIf(isRepeat[j])
+					self.model.AddBoolAnd([x.Not() for x in isEqual]).OnlyEnforceIf(isRepeat[j].Not())
+					self.model.Add(repeatCount[j] == repeatCount[j-1]+1).OnlyEnforceIf(isRepeat[j])
+					self.model.Add(repeatCount[j] == repeatCount[j-1]).OnlyEnforceIf(isRepeat[j].Not())
+				
+					self.model.Add(repeatCount[j] == myTarget).OnlyEnforceIf(termBools[j])
+					self.model.AddBoolAnd(isRepeat[j]).OnlyEnforceIf(termBools[j])
+					self.model.Add(repeatCount[j] != myTarget).OnlyEnforceIf([termBools[j].Not(),isRepeat[j]])
 					
 		terminatorBools.insert(terminatorNumber,termBools)
 		terminatorNumber = terminatorNumber + 1

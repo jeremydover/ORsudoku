@@ -26,8 +26,9 @@ Chinese Whispers Lines - see Whispers Lines
 Clock Lines
 Clone Regions
 Close Neighbors - see Global Whispers
+Conditional Count Lines - see Conditional Lines
 Conditional Sandwich Sums - see Sandwich Sums
-Conditional Sum Lines
+Conditional Sum Lines - see Conditional Lines
 Consecutive Chain Regions
 Consecutive Lines
 Consecutive Quads
@@ -476,8 +477,12 @@ setShakenCloneRegion(list,noRepeat): creates a set of regions that contain the s
   list: a list OF LISTS of cell specifications
   noRepeat: OPTIONAL, defaults to False. If noRepeat, digits cannot repeat in the zone. By default, repeats are allowed.
   
-Conditional Sum Lines
+Conditional Lines
 ---------------------
+setConditionalCountLine(list,selectCriteria,terminationCriteria,terminateOnFirst,includeTerminator): analogous to a Hanging Count, but along a line instead of just in a column
+  list: list of cell specifications
+  See Hanging Sums for a description of all other parameters
+
 setConditionalSumLine(list,selectCriteria,terminationCriteria,terminateOnFirst,includeTerminator): analogous to a Hanging Sum, but along a line instead of just in a column
   list: list of cell specifications
   See Hanging Sums for a description of all other parameters
@@ -888,7 +893,7 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=
 	  For this property, we are picking cells based on their position within the clued row/column.
 	  Values[0]: A comparator: use the class variables GE, EQ or LE, or NE, or the string 'Indexed'
 	  Values[1]: For comparators, provides the limit of comparison for fixed locations in the column; for index, provides a cell which indexes the location to be selected
-	  So for example, ('Index',p.GE,4) would include all cells in the two boxes not adjacent to the clue. Yes, this is just a cage. I get it.
+	  So for example, ('Location',p.GE,4) would include all cells in the two boxes not adjacent to the clue. Yes, this is just a cage. I get it.
 	  This property can be extended with additional value specifications, all of which will be joined with logical OR, so for example, the tuple ('Location',EQ,1,'Indexed',1) selects the first cell, and the cell indexed by the digit in the first cell. If multiple criteria point to cell, it is only selected once...its value is not multiplied.
 	
 	Property: 'LocationSkip'
@@ -950,9 +955,9 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=
 	Value: list of digits to seek
 	
 	Property: 'DigitInstance'
-	For this property, we select cells which are the nth instance of their appearance in the list
-	Value: instance number
-	Value: list of digits whose instance to match (optional, defaults to all digits)
+	For this property, we select cells based on how many times their digit has appeared in the list.
+	Values[0]: A comparator: use the class variables GE, EQ or LE, or NE.
+	Values[1]: Value for comparison
 	
   selectTerminator: a *list* of conditions (tuples) which describe when the sum should stop. As with summand selection,
   each tuple starts with a sting containing a property name, and is followed by values specific to that property. Note that multiple
@@ -1002,6 +1007,10 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=
 	  'Any' - any sum defined by a digit in any index cell may match the clue
 	  'Largest' - the largest digit in the index cells defines the length of the sum that matches the clue
 	  'Smallest' - the smallest digit in the index cells defines the length of the sum that matches the clue
+	
+	Terminator: 'RepeatReached'
+	Terminate when some numbered instance of a repeated digit is reached
+	Value: May be an integer to give a specific number of repeats, or may be the string 'Last' to indicate termination at the last repeat.
 	
   terminateOnFirst: by default, the sum will terminate at the first cell that matches one of the termination criteria. However, in hindsight,
   the behavior seen in actual puzzles seems to be ambiguity, where the sum can terminate based on any of the given criteria, determined on a
@@ -1741,8 +1750,9 @@ p = crustSandwichSudoku(boardSizeRoot,enforceRegions=True,includeCrust=False,sel
   but this can also be relaxed by setting includeCrust to True. This class also inherits the irregular and digitSet parameters, which may be used
   to define irregular regions and alternate digit sets. It might even work.
   
-To set a crust sandwich clue, the normal setSandwichSum call as above can be used, and it will be applied with the selectCriteria defined in initialization, if any. There is an additional method:
+To set a crust sandwich clue, the normal setSandwichSum call as above can be used, and it will be applied with the selectCriteria defined in initialization, if any. There are additional methods:
 setCrustHasLength(): asserts that one of the crust digits must equal the number of cells in the sandwich for each sandwich
+setTwoCrustDigits(): asserts that the pair of crust digits are the same for each row/column
   
 Scary Cells
 -----------

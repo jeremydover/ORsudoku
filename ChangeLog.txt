@@ -1,3 +1,9 @@
+2/4/2025 ter
+	Finished DigitInstance conditional selection. Added test case.
+	Added support to crust sandwich sudoku enforcing that the crusts are always the same two, unknown, digits. Added test case.
+	Added test case for InOrder clues.
+	Added RepeatReached conditional termination.
+
 2/4/2025 bis
 	Provided return codes for all solving methods.
 	Added support for conditional count lines.

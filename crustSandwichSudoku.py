@@ -158,6 +158,18 @@ class crustSandwichSudoku(sudoku):
 					self.model.Add(self.cellValues[j][i] == k-j-1).OnlyEnforceIf([self.crust[j][i],self.crust[k][i],d])
 					self.model.Add(self.cellValues[k][i] == k-j-1).OnlyEnforceIf([self.crust[j][i],self.crust[k][i],d.Not()])
 				
+	def setTwoCrustDigits(self):
+		# Asserts that the crusts are the same, but undetermined, digits in each row and column.
+		crustDigit1 = self.model.NewIntVar(self.minDigit,self.maxDigit,'FirstCrustDigit')
+		crustDigit2 = self.model.NewIntVar(self.minDigit,self.maxDigit,'SecondCrustDigit')
+		self.model.Add(crustDigit1 > crustDigit2)
+		for i in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				c = self.model.NewBoolVar('switch')
+				self.model.Add(crustDigit1 == self.cellValues[i][j]).OnlyEnforceIf([self.crust[i][j],c])
+				self.model.Add(crustDigit2 == self.cellValues[i][j]).OnlyEnforceIf([self.crust[i][j],c.Not()])
+				self.model.AddBoolAnd(c).OnlyEnforceIf(self.crust[i][j].Not())
+	
 	def printCurrentSolution(self):
 		dW = max([len(str(x)) for x in self.digits])
 		colorama.init()
