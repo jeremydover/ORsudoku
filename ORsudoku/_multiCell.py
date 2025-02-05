@@ -620,8 +620,12 @@ def setMaxMinSumCage(self,inlist,value,repeating=False):
 	inlist = self._procCellList(inlist)
 	if not repeating:
 		self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in inlist])
-	myMax = self.model.NewIntVar(self.minDigit,self.maxDigit,'MaxMinSumCageMaximum')
-	myMin = self.model.NewIntVar(self.minDigit,self.maxDigit,'MaxMinSumCageMinimum')
+	# Need for cell transform clues. self.minDigit is the smallest base digit, not necessarily as transformed.
+	myMinDigit = min(self.digits)
+	myMaxDigit = max(self.digits)
+	
+	myMax = self.model.NewIntVar(myMinDigit,myMaxDigit,'MaxMinSumCageMaximum')
+	myMin = self.model.NewIntVar(myMinDigit,myMaxDigit,'MaxMinSumCageMinimum')
 	self.model.AddMaxEquality(myMax,[self.cellValues[x[0]][x[1]] for x in inlist])
 	self.model.AddMinEquality(myMin,[self.cellValues[x[0]][x[1]] for x in inlist])
 	self.model.Add(myMax+myMin == value)

@@ -754,7 +754,12 @@ def setConditionalSumLine(self,inlist,value,selectSummands=None,selectTerminator
 	# Copied from setHangingSum, an external clue. Just a line version, should be straightforward since the underlying support
 	# functions were converted to lines.
 	L = self._procCellList(inlist)
-	partialSum = [self.model.NewIntVar(min(0,self.boardWidth*self.minDigit),self.boardWidth*self.maxDigit,'HangingSumPartialSum{:d}'.format(i)) for i in range(len(L))]
+	
+	# Need for cell transform clues. self.minDigit is the smallest base digit, not necessarily as transformed.
+	myMin = min(self.digits)
+	myMax = max(self.digits)
+	
+	partialSum = [self.model.NewIntVar(min(0,self.boardWidth*myMin),self.boardWidth*myMax,'HangingSumPartialSum{:d}'.format(i)) for i in range(len(L))]
 		
 	selectionCells = self._selectCellsOnLine(L,selectSummands)
 	

@@ -422,7 +422,11 @@ def setConditionalSandwichSum(self,row1,col1,rc,value,digits=[1,9],selectCriteri
 	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
 	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
 	
-	partialSum = [self.model.NewIntVar(min(0,self.boardWidth*self.minDigit),self.boardWidth*self.maxDigit,'ConditionSandwichPartialSum{:d}'.format(i)) for i in range(self.boardWidth)]
+	# Need for cell transform clues. self.minDigit is the smallest base digit, not necessarily as transformed.
+	myMin = min(self.digits)
+	myMax = max(self.digits)
+	
+	partialSum = [self.model.NewIntVar(min(0,self.boardWidth*myMin),self.boardWidth*myMax,'ConditionSandwichPartialSum{:d}'.format(i)) for i in range(self.boardWidth)]
 
 	selectionCells = self._selectCellsInRowCol(row,col,rc,selectCriteria)
 	
@@ -437,8 +441,8 @@ def setConditionalSandwichSum(self,row1,col1,rc,value,digits=[1,9],selectCriteri
 	terminatorCells1 = self._terminateCellsInRowCol(row,col,rc,[('DigitSetReached',digits,1)])
 	terminatorCells2 = self._terminateCellsInRowCol(row,col,rc,[('DigitSetReached',digits,2)])
 	
-	preSum = self.model.NewIntVar(min(0,self.boardWidth*self.minDigit),self.boardWidth*self.maxDigit,'ConditionSandwichPreSum{:d}')
-	fullSum = self.model.NewIntVar(min(0,self.boardWidth*self.minDigit),self.boardWidth*self.maxDigit,'ConditionSandwichPreSum{:d}')
+	preSum = self.model.NewIntVar(min(0,self.boardWidth*myMin),self.boardWidth*myMax,'ConditionSandwichPreSum{:d}')
+	fullSum = self.model.NewIntVar(min(0,self.boardWidth*myMin),self.boardWidth*myMax,'ConditionSandwichPreSum{:d}')
 	
 	# So what do we do if the first instance is at index 0? Easy, just peg preSum to 0...there will be nothing to subtract off
 	self.model.Add(preSum == 0).OnlyEnforceIf(terminatorCells1[0])
@@ -716,7 +720,11 @@ def setMaxAscendingRun(self,row1,col1,rc,value,lengthTest='cells',valueTest='cel
 	partialCounts = [self.model.NewIntVar(0,self.boardWidth,'MaxAscendingCountRow{:d}Col{:d}RC{:d}'.format(row,col,rc)) for i in range(self.boardWidth)]
 	self.model.Add(partialCounts[0] == 1)
 	
-	partialSums = [self.model.NewIntVar(min(0,self.boardWidth*self.minDigit),self.boardWidth*self.maxDigit,'MaxAscendingSumRow{:d}Col{:d}RC{:d}'.format(row,col,rc)) for i in range(self.boardWidth)]
+	# Need for cell transform clues. self.minDigit is the smallest base digit, not necessarily as transformed.
+	myMin = min(self.digits)
+	myMax = max(self.digits)
+	
+	partialSums = [self.model.NewIntVar(min(0,self.boardWidth*myMin),self.boardWidth*myMax,'MaxAscendingSumRow{:d}Col{:d}RC{:d}'.format(row,col,rc)) for i in range(self.boardWidth)]
 	self.model.Add(partialSums[0] == self.cellValues[row][col])
 	self.allVars = self.allVars + partialSums
 	
@@ -729,7 +737,7 @@ def setMaxAscendingRun(self,row1,col1,rc,value,lengthTest='cells',valueTest='cel
 		self.model.Add(partialSums[i] == self.cellValues[row+i*vStep][col+i*hStep]).OnlyEnforceIf(incBools[i].Not())
 		
 	maxCount = self.model.NewIntVar(0,self.boardWidth,'MaxAscendingMaxCountValue{:d}Col{:d}RC{:d}'.format(row,col,rc))
-	maxSum = self.model.NewIntVar(min(0,self.boardWidth*self.minDigit),self.boardWidth*self.maxDigit,'MaxAscendingMaxSumValue{:d}Col{:d}RC{:d}'.format(row,col,rc))
+	maxSum = self.model.NewIntVar(min(0,self.boardWidth*myMin),self.boardWidth*myMax,'MaxAscendingMaxSumValue{:d}Col{:d}RC{:d}'.format(row,col,rc))
 
 	self.model.AddMaxEquality(maxCount,partialCounts)
 	self.model.AddMaxEquality(maxSum,partialSums)
@@ -740,8 +748,8 @@ def setMaxAscendingRun(self,row1,col1,rc,value,lengthTest='cells',valueTest='cel
 				self.model.Add(maxCount == value)
 			else:
 				checkBools = [self.model.NewBoolVar('checkBool') for i in range(self.boardWidth)]
-				candSums = [self.model.NewIntVar(min(0,self.boardWidth*self.minDigit),self.boardWidth*self.maxDigit,'MaxAscendingCandidates{:d}Col{:d}RC{:d}'.format(row,col,rc)) for i in range(self.boardWidth)]
-				filteredMaxSum = self.model.NewIntVar(min(0,self.boardWidth*self.minDigit),self.boardWidth*self.maxDigit,'MaxAscendingFilteredMaxSumValue{:d}Col{:d}RC{:d}'.format(row,col,rc))
+				candSums = [self.model.NewIntVar(min(0,self.boardWidth*myMin),self.boardWidth*myMax,'MaxAscendingCandidates{:d}Col{:d}RC{:d}'.format(row,col,rc)) for i in range(self.boardWidth)]
+				filteredMaxSum = self.model.NewIntVar(min(0,self.boardWidth*myMin),self.boardWidth*myMax,'MaxAscendingFilteredMaxSumValue{:d}Col{:d}RC{:d}'.format(row,col,rc))
 				for i in range(self.boardWidth):
 					self.model.Add(partialCounts[i] == maxCount).OnlyEnforceIf(checkBools[i])
 					self.model.Add(partialCounts[i] < maxCount).OnlyEnforceIf(checkBools[i].Not())
@@ -834,8 +842,12 @@ def setSkyscraperSum(self,row1,col1,rc,value,depth=None):
 			self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] < self.cellValues[row+j*vStep][col+j*hStep]).OnlyEnforceIf(c.Not())
 		incVars.insert(i,t)
 	
+	# Need for cell transform clues. self.minDigit is the smallest base digit, not necessarily as transformed.
+	myMin = min(self.digits)
+	myMax = max(self.digits)
+	
 	seenBools = [self.model.NewBoolVar('SkyscraperSeenBool{:d}{:d}'.format(row+i*vStep,col+i*hStep)) for i in range(depth)]
-	seenInts = [self.model.NewIntVar(min(self.minDigit,0),self.maxDigit,'SkyscraperSeenInt{:d}{:d}'.format(row+i*vStep,col+i*hStep)) for i in range(depth)]
+	seenInts = [self.model.NewIntVar(min(myMin,0),myMax,'SkyscraperSeenInt{:d}{:d}'.format(row+i*vStep,col+i*hStep)) for i in range(depth)]
 	for i in range(depth):
 		self.model.Add(seenInts[i] == self.cellValues[row+i*vStep][col+i*hStep]).OnlyEnforceIf(seenBools[i])
 		self.model.Add(seenInts[i] == 0).OnlyEnforceIf(seenBools[i].Not())
@@ -1138,9 +1150,13 @@ def setHangingSum(self,row1,col1,rc,value,selectSummands=None,selectTerminator=N
 	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
 	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
 	
+	# Need for cell transform clues. self.minDigit is the smallest base digit, not necessarily as transformed.
+	myMin = min(self.digits)
+	myMax = max(self.digits)
+	
 	# Since we don't know how this is going to terminate, or what is going to be picked, I think the best way to
 	# go is to just create partial sums for each cell, basically "if the sum stopped at cell 5, what would the total be?"
-	partialSum = [self.model.NewIntVar(min(0,self.boardWidth*self.minDigit),self.boardWidth*self.maxDigit,'HangingSumPartialSum{:d}'.format(i)) for i in range(self.boardWidth)]
+	partialSum = [self.model.NewIntVar(min(0,self.boardWidth*myMin),self.boardWidth*myMax,'HangingSumPartialSum{:d}'.format(i)) for i in range(self.boardWidth)]
 	self.allVars = self.allVars + partialSum
 	
 	# Now I'm going to create selection Booleans to evaluate each cell against the selectSummand criteria. 
@@ -1192,7 +1208,11 @@ def setHangingAverage(self,row1,col1,rc,value,selectCounts=None,selectTerminator
 	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
 	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
 	
-	partialSum = [self.model.NewIntVar(min(0,self.boardWidth*self.minDigit),self.boardWidth*self.maxDigit,'HangingAverageSumPartialSum{:d}'.format(i)) for i in range(self.boardWidth)]
+	# Need for cell transform clues. self.minDigit is the smallest base digit, not necessarily as transformed.
+	myMin = min(self.digits)
+	myMax = max(self.digits)
+	
+	partialSum = [self.model.NewIntVar(min(0,self.boardWidth*myMin),self.boardWidth*myMax,'HangingAverageSumPartialSum{:d}'.format(i)) for i in range(self.boardWidth)]
 	partialCount = [self.model.NewIntVar(0,self.boardWidth,'HangingAverageCountPartials{:d}'.format(i)) for i in range(self.boardWidth)]
 	self.allVars = self.allVars + partialSum + partialCount
 	
@@ -1255,7 +1275,7 @@ def setHangingAverage(self,row1,col1,rc,value,selectCounts=None,selectTerminator
 def setXOutside(self,row,col,rc,values):
 	self.setHangingCount(row,col,rc,len(values),[('DigitSet',values)],[('Indexed',1)])
 	
-def setInOrder(self,row1,col1,rc,values):
+def setInOrder(self,row1,col1,rc,values,adjacent=False):
 	row = row1 - 1
 	col = col1 - 1
 	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
@@ -1267,4 +1287,7 @@ def setInOrder(self,row1,col1,rc,values):
 	digitPositions = [self.model.NewIntVar(0,self.digitRange,'InOrderPositions') for i in range(self.boardWidth)]
 	self.model.AddInverse(cells0,digitPositions)
 	for j in range(1,len(values)):
-		self.model.Add(digitPositions[values[j-1] - self.minDigit] < digitPositions[values[j] - self.minDigit])
+		if adjacent is True:
+			self.model.Add(digitPositions[values[j-1] - self.minDigit] == digitPositions[values[j] - self.minDigit] - 1)
+		else:
+			self.model.Add(digitPositions[values[j-1] - self.minDigit] < digitPositions[values[j] - self.minDigit])

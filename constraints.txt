@@ -1039,10 +1039,11 @@ setHiddenClones(list,number): assert that the region of cells defined via list h
 
 In Order
 --------
-setInOrder(row,col,rc,values): when viewed from the clue location, the digits in values are seen in order
+setInOrder(row,col,rc,values,adjacent): when viewed from the clue location, the digits in values are seen in order
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   values: list of digits in the order that they are to be seen
+  adjacent (optional): Defaults to False. If True, values must be in a contiguous group of cells.
 
 Indexing (159)
 --------------

@@ -253,9 +253,13 @@ def setNearestNeighbor(self,row1,col1,pointers):
 		pointers = [pointers]
 	allNeighbors = {(row+i,col+j) for i in [-1,0,1] for j in [-1,0,1] if abs(i) != abs(j)} & {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)}
 	vDict = {}
+	# Need for cell transform clues. self.minDigit is the smallest base digit, not necessarily as transformed.
+	myMin = min(self.digits)
+	myMax = max(self.digits)
+	
 	for x in allNeighbors:
 		bV = self.model.NewBoolVar('')
-		vDict[x] = self.model.NewIntVar(0,self.maxDigit-self.minDigit,'')
+		vDict[x] = self.model.NewIntVar(0,myMax-myMin,'')
 		self.model.Add(self.cellValues[row][col] > self.cellValues[x[0]][x[1]]).OnlyEnforceIf(bV)
 		self.model.Add(vDict[x] == self.cellValues[row][col] - self.cellValues[x[0]][x[1]]).OnlyEnforceIf(bV)
 		self.model.Add(self.cellValues[row][col] < self.cellValues[x[0]][x[1]]).OnlyEnforceIf(bV.Not())
