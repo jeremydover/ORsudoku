@@ -795,3 +795,39 @@ def setConditionalCountLine(self,inlist,value,selectSummands=None,selectTerminat
 	terminatorCells = self._terminateCellsOnLine(L,selectTerminator)
 	
 	self._evaluateHangingClues(partialCount,terminatorCells,value,terminateOnFirst,includeTerminator)
+	
+def setConditionalInstanceLine(self,inlist,values,selectSummands=None,selectTerminator=None,terminateOnFirst=True,includeTerminator=True,negativeConstraint=False):
+	L = self._procCellList(inlist)
+	myDigits = list(self.digits)
+	
+	selectionCells = self._selectCellsOnLine(L,selectSummands)
+	
+	digitMatch = [[self.model.NewBoolVar('MatchForDigit{:d}Cell{:d}'.format(myDigits[d],j)) for j in range(len(L))] for d in range(len(myDigits))]
+	matchToHere = [[self.model.NewBoolVar('MatchToHere{:d}Cell{:d}'.format(myDigits[d],j)) for j in range(len(L))] for d in range(len(myDigits))]
+	matchToHereInt = [[self.model.NewIntVar(0,1,'MatchToHere{:d}Cell{:d}'.format(myDigits[d],j)) for j in range(len(L))] for d in range(len(myDigits))]
+	partialMatch = [self.model.NewIntVar(0,len(L),'PartialMatchCounts') for j in range(len(L))]
+	
+	for j in range(len(L)):
+		for d in range(len(myDigits)):
+			self.model.Add(self.cellValues[L[j][0]][L[j][1]] == myDigits[d]).OnlyEnforceIf([digitMatch[d][j],selectionCells[j]])
+			self.model.Add(self.cellValues[L[j][0]][L[j][1]] != myDigits[d]).OnlyEnforceIf([digitMatch[d][j].Not(),selectionCells[j]])
+			self.model.AddBoolAnd(digitMatch[d][j].Not()).OnlyEnforceIf(selectionCells[j].Not())
+			self.model.AddBoolOr([digitMatch[d][k] for k in range(j+1)]).OnlyEnforceIf(matchToHere[d][j])
+			self.model.AddBoolAnd([digitMatch[d][k].Not() for k in range(j+1)]).OnlyEnforceIf(matchToHere[d][j].Not())
+			self.model.Add(matchToHereInt[d][j] == 1).OnlyEnforceIf(matchToHere[d][j])
+			self.model.Add(matchToHereInt[d][j] == 0).OnlyEnforceIf(matchToHere[d][j].Not())
+		self.model.Add(partialMatch[j] == sum([matchToHereInt[d][j] for d in range(len(myDigits)) if myDigits[d] in values]))
+	
+	# Now create terminator conditions
+	terminatorCells = self._terminateCellsOnLine(L,selectTerminator)
+	
+	self._evaluateHangingClues(partialMatch,terminatorCells,len(values),terminateOnFirst,includeTerminator)
+	
+	if negativeConstraint == True:
+		for j in range(len(L)):
+			if includeTerminator is True:
+				self.model.Add(sum([matchToHereInt[d][j] for d in range(len(myDigits)) if myDigits[d] not in values]) == 0).OnlyEnforceIf(terminatorCells[j])
+			else:
+				self.model.Add(sum([matchToHereInt[d][j-1] for d in range(len(myDigits)) if myDigits[d] not in values]) == 0).OnlyEnforceIf(terminatorCells[j])
+			
+	

@@ -323,8 +323,36 @@ def _selectCellsOnLine(self,L,selectCriteria,initiatorCells=[]):
 						self.model.Add(self.cellValues[L[i][0]][L[i][1]] != self.cellValues[L[j][0]][L[j][1]]).OnlyEnforceIf(myMatchVars[j].Not())
 				for i in range(len(L)):
 					self.model.AddBoolAnd([x.Not() for x in matchVars[i]] + [matchVars[j][i].Not() for j in range(i+1,len(L))]).OnlyEnforceIf(criterionBools[i])
-					self.model.AddBoolOr(matchVars[i] + [matchVars[j][i] for j in range(i+1,len(L))]).OnlyEnforceIf(criterionBools[i].Not())						
-																
+					self.model.AddBoolOr(matchVars[i] + [matchVars[j][i] for j in range(i+1,len(L))]).OnlyEnforceIf(criterionBools[i].Not())
+			case 'ConsecutiveNeighbor'|'ConsecutiveBefore'|'ConsecutiveAfter':
+				consecPair = [self.model.NewBoolVar('ConsecPair') for j in range(len(L)-1)]
+				maxPair = [self.model.NewIntVar(self.minDigit,self.maxDigit,'ConsecPairMax') for j in range(len(L)-1)]
+				minPair = [self.model.NewIntVar(self.minDigit,self.maxDigit,'ConsecPairMax') for j in range(len(L)-1)]
+				for i in range(len(L)-1):
+					self.model.AddMinEquality(minPair[i],[self.cellValues[L[i][0]][L[i][1]],self.cellValues[L[i+1][0]][L[i+1][1]]])
+					self.model.AddMaxEquality(maxPair[i],[self.cellValues[L[i][0]][L[i][1]],self.cellValues[L[i+1][0]][L[i+1][1]]])
+					self.model.Add(maxPair[i] - minPair[i] == 1).OnlyEnforceIf(consecPair[i])
+					self.model.Add(maxPair[i] - minPair[i] != 1).OnlyEnforceIf(consecPair[i].Not())
+				
+				if criterion[0] == 'ConsecutiveNeighbor':
+					self.model.AddBoolAnd(consecPair[0]).OnlyEnforceIf(criterionBools[0])
+					self.model.AddBoolAnd(consecPair[0].Not()).OnlyEnforceIf(criterionBools[0].Not())
+					self.model.AddBoolAnd(consecPair[-1]).OnlyEnforceIf(criterionBools[-1])
+					self.model.AddBoolAnd(consecPair[-1].Not()).OnlyEnforceIf(criterionBools[-1].Not())
+					for i in range(1,len(L)-1):
+						self.model.AddBoolOr([consecPair[i-1],consecPair[i]]).OnlyEnforceIf(criterionBools[i])
+						self.model.AddBoolAnd([consecPair[i-1].Not(),consecPair[i].Not()]).OnlyEnforceIf(criterionBools[i].Not())
+				elif criterion[0] == 'ConsecutiveBefore':
+					self.model.AddBoolAnd(criterionBools[0].Not())
+					for i in range(1,len(L)):
+						self.model.AddBoolAnd(consecPair[i-1]).OnlyEnforceIf(criterionBools[i])
+						self.model.AddBoolAnd(consecPair[i-1].Not()).OnlyEnforceIf(criterionBools[i].Not())
+				elif criterion[0] == 'ConsecutiveAfter':
+					self.model.AddBoolAnd(criterionBools[-1].Not())
+					for i in range(len(L)-1):
+						self.model.AddBoolAnd(consecPair[i]).OnlyEnforceIf(criterionBools[i])
+						self.model.AddBoolAnd(consecPair[i].Not()).OnlyEnforceIf(criterionBools[i].Not())
+			
 		criteriaBools.insert(criterionNumber,criterionBools)
 		criterionNumber = criterionNumber + 1
 	

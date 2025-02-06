@@ -1,3 +1,8 @@
+2/6/2025 bis
+	Added support for conditional instance lines and hanging instance clues (like conditional sum, but testing presence of digits matching the criteria instead of the sum of the criteria)
+	Added selection criteria related to digits having consecutive neighbors.
+	Note: these have undergone some initial testing, but need more. Am pushing solely to get code code back home.
+
 2/6/2025
 	Added test cases. Fixed minor bug in Repeating Arrows introduced with re-factor.
 	Implemented NoRepeats selection criterion for hanging sums.

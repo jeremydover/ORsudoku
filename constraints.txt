@@ -27,6 +27,7 @@ Clock Lines
 Clone Regions
 Close Neighbors - see Global Whispers
 Conditional Count Lines - see Conditional Lines
+Conditional Instance Lines - see Conditional Lines
 Conditional Sandwich Sums - see Sandwich Sums
 Conditional Sum Lines - see Conditional Lines
 Consecutive Chain Regions
@@ -87,7 +88,7 @@ Global Modular (see Global Entropy)
 Global Neighbor Sums
 Global Whispers (Dutch, et. al.)
 Gurth's Symmetric Placement (GSP)
-Hanging Sums/Counts/Averages
+Hanging Sums/Counts/Averages/Instances
 Hidden Clones
 In Order
 Indexing
@@ -479,11 +480,15 @@ setShakenCloneRegion(list,noRepeat): creates a set of regions that contain the s
   
 Conditional Lines
 ---------------------
-setConditionalCountLine(list,selectCriteria,terminationCriteria,terminateOnFirst,includeTerminator): analogous to a Hanging Count, but along a line instead of just in a column
+setConditionalCountLine(list,value,selectCriteria,terminationCriteria,terminateOnFirst,includeTerminator): analogous to a Hanging Count, but along a line instead of just in a column
   list: list of cell specifications
   See Hanging Sums for a description of all other parameters
 
-setConditionalSumLine(list,selectCriteria,terminationCriteria,terminateOnFirst,includeTerminator): analogous to a Hanging Sum, but along a line instead of just in a column
+setConditionalSumLine(list,value,selectCriteria,terminationCriteria,terminateOnFirst,includeTerminator): analogous to a Hanging Sum, but along a line instead of just in a column
+  list: list of cell specifications
+  See Hanging Sums for a description of all other parameters
+  
+setConditionalInstanceLine(list,values,selectCriteria,terminationCriteria,terminateOnFirst,includeTerminator,negativeConstraint): analogous to a Hanging Instance, but along a line instead of just in a column
   list: list of cell specifications
   See Hanging Sums for a description of all other parameters
 
@@ -962,6 +967,9 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=
 	Property: 'NoRepeats'
 	For this property, we select cells only if their digit does not repeat in the list.
 	
+	Property: 'ConsecutiveBefore','ConsecutiveAfter','ConsecutiveNeighbor'
+	For these properties, we pick digits that are consecutive with the digit before, after, or either (respectively) in the line
+	
   selectTerminator: a *list* of conditions (tuples) which describe when the sum should stop. As with summand selection,
   each tuple starts with a sting containing a property name, and is followed by values specific to that property. Note that multiple
   selection criteria may be given, but for termination they are combined with a logical OR. There are two styles of termination, defined
@@ -1033,6 +1041,17 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=
   p.setHangingSum(1,2,p.Col,14,[],[('Fixed',1),('ParityChangeReached',1)],terminateOnFirst=False)
   
   The sum can again terminate in the first cell, or it continues to the first parity change.
+  
+Related functions:
+setHangingCount(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=True,includeTerminator=True) - counts the number of digits matched, instead of their sum
+
+setHangingAverage(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=True,includeTerminator=True) - counts the average of the matched digits
+
+setHangingInstance(row,col,rc,values,selectSummands,selectTerminator,terminateOnFirst=True,includeTerminator=True,negativeConstraint=False) - determines if the selected digits match the digits given in values
+  All arguments are the same as hanging sum, except
+  values: a list of values to be found meeting the conditions
+  negativeConstraint: assert that the digits in values are the only digits which meet the selection criteria
+
 	
 Hidden Clones
 -------------

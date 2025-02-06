@@ -1272,6 +1272,13 @@ def setHangingAverage(self,row1,col1,rc,value,selectCounts=None,selectTerminator
 					if k != i:
 						self.model.AddBoolAnd(c).OnlyEnforceIf(varBitmap[k])
 						
+def setHangingInstance(self,row,col,rc,values,selectSummands=None,selectTerminator=None,terminateOnFirst=True,includeTerminator=True,negativeConstraint=False):
+	hStep = 0 if rc == self.Col else (1 if col == 1 else -1)
+	vStep = 0 if rc == self.Row else (1 if row == 1 else -1)
+	
+	L = [(row+k*vStep,col+k*hStep) for k in range(self.boardWidth)]
+	self.setConditionalInstanceLine(L,values,selectSummands,selectTerminator,terminateOnFirst,includeTerminator,negativeConstraint)
+
 def setXOutside(self,row,col,rc,values):
 	self.setHangingCount(row,col,rc,len(values),[('DigitSet',values)],[('Indexed',1)])
 	
