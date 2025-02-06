@@ -959,6 +959,9 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=
 	Values[0]: A comparator: use the class variables GE, EQ or LE, or NE.
 	Values[1]: Value for comparison
 	
+	Property: 'NoRepeats'
+	For this property, we select cells only if their digit does not repeat in the list.
+	
   selectTerminator: a *list* of conditions (tuples) which describe when the sum should stop. As with summand selection,
   each tuple starts with a sting containing a property name, and is followed by values specific to that property. Note that multiple
   selection criteria may be given, but for termination they are combined with a logical OR. There are two styles of termination, defined

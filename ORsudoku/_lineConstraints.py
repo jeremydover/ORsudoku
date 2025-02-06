@@ -1,4 +1,5 @@
 from ORsudoku.combinationIterator import CombinationIterator
+import math
 
 def setArrow(self,inlist):
 	inlist = self._procCellList(inlist)

@@ -1,3 +1,7 @@
+2/6/2025
+	Added test cases. Fixed minor bug in Repeating Arrows introduced with re-factor.
+	Implemented NoRepeats selection criterion for hanging sums.
+
 2/5/2025
 	Reviewed use of self.minDigit and self.maxDigit in code, as relates to doublers and other transforms. Made several changes to ensure variable bounds are sized appropriately for expanded cell values.
 	Added support for InOrder clues to force adjacency as an option.

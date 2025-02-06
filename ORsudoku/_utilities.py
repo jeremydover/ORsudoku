@@ -313,7 +313,17 @@ def _selectCellsOnLine(self,L,selectCriteria,initiatorCells=[]):
 						case self.NE:
 							self.model.Add(instanceCount[i] != criterion[2]).OnlyEnforceIf(criterionBools[i])
 							self.model.Add(instanceCount[i] == criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
-					
+			case 'NoRepeats':
+				matchVars = []
+				for i in range(len(L)):
+					myMatchVars = [self.model.NewBoolVar('SelectionNoRepeatsMatch{:d}{:d}'.format(i,j)) for j in range(i)]
+					matchVars.insert(i,myMatchVars)
+					for j in range(i):
+						self.model.Add(self.cellValues[L[i][0]][L[i][1]] == self.cellValues[L[j][0]][L[j][1]]).OnlyEnforceIf(myMatchVars[j])
+						self.model.Add(self.cellValues[L[i][0]][L[i][1]] != self.cellValues[L[j][0]][L[j][1]]).OnlyEnforceIf(myMatchVars[j].Not())
+				for i in range(len(L)):
+					self.model.AddBoolAnd([x.Not() for x in matchVars[i]] + [matchVars[j][i].Not() for j in range(i+1,len(L))]).OnlyEnforceIf(criterionBools[i])
+					self.model.AddBoolOr(matchVars[i] + [matchVars[j][i] for j in range(i+1,len(L))]).OnlyEnforceIf(criterionBools[i].Not())						
 																
 		criteriaBools.insert(criterionNumber,criterionBools)
 		criterionNumber = criterionNumber + 1
