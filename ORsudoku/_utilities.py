@@ -65,6 +65,8 @@ def getOrthogonalNeighbors(self,i,j):
 	return list({(i+k,j+m) for k in [-1,0,1] for m in [-1,0,1] if abs(k) != abs(m)} & {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)})
 	
 def _selectCellsMatchDigitSet(self,myVars,L,values):
+	if type(values) is int:
+		values = [values]
 	for i in range(len(myVars)):
 		for j in self.digits:
 			if j in values:
@@ -327,7 +329,7 @@ def _selectCellsOnLine(self,L,selectCriteria,initiatorCells=[]):
 			case 'ConsecutiveNeighbor'|'ConsecutiveBefore'|'ConsecutiveAfter':
 				consecPair = [self.model.NewBoolVar('ConsecPair') for j in range(len(L)-1)]
 				maxPair = [self.model.NewIntVar(self.minDigit,self.maxDigit,'ConsecPairMax') for j in range(len(L)-1)]
-				minPair = [self.model.NewIntVar(self.minDigit,self.maxDigit,'ConsecPairMax') for j in range(len(L)-1)]
+				minPair = [self.model.NewIntVar(self.minDigit,self.maxDigit,'ConsecPairMin') for j in range(len(L)-1)]
 				for i in range(len(L)-1):
 					self.model.AddMinEquality(minPair[i],[self.cellValues[L[i][0]][L[i][1]],self.cellValues[L[i+1][0]][L[i+1][1]]])
 					self.model.AddMaxEquality(maxPair[i],[self.cellValues[L[i][0]][L[i][1]],self.cellValues[L[i+1][0]][L[i+1][1]]])

@@ -583,3 +583,29 @@ def setFlatMates(self,base=5,above=[1],below=[9]):
 	
 def setDutchFlatMates(self):
 	self.setFlatMates()
+	
+def setPool(self,value,digit=9):
+	# Man the old implementation was stupid.
+	myMin = min(self.digits)
+	myMax = max(self.digits)
+	beforeSums = [self.model.NewIntVar(min(0,self.boardWidth*myMin),self.boardWidth*myMax,'PoolBeforeSum{:d}'.format(i)) for i in range(self.boardWidth)]
+	afterSums = [self.model.NewIntVar(min(0,self.boardWidth*myMin),self.boardWidth*myMax,'PoolAfterSum{:d}'.format(i)) for i in range(self.boardWidth)]
+	for i in range(self.boardWidth):
+		digitBools = [self.model.NewBoolVar('PoolDigitLocationRow{:d}'.format(i)) for j in range(self.boardWidth)]
+		for j in range(self.boardWidth):
+			self.model.Add(self.cellValues[i][j] == digit).OnlyEnforceIf(digitBools[j])
+			self.model.Add(self.cellValues[i][j] != digit).OnlyEnforceIf(digitBools[j].Not())
+			if j == 0:
+				self.model.Add(beforeSums[i] == 0).OnlyEnforceIf(digitBools[j])
+				self.model.Add(afterSums[i] == sum(self.cellValues[i][k] for k in range(self.boardWidth))).OnlyEnforceIf(digitBools[j])
+			elif j == self.boardWidth-1:
+				self.model.Add(beforeSums[i] == sum(self.cellValues[i][k] for k in range(self.boardWidth))).OnlyEnforceIf(digitBools[j])
+				self.model.Add(afterSums[i] == 0).OnlyEnforceIf(digitBools[j])
+			else:
+				self.model.Add(beforeSums[i] == sum(self.cellValues[i][k] for k in range(j))).OnlyEnforceIf(digitBools[j])
+				self.model.Add(afterSums[i] == sum(self.cellValues[i][k] for k in range(j+1,self.boardWidth))).OnlyEnforceIf(digitBools[j])
+	
+	self.model.Add(beforeSums[0] <= value)
+	self.model.Add(afterSums[self.boardWidth-1] <= value)
+	for i in range(self.boardWidth-1):
+		self.model.Add(afterSums[i] + beforeSums[i+1] <= value)

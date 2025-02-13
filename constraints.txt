@@ -151,6 +151,7 @@ Parity Party
 Parity Quads (2x2 regions which contain both parities)
 Parity Snakes
 Pencilmarks
+Pool
 Psycho Killer Cages - see Killer Cages
 Psycho Look-And-Say Cages - see Zones
 Pointing Arrows - see Arrows
@@ -1607,6 +1608,12 @@ Pointing Differents
 setPointingDifferents(row1,col1,row2,col2,value): asserts that there are only value different digits on the diagonal containing (row1,col1) and (row2,col2)
   row1,col1: the cell spec of the first cell in the little killer diagonal, next to the clue
   row2,col2: the cell spec for the second cell in the diagonal
+
+Pool
+----
+setPool(value,digit): a dumb constraint that says when reading the digits in the grid from left to right, top to bottom, as a single string, the numbers between instances of digit sum to at most value
+  value: the maximum sum of a string of numbers between digit
+  digit: optional, defaults to 9...the digit to delimit strings whose sum is calculated
 
 Position Sums
 -------------

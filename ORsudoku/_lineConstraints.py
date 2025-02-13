@@ -829,5 +829,3 @@ def setConditionalInstanceLine(self,inlist,values,selectSummands=None,selectTerm
 				self.model.Add(sum([matchToHereInt[d][j] for d in range(len(myDigits)) if myDigits[d] not in values]) == 0).OnlyEnforceIf(terminatorCells[j])
 			else:
 				self.model.Add(sum([matchToHereInt[d][j-1] for d in range(len(myDigits)) if myDigits[d] not in values]) == 0).OnlyEnforceIf(terminatorCells[j])
-			
-	
