@@ -806,7 +806,7 @@ def setConditionalInstanceLine(self,inlist,values,selectSummands=None,selectTerm
 	matchToHere = [[self.model.NewBoolVar('MatchToHere{:d}Cell{:d}'.format(myDigits[d],j)) for j in range(len(L))] for d in range(len(myDigits))]
 	matchToHereInt = [[self.model.NewIntVar(0,1,'MatchToHere{:d}Cell{:d}'.format(myDigits[d],j)) for j in range(len(L))] for d in range(len(myDigits))]
 	partialMatch = [self.model.NewIntVar(0,len(L),'PartialMatchCounts') for j in range(len(L))]
-	
+
 	for j in range(len(L)):
 		for d in range(len(myDigits)):
 			self.model.Add(self.cellValues[L[j][0]][L[j][1]] == myDigits[d]).OnlyEnforceIf([digitMatch[d][j],selectionCells[j]])

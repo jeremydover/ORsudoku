@@ -1,4 +1,5 @@
 import math
+import re
 
 def _varBitmap(self,string,num):
 	# Utility function to create a list of Boolean variable propositions that encode num possibilities exactly.
@@ -326,7 +327,7 @@ def _selectCellsOnLine(self,L,selectCriteria,initiatorCells=[]):
 				for i in range(len(L)):
 					self.model.AddBoolAnd([x.Not() for x in matchVars[i]] + [matchVars[j][i].Not() for j in range(i+1,len(L))]).OnlyEnforceIf(criterionBools[i])
 					self.model.AddBoolOr(matchVars[i] + [matchVars[j][i] for j in range(i+1,len(L))]).OnlyEnforceIf(criterionBools[i].Not())
-			case 'ConsecutiveNeighbor'|'ConsecutiveBefore'|'ConsecutiveAfter':
+			case 'ConsecutiveNeighbor'|'ConsecutiveBefore'|'ConsecutiveAfter'|'ConsecutiveNone':
 				consecPair = [self.model.NewBoolVar('ConsecPair') for j in range(len(L)-1)]
 				maxPair = [self.model.NewIntVar(self.minDigit,self.maxDigit,'ConsecPairMax') for j in range(len(L)-1)]
 				minPair = [self.model.NewIntVar(self.minDigit,self.maxDigit,'ConsecPairMin') for j in range(len(L)-1)]
@@ -354,7 +355,71 @@ def _selectCellsOnLine(self,L,selectCriteria,initiatorCells=[]):
 					for i in range(len(L)-1):
 						self.model.AddBoolAnd(consecPair[i]).OnlyEnforceIf(criterionBools[i])
 						self.model.AddBoolAnd(consecPair[i].Not()).OnlyEnforceIf(criterionBools[i].Not())
-			
+				elif criterion[0] == 'ConsecutiveNone':
+					self.model.AddBoolAnd(consecPair[0].Not()).OnlyEnforceIf(criterionBools[0])
+					self.model.AddBoolAnd(consecPair[0]).OnlyEnforceIf(criterionBools[0].Not())
+					self.model.AddBoolAnd(consecPair[-1].Not()).OnlyEnforceIf(criterionBools[-1])
+					self.model.AddBoolAnd(consecPair[-1]).OnlyEnforceIf(criterionBools[-1].Not())
+					for i in range(1,len(L)-1):
+						self.model.AddBoolAnd([consecPair[i-1].Not(),consecPair[i].Not()]).OnlyEnforceIf(criterionBools[i])
+						self.model.AddBoolOr([consecPair[i-1],consecPair[i]]).OnlyEnforceIf(criterionBools[i].Not())
+			case 'ParityNeighbor'|'ParityBefore'|'ParityAfter'|'ParityNone'|'ParityAll'|'ParityBoth'|'ParityNeither'|'EntropyNeighbor'|'EntropyBefore'|'EntropyAfter'|'EntropyNone'|'EntropyAll'|'EntropyBoth'|'EntropyNeither'|'ModularNeighbor'|'ModularBefore'|'ModularAfter'|'ModularNone'|'ModularAll'|'ModularBoth'|'ModularNeither'|'PrimalityNeighbor'|'PrimalityBefore'|'PrimalityAfter'|'PrimalityNone'|'PrimalityAll'|'PrimalityBoth'|'PrimalityNeither':
+				x = re.search("(Parity|Entropy|Modular|Primality)(.*)",criterion[0])
+				mode = x.group(1)
+				where = x.group(2)
+				if mode not in self._propertyInitialized:
+					getattr(self,'_set'+mode)()
+				myCells = getattr(self,'cell'+mode)
+				matchForward = [self.model.NewBoolVar('HasNeighborForward') for j in range(len(L))]
+				matchBackward = [self.model.NewBoolVar('HasNeighborBackward') for j in range(len(L))]
+				for i in range(len(L)):
+					if len(criterion) > 1:
+						testValue = criterion[1]
+					else:
+						testValue = myCells[L[i][0]][L[i][1]]
+					if i == 0:
+						self.model.AddBoolAnd(matchBackward[i].Not())
+					else:
+						self.model.Add(myCells[L[i-1][0]][L[i-1][1]] == testValue).OnlyEnforceIf(matchBackward[i])
+						self.model.Add(myCells[L[i-1][0]][L[i-1][1]] != testValue).OnlyEnforceIf(matchBackward[i].Not())
+					if i == len(L)-1:
+						self.model.AddBoolAnd(matchForward[i].Not())
+					else:
+						self.model.Add(myCells[L[i+1][0]][L[i+1][1]] == testValue).OnlyEnforceIf(matchForward[i])
+						self.model.Add(myCells[L[i+1][0]][L[i+1][1]] != testValue).OnlyEnforceIf(matchForward[i].Not())
+						
+				if where == 'Neighbor':
+					for i in range(len(L)):
+						self.model.AddBoolOr([matchForward[i],matchBackward[i]]).OnlyEnforceIf(criterionBools[i])
+						self.model.AddBoolAnd([matchForward[i].Not(),matchBackward[i].Not()]).OnlyEnforceIf(criterionBools[i].Not())
+				elif where == 'Before':
+					for i in range(len(L)):
+						self.model.AddBoolAnd(matchBackward[i]).OnlyEnforceIf(criterionBools[i])
+						self.model.AddBoolAnd(matchBackward[i].Not()).OnlyEnforceIf(criterionBools[i].Not())
+				elif where == 'After':
+					self.model.AddBoolAnd(criterionBools[-1].Not())
+					for i in range(len(L)):
+						self.model.AddBoolAnd(matchForward[i]).OnlyEnforceIf(criterionBools[i])
+						self.model.AddBoolAnd(matchForward[i].Not()).OnlyEnforceIf(criterionBools[i].Not())
+				elif where == 'None':
+					for i in range(len(L)):
+						self.model.AddBoolAnd([matchBackward[i].Not(),matchForward[i].Not()]).OnlyEnforceIf(criterionBools[i])
+						self.model.AddBoolOr([matchBackward[i],matchForward[i]]).OnlyEnforceIf(criterionBools[i].Not())
+				elif where == 'All':
+					for i in range(len(L)):
+						self.model.AddBoolAnd([matchBackward[i],matchForward[i]]).OnlyEnforceIf(criterionBools[i])
+						self.model.AddBoolOr([matchBackward[i].Not(),matchForward[i].Not()]).OnlyEnforceIf(criterionBools[i].Not())
+				elif where == 'Both':
+					self.model.AddBoolAnd([criterionBools[0].Not(),criterionBools[-1].Not()])
+					for i in range(1,len(L)-1):
+						self.model.AddBoolAnd([matchBackward[i],matchForward[i]]).OnlyEnforceIf(criterionBools[i])
+						self.model.AddBoolOr([matchBackward[i].Not(),matchForward[i].Not()]).OnlyEnforceIf(criterionBools[i].Not())
+				elif where == 'Neither':
+					self.model.AddBoolAnd([criterionBools[0].Not(),criterionBools[-1].Not()])
+					for i in range(1,len(L)-1):
+						self.model.AddBoolAnd([matchBackward[i].Not(),matchForward[i].Not()]).OnlyEnforceIf(criterionBools[i])
+						self.model.AddBoolOr([matchBackward[i],matchForward[i]]).OnlyEnforceIf(criterionBools[i].Not())
+				
 		criteriaBools.insert(criterionNumber,criterionBools)
 		criterionNumber = criterionNumber + 1
 	
@@ -539,7 +604,50 @@ def _terminateCellsOnLine(self,L,selectTerminator):
 					self.model.Add(repeatCount[j] == myTarget).OnlyEnforceIf(termBools[j])
 					self.model.AddBoolAnd(isRepeat[j]).OnlyEnforceIf(termBools[j])
 					self.model.Add(repeatCount[j] != myTarget).OnlyEnforceIf([termBools[j].Not(),isRepeat[j]])
+			case 'RelatedDigit':
+				base = terminator[1]-1
+				comparator = terminator[2]
+				scale = terminator[3]
+				shift = terminator[4]
+				instance = terminator[5]
+				
+				instanceCount = [self.model.NewIntVar(0,len(L),'RelatedDigitInstanceCount') for j in range(len(L))]
+				isInstance = [self.model.NewBoolVar('RelatedDigitInstanceTest') for j in range(len(L))]
+				
+				for i in range(len(L)):
+					match comparator:
+						case self.LE:
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] <= scale*self.cellValues[L[base][0]][L[base][1]] + shift).OnlyEnforceIf(isInstance[i])
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] > scale*self.cellValues[L[base][0]][L[base][1]] + shift).OnlyEnforceIf(isInstance[i].Not())
+						case self.EQ:
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] == scale*self.cellValues[L[base][0]][L[base][1]] + shift).OnlyEnforceIf(isInstance[i])
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] != scale*self.cellValues[L[base][0]][L[base][1]] + shift).OnlyEnforceIf(isInstance[i].Not())
+						case self.GE:
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] >= scale*self.cellValues[L[base][0]][L[base][1]] + shift).OnlyEnforceIf(isInstance[i])
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] < scale*self.cellValues[L[base][0]][L[base][1]] + shift).OnlyEnforceIf(isInstance[i].Not())
+						case self.NE:
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] != scale*self.cellValues[L[base][0]][L[base][1]] + shift).OnlyEnforceIf(isInstance[i])
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] == scale*self.cellValues[L[base][0]][L[base][1]] + shift).OnlyEnforceIf(isInstance[i].Not())
+							
+				self.model.Add(instanceCount[0] == 1).OnlyEnforceIf(isInstance[0])
+				self.model.Add(instanceCount[0] == 0).OnlyEnforceIf(isInstance[0].Not())
+				for i in range(1,len(L)):
+					self.model.Add(instanceCount[i] == instanceCount[i-1] + 1).OnlyEnforceIf(isInstance[i])
+					self.model.Add(instanceCount[i] == instanceCount[i-1]).OnlyEnforceIf(isInstance[i].Not())
 					
+				if instance == 1:
+					self.model.AddBoolAnd(termBools[0]).OnlyEnforceIf(isInstance[0])
+					self.model.AddBoolAnd(termBools[0].Not()).OnlyEnforceIf(isInstance[0].Not())
+				else:
+					self.model.AddBoolAnd(termBools[0].Not())
+				
+				for i in range(1,len(L)):
+					self.model.Add(instanceCount[i] == instance).OnlyEnforceIf(termBools[i])
+					self.model.AddBoolAnd(isInstance[i]).OnlyEnforceIf(termBools[i])
+					self.model.Add(instanceCount[i] != instance).OnlyEnforceIf([termBools[i].Not(),isInstance[i]])
+					
+					
+				
 		terminatorBools.insert(terminatorNumber,termBools)
 		terminatorNumber = terminatorNumber + 1
 	

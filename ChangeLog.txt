@@ -1,3 +1,9 @@
+2/19/2025
+	Added test case for next to nine sum.
+	Added support for selection criteria for neighbors matching on entropy, parity, modular or primality, similar to criteria for having consecutive neighbors.
+	Added support for Related Digit termination, where the termination criterion for a sum can be based upon an affine (ax+b) relationship with the value in a given cell.
+	Added test cases for new selection and termination functionality.
+
 2/12/2025
 	Fixed some small bugs
 	Added support for pool constraint, which is pretty dumb

@@ -971,6 +971,21 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=
 	Property: 'ConsecutiveBefore','ConsecutiveAfter','ConsecutiveNeighbor'
 	For these properties, we pick digits that are consecutive with the digit before, after, or either (respectively) in the line
 	
+	Property: '(Parity|Entropy|Modular|Primality)(Neighbor|Before|After|All|None|Both|Neither)'
+	Sorry for Regex description here, but there are actually 28 different possibilities, as any characteristic in the first list can be paired with any location in the second list to create a property, e.g., MatchParityAfter, MatchModularNone, etc.
+	For these properties we pick digits whose described neighbors meet the associated property matching condition
+	  Neighbor: either the digit before or after, possibly both
+	  Before: the digit before
+	  After: the digit after
+	  All: all neighbors, possibly just one match if digit is at the end of a line
+      None: no neighbors match, possibly just one non-match if digit is at the end of a line
+	  Both: cell must have two neighbors, and both must match
+	  Neither: cell must have two neighbors, and neither may match
+	  
+	By default, and if no second argument is given, the neighbor digits will be considered to match if they have the same parity/entropy/etc. as the digit under consideration. If a second argument is given, the property for each neighbor is compared for equality against the given value.
+	For example: ['EntropyBefore'] will match all digits whose predecessor is in the same entropy stratum
+	('ParityBoth',0) will match all digits that have two neighbors when both of those neighbors are even, regardless of the parity of the digit under consideration.
+	
   selectTerminator: a *list* of conditions (tuples) which describe when the sum should stop. As with summand selection,
   each tuple starts with a sting containing a property name, and is followed by values specific to that property. Note that multiple
   selection criteria may be given, but for termination they are combined with a logical OR. There are two styles of termination, defined
@@ -1023,6 +1038,15 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=
 	Terminator: 'RepeatReached'
 	Terminate when some numbered instance of a repeated digit is reached
 	Value: May be an integer to give a specific number of repeats, or may be the string 'Last' to indicate termination at the last repeat.
+	
+	Terminator: 'RelatedDigit'
+	Terminate when some instance of a digit having a given relationship with a cell in the line is met.
+	Values[0]: Location of the base digit along the line (one-based)
+	Values[1]: A comparator: use the class variables GE, EQ or LE, or NE
+	Values[2]: Scale, an integer multiplied by the digit in the base cell to determine the threshold for comparison
+	Values[3]: Shift, an integer add to the (scaled) digit in the base cell to determine the threshold for comparison
+	Values[4]: The numbered instance on which to terminate
+	  Example: ('RelatedDigit',-1,p.GE,2,0,3) would terminate at the third digit in line that is at least double the digit (plus 0) in the last cell
 	
   terminateOnFirst: by default, the sum will terminate at the first cell that matches one of the termination criteria. However, in hindsight,
   the behavior seen in actual puzzles seems to be ambiguity, where the sum can terminate based on any of the given criteria, determined on a
