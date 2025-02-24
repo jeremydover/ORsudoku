@@ -1,3 +1,6 @@
+2/24/2025 bis
+	Added test case.
+
 2/24/2025
 	Eliminated terminateOnFirst argument from conditional lines and hanging clues in favor of a terminateOn argument, which defaults to the value 'First'.
 	Any existing code for which terminateOnFirst was not set will continue to work. Any code that explicitly set terminateOnFirst=True can be patched by

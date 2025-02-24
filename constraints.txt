@@ -972,7 +972,7 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
 	For these properties, we pick digits that are consecutive with the digit before, after, or either (respectively) in the line
 	
 	Property: '(Parity|Entropy|Modular|Primality)(Neighbor|Before|After|All|None|Both|Neither)'
-	Sorry for Regex description here, but there are actually 28 different possibilities, as any characteristic in the first list can be paired with any location in the second list to create a property, e.g., MatchParityAfter, MatchModularNone, etc.
+	Sorry for Regex description here, but there are actually 28 different possibilities, as any characteristic in the first list can be paired with any location in the second list to create a property, e.g., ParityAfter, ModularNone, etc.
 	For these properties we pick digits whose described neighbors meet the associated property matching condition
 	  Neighbor: either the digit before or after, possibly both
 	  Before: the digit before
