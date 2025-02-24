@@ -751,7 +751,7 @@ def setLotLine(self,inlist,lotIndex,prop):
 		self.model.Add(countInts[i] == 0).OnlyEnforceIf(countBools[i].Not())
 	self.model.Add(self.cellValues[inlist[lotIndex-1][0]][inlist[lotIndex-1][1]] == sum(countInts))
 
-def setConditionalSumLine(self,inlist,value,selectSummands=None,selectTerminator=None,terminateOnFirst=True,includeTerminator=True):
+def setConditionalSumLine(self,inlist,value,selectSummands=None,selectTerminator=None,terminateOn='First',includeTerminator=True):
 	# Copied from setHangingSum, an external clue. Just a line version, should be straightforward since the underlying support
 	# functions were converted to lines.
 	L = self._procCellList(inlist)
@@ -774,9 +774,9 @@ def setConditionalSumLine(self,inlist,value,selectSummands=None,selectTerminator
 	# Now create terminator conditions
 	terminatorCells = self._terminateCellsOnLine(L,selectTerminator)
 	
-	self._evaluateHangingClues(partialSum,terminatorCells,value,terminateOnFirst,includeTerminator)
+	self._evaluateHangingClues(partialSum,terminatorCells,value,terminateOn,includeTerminator)
 	
-def setConditionalCountLine(self,inlist,value,selectSummands=None,selectTerminator=None,terminateOnFirst=True,includeTerminator=True):
+def setConditionalCountLine(self,inlist,value,selectSummands=None,selectTerminator=None,terminateOn='First',includeTerminator=True):
 	# Copied from setConditionalSumLine, for counts instead of sums
 	
 	L = self._procCellList(inlist)
@@ -794,9 +794,9 @@ def setConditionalCountLine(self,inlist,value,selectSummands=None,selectTerminat
 	# Now create terminator conditions
 	terminatorCells = self._terminateCellsOnLine(L,selectTerminator)
 	
-	self._evaluateHangingClues(partialCount,terminatorCells,value,terminateOnFirst,includeTerminator)
+	self._evaluateHangingClues(partialCount,terminatorCells,value,terminateOn,includeTerminator)
 	
-def setConditionalInstanceLine(self,inlist,values,selectSummands=None,selectTerminator=None,terminateOnFirst=True,includeTerminator=True,negativeConstraint=False):
+def setConditionalInstanceLine(self,inlist,values,selectSummands=None,selectTerminator=None,terminateOn='First',includeTerminator=True,negativeConstraint=False):
 	L = self._procCellList(inlist)
 	myDigits = list(self.digits)
 	
@@ -821,7 +821,7 @@ def setConditionalInstanceLine(self,inlist,values,selectSummands=None,selectTerm
 	# Now create terminator conditions
 	terminatorCells = self._terminateCellsOnLine(L,selectTerminator)
 	
-	self._evaluateHangingClues(partialMatch,terminatorCells,len(values),terminateOnFirst,includeTerminator)
+	self._evaluateHangingClues(partialMatch,terminatorCells,len(values),terminateOn,includeTerminator)
 	
 	if negativeConstraint == True:
 		for j in range(len(L)):

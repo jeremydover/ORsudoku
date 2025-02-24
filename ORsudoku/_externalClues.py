@@ -1138,7 +1138,7 @@ def setBust(self,row1,col1,rc,value,targetSum=21):
 	self.model.Add(sum(self.cellValues[row+j*vStep][col+j*hStep] for j in range(value-1)) <= targetSum)
 	self.model.Add(sum(self.cellValues[row+j*vStep][col+j*hStep] for j in range(value)) > targetSum)
 	
-def setHangingSum(self,row1,col1,rc,value,selectSummands=None,selectTerminator=None,terminateOnFirst=True,includeTerminator=True):
+def setHangingSum(self,row1,col1,rc,value,selectSummands=None,selectTerminator=None,terminateOn='First',includeTerminator=True):
 	# OK, this one is going to need some comments, because I'm hoping it will cover a LOT of ground. Basically
 	# this is going to be a general function to cover a number of different constraints that start at the grid
 	# boundary and continue in, selecting digits based on some criteria, and terminating at a cell, determined
@@ -1173,9 +1173,9 @@ def setHangingSum(self,row1,col1,rc,value,selectSummands=None,selectTerminator=N
 	# Now create terminator conditions
 	terminatorCells = self._terminateCellsInRowCol(row,col,rc,selectTerminator)
 	
-	self._evaluateHangingClues(partialSum,terminatorCells,value,terminateOnFirst,includeTerminator)
+	self._evaluateHangingClues(partialSum,terminatorCells,value,terminateOn,includeTerminator)
 	
-def setHangingCount(self,row1,col1,rc,value,selectCounts=None,selectTerminator=None,terminateOnFirst=True,includeTerminator=True):
+def setHangingCount(self,row1,col1,rc,value,selectCounts=None,selectTerminator=None,terminateOn='First',includeTerminator=True):
 
 	row = row1 - 1
 	col = col1 - 1
@@ -1199,9 +1199,9 @@ def setHangingCount(self,row1,col1,rc,value,selectCounts=None,selectTerminator=N
 	# Now create terminator conditions
 	terminatorCells = self._terminateCellsInRowCol(row,col,rc,selectTerminator)
 	
-	self._evaluateHangingClues(partialCount,terminatorCells,value,terminateOnFirst,includeTerminator)
+	self._evaluateHangingClues(partialCount,terminatorCells,value,terminateOn,includeTerminator)
 	
-def setHangingAverage(self,row1,col1,rc,value,selectCounts=None,selectTerminator=None,terminateOnFirst=True,includeTerminator=True):
+def setHangingAverage(self,row1,col1,rc,value,selectCounts=None,selectTerminator=None,terminateOn='First',includeTerminator=True):
 
 	row = row1 - 1
 	col = col1 - 1
@@ -1237,7 +1237,7 @@ def setHangingAverage(self,row1,col1,rc,value,selectCounts=None,selectTerminator
 	terminatorCells = self._terminateCellsInRowCol(row,col,rc,selectTerminator)
 	
 	# Shoot, I abstract this for sum and count, but need the details for average
-	if terminateOnFirst:
+	if terminateOn == 'First':
 		if includeTerminator:
 			self.model.Add(partialSum[0] == value).OnlyEnforceIf(terminatorCells[0])
 		else:
@@ -1250,6 +1250,12 @@ def setHangingAverage(self,row1,col1,rc,value,selectCounts=None,selectTerminator
 				self.model.Add(partialSum[i] == value*partialCount[i]).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i)])
 			else:
 				self.model.Add(partialSum[i-1] == value*partialCount[i-1]).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i)])
+	elif terminateOn == 'Last':
+		for i in range(len(partial)):
+			if includeTerminator:
+				self.model.Add(partialSum[i] == value*partialCount[i]).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i+1,len(partial))])
+			else:
+				self.model.Add(partialSum[i-1] == value*partialCount[i-1]).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i+1,len(partial))])
 	else:
 		# OK, what the heck is going on here? I want to allow for the possibility that any place that provides a possible 
 		# termination point could be chosen. Hence the varBitmap to pick. However. I want to ensure the solution is unique, so
@@ -1272,12 +1278,12 @@ def setHangingAverage(self,row1,col1,rc,value,selectCounts=None,selectTerminator
 					if k != i:
 						self.model.AddBoolAnd(c).OnlyEnforceIf(varBitmap[k])
 						
-def setHangingInstance(self,row,col,rc,values,selectSummands=None,selectTerminator=None,terminateOnFirst=True,includeTerminator=True,negativeConstraint=False):
+def setHangingInstance(self,row,col,rc,values,selectSummands=None,selectTerminator=None,terminateOn='First',includeTerminator=True,negativeConstraint=False):
 	hStep = 0 if rc == self.Col else (1 if col == 1 else -1)
 	vStep = 0 if rc == self.Row else (1 if row == 1 else -1)
 	
 	L = [(row+k*vStep,col+k*hStep) for k in range(self.boardWidth)]
-	self.setConditionalInstanceLine(L,values,selectSummands,selectTerminator,terminateOnFirst,includeTerminator,negativeConstraint)
+	self.setConditionalInstanceLine(L,values,selectSummands,selectTerminator,terminateOn,includeTerminator,negativeConstraint)
 
 def setXOutside(self,row,col,rc,values):
 	self.setHangingCount(row,col,rc,len(values),[('DigitSet',values)],[('Indexed',1)])

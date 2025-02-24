@@ -1,3 +1,13 @@
+2/24/2025
+	Eliminated terminateOnFirst argument from conditional lines and hanging clues in favor of a terminateOn argument, which defaults to the value 'First'.
+	Any existing code for which terminateOnFirst was not set will continue to work. Any code that explicitly set terminateOnFirst=True can be patched by
+	replacing with the string terminateOn='First', while code that implemented terminateOnFirst=False can be updated by replacing this string with
+	terminateOn='Any'. Sorry for breaking backward compatibility, but hoping the feature is new enough it is not widely used. Updated test cases appropriately.
+	
+	Added new termination criteria ParityRepeatReached, for all of parity, entropy, modular, primality.
+	Fixed bug in neighbor matching which was incorrectly excluding endpoints in the 'All' neighbors selection.
+	Added test cases.
+
 2/19/2025
 	Added test case for next to nine sum.
 	Added support for selection criteria for neighbors matching on entropy, parity, modular or primality, similar to criteria for having consecutive neighbors.

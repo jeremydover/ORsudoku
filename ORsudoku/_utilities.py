@@ -397,7 +397,6 @@ def _selectCellsOnLine(self,L,selectCriteria,initiatorCells=[]):
 						self.model.AddBoolAnd(matchBackward[i]).OnlyEnforceIf(criterionBools[i])
 						self.model.AddBoolAnd(matchBackward[i].Not()).OnlyEnforceIf(criterionBools[i].Not())
 				elif where == 'After':
-					self.model.AddBoolAnd(criterionBools[-1].Not())
 					for i in range(len(L)):
 						self.model.AddBoolAnd(matchForward[i]).OnlyEnforceIf(criterionBools[i])
 						self.model.AddBoolAnd(matchForward[i].Not()).OnlyEnforceIf(criterionBools[i].Not())
@@ -406,7 +405,11 @@ def _selectCellsOnLine(self,L,selectCriteria,initiatorCells=[]):
 						self.model.AddBoolAnd([matchBackward[i].Not(),matchForward[i].Not()]).OnlyEnforceIf(criterionBools[i])
 						self.model.AddBoolOr([matchBackward[i],matchForward[i]]).OnlyEnforceIf(criterionBools[i].Not())
 				elif where == 'All':
-					for i in range(len(L)):
+					self.model.AddBoolAnd(matchForward[0]).OnlyEnforceIf(criterionBools[0])
+					self.model.AddBoolAnd(matchForward[0].Not()).OnlyEnforceIf(criterionBools[0].Not())
+					self.model.AddBoolAnd(matchBackward[-1]).OnlyEnforceIf(criterionBools[-1])
+					self.model.AddBoolAnd(matchBackward[-1].Not()).OnlyEnforceIf(criterionBools[-1].Not())
+					for i in range(1,len(L)-1):
 						self.model.AddBoolAnd([matchBackward[i],matchForward[i]]).OnlyEnforceIf(criterionBools[i])
 						self.model.AddBoolOr([matchBackward[i].Not(),matchForward[i].Not()]).OnlyEnforceIf(criterionBools[i].Not())
 				elif where == 'Both':
@@ -527,17 +530,22 @@ def _terminateCellsOnLine(self,L,selectTerminator):
 					self.model.Add(instanceCount[i-1] >= terminator[2]).OnlyEnforceIf([c,termBools[i].Not()])
 					self.model.Add(instanceCount[i] < terminator[2]).OnlyEnforceIf([c.Not(),termBools[i].Not()])
 					self.model.AddBoolAnd(c).OnlyEnforceIf(termBools[i])
-			case 'ParityChangeReached' | 'EntropyChangeReached' | 'ModularChangeReached' | 'PrimalityChangeReached':
+			case 'ParityChangeReached' | 'EntropyChangeReached' | 'ModularChangeReached' | 'PrimalityChangeReached' | 'ParityRepeatReached' | 'EntropyRepeatReached' | 'ModularRepeatReached' | 'PrimalityRepeatReached':
 				if terminator[0][0:-13] not in self._propertyInitialized:
 					getattr(self,'_set'+terminator[0][0:-13])()
+				myTransition = terminator[0][-13:-7] # 'Change' or 'Repeat'
 				instanceCount = [self.model.NewIntVar(0,len(L),terminator[0][0:-13]+'ChangeInstanceCount') for j in range(len(L))]
 				isInstance = [self.model.NewBoolVar(terminator[0][0:-13]+'ChangeInstanceTest') for j in range(len(L))]
 				self.allVars = self.allVars + instanceCount + isInstance
 				self.model.AddBoolAnd(isInstance[0].Not())  # first cell cannot be a change
 				myCells = getattr(self,'cell'+terminator[0][0:-13])
 				for i in range(1,len(L)):
-					self.model.Add(myCells[L[i][0]][L[i][1]] != myCells[L[i-1][0]][L[i-1][1]]).OnlyEnforceIf(isInstance[i])
-					self.model.Add(myCells[L[i][0]][L[i][1]] == myCells[L[i-1][0]][L[i-1][1]]).OnlyEnforceIf(isInstance[i].Not())
+					if myTransition == 'Change':
+						self.model.Add(myCells[L[i][0]][L[i][1]] != myCells[L[i-1][0]][L[i-1][1]]).OnlyEnforceIf(isInstance[i])
+						self.model.Add(myCells[L[i][0]][L[i][1]] == myCells[L[i-1][0]][L[i-1][1]]).OnlyEnforceIf(isInstance[i].Not())
+					elif myTransition == 'Repeat':
+						self.model.Add(myCells[L[i][0]][L[i][1]] == myCells[L[i-1][0]][L[i-1][1]]).OnlyEnforceIf(isInstance[i])
+						self.model.Add(myCells[L[i][0]][L[i][1]] != myCells[L[i-1][0]][L[i-1][1]]).OnlyEnforceIf(isInstance[i].Not())
 				self.model.Add(instanceCount[0] == 1).OnlyEnforceIf(isInstance[0])
 				self.model.Add(instanceCount[0] == 0).OnlyEnforceIf(isInstance[0].Not())
 				for i in range(1,len(L)):
@@ -669,9 +677,9 @@ def _terminateCellsInRowCol(self,row,col,rc,selectTerminator):
 	terminatorCells = self._terminateCellsOnLine(L,selectTerminator)
 	return terminatorCells
 	
-def _evaluateHangingClues(self,partial,terminatorCells,value,terminateOnFirst,includeTerminator):
+def _evaluateHangingClues(self,partial,terminatorCells,value,terminateOn,includeTerminator):
 	# This does the final configuration of a hanging clue, just extracting the ugly stuff away from the individual functions
-	if terminateOnFirst:
+	if terminateOn == 'First':
 		if includeTerminator:
 			self.model.Add(partial[0] == value).OnlyEnforceIf(terminatorCells[0])
 		else:
@@ -684,9 +692,15 @@ def _evaluateHangingClues(self,partial,terminatorCells,value,terminateOnFirst,in
 				self.model.Add(partial[i] == value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i)])
 			else:
 				self.model.Add(partial[i-1] == value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i)])
+	elif terminateOn == 'Last':
+		for i in range(len(partial)):
+			if includeTerminator:
+				self.model.Add(partial[i] == value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i+1,len(partial))])
+			else:
+				self.model.Add(partial[i-1] == value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i+1,len(partial))])
 	else:
 		# OK, what the heck is going on here? I want to allow for the possibility that any place that provides a possible 
-		# termination point could be chosen. Hence the varBitmap to pick. However. I want to ensure the solution is unique, so
+		# termination point could be chosen, so terminateOn is 'Any'. Hence the varBitmap to pick. However. I want to ensure the solution is unique, so
 		# I want to make sure to pick the *first* location which meets the condition. I actually don't care which, just need to
 		# be canonical. The for j loop below ensures that if there is an earlier terminator that *could* be chosen, this
 		# one cannot be.

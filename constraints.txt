@@ -481,15 +481,15 @@ setShakenCloneRegion(list,noRepeat): creates a set of regions that contain the s
   
 Conditional Lines
 ---------------------
-setConditionalCountLine(list,value,selectCriteria,terminationCriteria,terminateOnFirst,includeTerminator): analogous to a Hanging Count, but along a line instead of just in a column
+setConditionalCountLine(list,value,selectCriteria,terminationCriteria,terminateOn,includeTerminator): analogous to a Hanging Count, but along a line instead of just in a column
   list: list of cell specifications
   See Hanging Sums for a description of all other parameters
 
-setConditionalSumLine(list,value,selectCriteria,terminationCriteria,terminateOnFirst,includeTerminator): analogous to a Hanging Sum, but along a line instead of just in a column
+setConditionalSumLine(list,value,selectCriteria,terminationCriteria,terminateOn,includeTerminator): analogous to a Hanging Sum, but along a line instead of just in a column
   list: list of cell specifications
   See Hanging Sums for a description of all other parameters
   
-setConditionalInstanceLine(list,values,selectCriteria,terminationCriteria,terminateOnFirst,includeTerminator,negativeConstraint): analogous to a Hanging Instance, but along a line instead of just in a column
+setConditionalInstanceLine(list,values,selectCriteria,terminationCriteria,terminateOn,includeTerminator,negativeConstraint): analogous to a Hanging Instance, but along a line instead of just in a column
   list: list of cell specifications
   See Hanging Sums for a description of all other parameters
 
@@ -882,7 +882,7 @@ Hanging Sums
 ------------
 This is a function which is probably overloaded with capability, but generically, it allows the setter to define outside sum clues
 which give the sum of some selection of digits, up to some terminator. The syntax is:
-setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=True,includeTerminator=True)
+setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='First',includeTerminator=True)
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: the length of the longest run of increasing digits in the row/col
@@ -988,8 +988,8 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=
 	
   selectTerminator: a *list* of conditions (tuples) which describe when the sum should stop. As with summand selection,
   each tuple starts with a sting containing a property name, and is followed by values specific to that property. Note that multiple
-  selection criteria may be given, but for termination they are combined with a logical OR. There are two styles of termination, defined
-  in the terminateOnFirst parameter, described below. Currently supported properties:
+  selection criteria may be given, but for termination they are combined with a logical OR. There are three styles of termination, defined
+  by the terminateOn parameter, described below. Currently supported properties:
     Terminator: 'Last'
 	Terminate at the last cell in the column
 	
@@ -1011,21 +1011,12 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=
 	Values[0]: list of target digits
 	Values[1]: nth instance of target to stop at
 	
-	Terminator: 'ParityChangeReached'
-	Terminate when some numbered instance of a change in parity occurs
+	Terminator: '(Parity|Entropy|Modular|Primality)(Change|Repeat)Reached'
+	Again, apologies for the regex notation, but there are 8 possible combinations here. This terminator keeps track of the number of
+		changes or repeats in some property (parity, entropy, etc.), and terminates on a specified instance of said change.
 	Value: nth instance of target
-	
-	Terminator: 'EntropyChangeReached'
-	Terminate when some numbered instance of a change in entropy occurs
-	Value: nth instance of target
-	
-	Terminator: 'ModularChangeReached'
-	Terminate when some numbered instance of a change in modular occurs
-	Value: nth instance of target
-	
-	Terminator: 'PrimalityChangeReached'
-	Terminate when some numbered instance of a change in primality occurs
-	Value: nth instance of target
+	Note: in any case, the terminating cell is the *second* in the pair where the change/repeat is determined, so the first cell can never
+	be a terminator.
 	
 	Terminator: 'Indexed'
 	Terminate at a value indexed by a set of indices
@@ -1048,31 +1039,32 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=
 	Values[4]: The numbered instance on which to terminate
 	  Example: ('RelatedDigit',-1,p.GE,2,0,3) would terminate at the third digit in line that is at least double the digit (plus 0) in the last cell
 	
-  terminateOnFirst: by default, the sum will terminate at the first cell that matches one of the termination criteria. However, in hindsight,
-  the behavior seen in actual puzzles seems to be ambiguity, where the sum can terminate based on any of the given criteria, determined on a
-  clue-by-clue basis. Since it seemed dumb to implement only the mode that no actual puzzles use, setting terminateOnFirst=False causes the
-  solver to allow the sum to continue to any possible termination point, not just the first one that occurs.
+  terminateOn: by default, the sum will terminate at the first cell that matches one of the termination criteria. This can also be set explicitly
+    by the argument terminateOn='First'. Additional possibilities are:
+	terminateOn='Last' - Uses the last cell which meets the termination criteria
+	terminateOn='Any' - Allows the solver to use any legitimate termination cell to match the clue; this is good for clues like parity party,
+	                    where any of the possible termination criteria may be used.
   
   includeTerminator: by default, the sum will include the cell which signals that the sum is to be terminated into the sum. To change this
   behavior and sum only up to, but not including, the terminator, set includeTerminator=False. Word to the wise: not including the terminator
   may give wonky results if the first cell is the terminator. Caveat emptor.
   
   Example:
-  p.setHangingSum(1,2,p.Col,14,[],[('Fixed',1),('DigitSetReached',[2,4,6,8],1),('DigitSetReached',[1,3,5,7,9],1)],terminateOnFirst=False)
+  p.setHangingSum(1,2,p.Col,14,[],[('Fixed',1),('DigitSetReached',[2,4,6,8],1),('DigitSetReached',[1,3,5,7,9],1)],terminateOn='Any')
   
   This sets a parity party constraint. There are no selectSummands, so all digits are included in the sum. The sum can stop after the first digit,
   or continues until it reached an even digit, or until it reaches an odd digit. Parity party can also be implemented like so:
   
-  p.setHangingSum(1,2,p.Col,14,[],[('Fixed',1),('ParityChangeReached',1)],terminateOnFirst=False)
+  p.setHangingSum(1,2,p.Col,14,[],[('Fixed',1),('ParityChangeReached',1)],terminateOn='Any')
   
   The sum can again terminate in the first cell, or it continues to the first parity change.
   
 Related functions:
-setHangingCount(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=True,includeTerminator=True) - counts the number of digits matched, instead of their sum
+setHangingCount(row,col,rc,value,selectSummands,selectTerminator,terminateOn='First',includeTerminator=True) - counts the number of digits matched, instead of their sum
 
-setHangingAverage(row,col,rc,value,selectSummands,selectTerminator,terminateOnFirst=True,includeTerminator=True) - counts the average of the matched digits
+setHangingAverage(row,col,rc,value,selectSummands,selectTerminator,terminateOn='First',includeTerminator=True) - counts the average of the matched digits
 
-setHangingInstance(row,col,rc,values,selectSummands,selectTerminator,terminateOnFirst=True,includeTerminator=True,negativeConstraint=False) - determines if the selected digits match the digits given in values
+setHangingInstance(row,col,rc,values,selectSummands,selectTerminator,terminateOn='First',includeTerminator=True,negativeConstraint=False) - determines if the selected digits match the digits given in values
   All arguments are the same as hanging sum, except
   values: a list of values to be found meeting the conditions
   negativeConstraint: assert that the digits in values are the only digits which meet the selection criteria
