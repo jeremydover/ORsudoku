@@ -174,6 +174,7 @@ Remote Kropki Arrows - see Kropki
 Removed Bulb Thermos - see Thermos
 Renban Lines
 Renrenbanban Lines (see Renban Lines)
+Repeated Neighbors
 Repeating Arrows - see Arrows
 Repelling Digits
 Reverse Numbered Rooms - see Numbered Rooms
@@ -195,6 +196,7 @@ Shift Lines
 Skyscrapers
 Skyscraper Sums - see Skyscrapers
 Slingshots
+Slot Machine
 Slow Thermometers (see Thermometers)
 Split Pea Lines
 Split Pill Lines - see Split Pea Lines
@@ -1012,11 +1014,9 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
 	Values[1]: nth instance of target to stop at
 	
 	Terminator: '(Parity|Entropy|Modular|Primality)(Change|Repeat)Reached'
-	Again, apologies for the regex notation, but there are 8 possible combinations here. This terminator keeps track of the number of
-		changes or repeats in some property (parity, entropy, etc.), and terminates on a specified instance of said change.
+	Again, apologies for the regex notation, but there are 8 possible combinations here. This terminator keeps track of the number of changes or repeats in some property (parity, entropy, etc.), and terminates on a specified instance of said change.
 	Value: nth instance of target
-	Note: in any case, the terminating cell is the *second* in the pair where the change/repeat is determined, so the first cell can never
-	be a terminator.
+	Note: in any case, the terminating cell is the *second* in the pair where the change/repeat is determined, so the first cell can never be a terminator.
 	
 	Terminator: 'Indexed'
 	Terminate at a value indexed by a set of indices
@@ -1723,6 +1723,23 @@ NOTE: do not use with countSolutions...has unconstrained Booleans that will give
 setNotRenbanLine(list): asserts that a set of digits does NOT form a Renban line
   list: list of cell specifications
   
+Repeated Neighbors
+------------------
+setRepeatedNeighbors(cell): asserts that at least two of this cells orthogonal neighbors must have the same digit
+  cell: cell specification
+  
+setRepeatedNeighborsArray(list): set multiple repeated neighbors constraints
+  list: list of cell specifications
+
+setDistinctNeighbors(cell): asserts that all digits in this cell's orthogonal neighbors are distinct
+  cell: cell specification
+  
+setDistinctNeighborsArray(list): set multiple distinct neighbors constraints
+  list: list of cell specifications
+  
+setRepeatedNeighborsNegative(): asserts the negative constraint, that only cells specifically marked as having
+  repeated neighbors do so
+
 Repelling Digits
 ----------------
 setRepellingDigit(value,list): assert that no cell containing digit value can be orthogonally adjacent to a cell containing a digit from list
@@ -1930,6 +1947,11 @@ setSlingshot(row,col,tail,head): assert that the digit pointed to by tail from (
   row,col: The coordinates of the cell in which the slingshot arrow lies
   tail: the direction in which the tail of the arrow points; use class variables Up, Down, Left, Right
   head: the direction in which the head of the arrow points; use class variables Up, Down, Left, Right
+
+Slot Machine
+------------
+setSlotMachine(list): each column in the list has the exact same ordering of digits, when read around bottom to top
+  list: list of column numbers, default is 2,5,8
 
 Split Pea Lines
 ---------------

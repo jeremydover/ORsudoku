@@ -1,3 +1,8 @@
+2/26/2025
+	Added support for repeated neighbors constraint, and added test case.
+	Added support for slot machine, and added test case.
+	Added additional test cases.
+
 2/24/2025 bis
 	Added test cases.
 

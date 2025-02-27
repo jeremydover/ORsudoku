@@ -487,3 +487,75 @@ def setRemoteClone(self,row1,col1=-1,dir1=-1,dir2=-1):
 		self.model.Add(self.cellValues[row][col] == j).OnlyEnforceIf(varBitmap[j-1])
 		self.model.Add(self.cellValues[row+j*vStep][col] == self.cellValues[row][col+j*hStep]).OnlyEnforceIf(varBitmap[j-1])
 		
+def setRepeatedNeighbors(self,row,col=-1):
+	if col == -1:
+		(row,col) = self._procCell(row)
+	
+	if 'RepeatedNeighbors' not in self._constraintInitialized:	
+		self.repeatedNeighborCells = [(row,col)]
+		self._constraintInitialized.append('RepeatedNeighbors')
+	else:
+		self.repeatedNeighborCells.append((row,col))
+	
+	cells = {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)}
+	
+	n1 = {(row,col-1),(row,col+1)} & cells
+	n2 = {(row-1,col),(row+1,col)} & cells
+	myBools = []
+	for x1 in n1:
+		for x2 in n2:
+			b = self.model.NewBoolVar('RepeatedNeighbors')
+			self.model.Add(self.cellValues[x1[0]][x1[1]] == self.cellValues[x2[0]][x2[1]]).OnlyEnforceIf(b)
+			self.model.Add(self.cellValues[x1[0]][x1[1]] != self.cellValues[x2[0]][x2[1]]).OnlyEnforceIf(b.Not())
+			myBools.append(b)
+	self.model.AddBoolOr(myBools)
+
+def setRepeatedNeighbours(self,row,col=-1):
+	self.setRepeatedNeighbors(row,col)
+	
+def setRepeatedNeighborsArray(self,cells):
+	for x in cells: self.setRepeatedNeighbors(x)
+	
+def setRepeatedNeighboursArray(self,cells):
+	self.setRepeatedNeighborsArray(cells)
+	
+def setDistinctNeighbors(self,row,col=-1):
+	# To label a single cell as not having repeated neighbors
+	if col == -1:
+		(row,col) = self._procCell(row)
+	
+	if 'RepeatedNeighbors' not in self._constraintInitialized:	
+		self.repeatedNeighborCells = []
+		self._constraintInitialized.append('RepeatedNeighbors')
+	
+	cells = {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)}
+	
+	n1 = {(row,col-1),(row,col+1)} & cells
+	n2 = {(row-1,col),(row+1,col)} & cells
+	for x1 in n1:
+		for x2 in n2:
+			self.model.Add(self.cellValues[x1[0]][x1[1]] != self.cellValues[x2[0]][x2[1]])
+	
+def setDistinctNeighbours(self,row,col=-1):
+	self.setDistinctNeighbors(row,col)
+
+def setDistinctNeighborsArray(self,cells):
+	for x in cells: self.setDistinctNeighbors(x)
+
+def setDistinctNeighboursArray(self,cells):
+	self.setDistinctNeighborsArray(cells)
+
+def setRepeatedNeighborsNegative(self):
+	if 'RepeatedNeighbors' not in self._constraintInitialized:	
+		self.repeatedNeighborCells = [(row,col)]
+		self._constraintInitialized.append('RepeatedNeighbors')
+	self._constraintNegative.append('RepeatedNeighbors')
+	
+def setRepeatedNeighboursNegative(self):
+	self.setRepeatedNeighborsNegative()
+	
+def _applyRepeatedNeighborsNegative(self):
+	for i in range(self.boardWidth):
+		for j in range(self.boardWidth):
+			if (i,j) not in self.repeatedNeighborCells:
+				self.setDistinctNeighbors(i,j)

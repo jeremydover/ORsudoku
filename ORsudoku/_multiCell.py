@@ -1149,3 +1149,13 @@ def setTripleTab(self,row1,col1,uldr,digits,cellCount=3):
 			self.model.Add(self.cellValues[cells[i][0]][cells[i][1]] == d).OnlyEnforceIf(vars[i])
 			self.model.Add(self.cellValues[cells[i][0]][cells[i][1]] != d).OnlyEnforceIf(vars[i].Not())
 		self.model.AddBoolOr(vars)
+		
+def setSlotMachine(self,inlist=[2,5,8]):
+	mylist = [x-1 for x in inlist]
+	for i in range(1,len(mylist)):
+		varBitmap = self._varBitmap('SlotMachineCol{:d}'.format(i),self.boardWidth)
+		for offset in range(self.boardWidth):
+			for j in range(self.boardWidth):
+				self.model.Add(self.cellValues[j][mylist[0]] == self.cellValues[(j+offset)%self.boardWidth][mylist[i]]).OnlyEnforceIf(varBitmap[offset])
+			
+	
