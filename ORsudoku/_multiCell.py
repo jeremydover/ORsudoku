@@ -757,7 +757,25 @@ def setEqualSumCages(self,inlist):
 	for i in range(1,len(inlist)):
 		thisList = self._procCellList(inlist[1])
 		self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in thisList) == baseSum)
-
+		
+def setRankedCage(self,inlist,ranklist):
+	# Ensure all cells are different
+	self.setCage(inlist)
+	inlist = self._procCellList(inlist)
+	myRank = [self.model.NewIntVar(1,len(inlist),'RankCageOrdering') for i in range(len(inlist))]
+	self.model.AddAllDifferent(myRank)
+	
+	for i in range(len(inlist)):
+		for j in range(i+1,len(inlist)):
+			c = self.model.NewBoolVar('RankCageComparison{:d}{:d}'.format(i,j))
+			self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] > self.cellValues[inlist[j][0]][inlist[j][1]]).OnlyEnforceIf(c)
+			self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]] < self.cellValues[inlist[j][0]][inlist[j][1]]).OnlyEnforceIf(c.Not())
+			self.model.Add(myRank[i] > myRank[j]).OnlyEnforceIf(c)
+			self.model.Add(myRank[i] < myRank[j]).OnlyEnforceIf(c.Not())
+			
+	for x in ranklist:
+		self.model.Add(myRank[x[0]-1] == x[1])
+	
 def setCapsule(self,inlist):
 	# A capsule has the same number of even and odd digits
 	self.setEquiparityCage(inlist)
@@ -1037,6 +1055,7 @@ def setParitySnake(self,row1,col1,row2,col2,parity=None):
 			tB.append(cB)
 			tI.append(cI)
 		pathBool.insert(i,tB)
+		self.allVars = self.allVars + tB
 		pathInt.insert(i,tI)
 		
 	for i in range(self.boardWidth):

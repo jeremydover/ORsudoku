@@ -166,6 +166,7 @@ Quad Max Values
 Quad Sums (one digit on a quad is the sum of the three others)
 Quadro (no 2x2 in grid has all even or all odd digits) - see Parity Quads
 QuattroQuadri
+Ranked Cages - see Killer Cages
 Ratio Pairs - see Kropki and Kropki pairs
 Region Sum Lines (sum of all cells along a line in a region is fixed)
 Region Segment Sum Lines - see Region Sum Lines
@@ -1211,6 +1212,12 @@ setKnappDanebenCage(list,value): creates a killer cage with all cell values dist
   list: list of cell specifications indicating the cells in a killer cage
   value: indicates the sum of the digits in the cage, plus or minus 1.
   
+setRankedCage(cellList,rankList): creates a killer cage with no repeats, but no specified sum. Rather, individual cells
+   within the cage are ranked from smallest (1), to largest (n, number of cells in cage), and any subset of ranks may be
+   clued.
+   cellList: list of cell specifications
+   rankList: list of tuples, where the first element of a tuple is the index of the clued cell in cellList (1-based, so first cell is 1), and the second element is its rank in the cage (1 is smallest, 2 is second smallest, etc.)
+  
 Kropki and Kropki Pairs
 -----------------------
 setKropkiWhite(cellHV): creates a white Kropki dot
@@ -1608,6 +1615,8 @@ setParitySnake(row1,col1,row2,col2,parity): asserts that there exists a path of 
 	row1,col1: position of first cell
 	row2,col2: position of second cell
 	parity: Optional: you may assert the snake has a particular parity with the Odd and Even class variables. By default, the snake may be either parity
+	
+Note: Parity snakes don't play well with the countSolutions method, due to the implementation. If there are multiple paths, each will be a separate solution, even if the underlying grids are the same. Additional solutions can also be created by cycles off the main path. Each solution will have a uniparity path between the posited endpoints, but the solver cannot readily determine uniqueness yet.
   
 Pencilmarks
 -----------

@@ -653,9 +653,7 @@ def _terminateCellsOnLine(self,L,selectTerminator):
 					self.model.Add(instanceCount[i] == instance).OnlyEnforceIf(termBools[i])
 					self.model.AddBoolAnd(isInstance[i]).OnlyEnforceIf(termBools[i])
 					self.model.Add(instanceCount[i] != instance).OnlyEnforceIf([termBools[i].Not(),isInstance[i]])
-					
-					
-				
+									
 		terminatorBools.insert(terminatorNumber,termBools)
 		terminatorNumber = terminatorNumber + 1
 	
