@@ -485,11 +485,11 @@ setShakenCloneRegion(list,noRepeat): creates a set of regions that contain the s
   
 Conditional Lines
 ---------------------
-setConditionalCountLine(list,value,selectCriteria,terminationCriteria,terminateOn,includeTerminator): analogous to a Hanging Count, but along a line instead of just in a column
+setConditionalCountLine(list,value,selectCriteria,terminationCriteria,terminateOn,includeTerminator,comparator): analogous to a Hanging Count, but along a line instead of just in a column
   list: list of cell specifications
   See Hanging Sums for a description of all other parameters
 
-setConditionalSumLine(list,value,selectCriteria,terminationCriteria,terminateOn,includeTerminator): analogous to a Hanging Sum, but along a line instead of just in a column
+setConditionalSumLine(list,value,selectCriteria,terminationCriteria,terminateOn,includeTerminator,comparator): analogous to a Hanging Sum, but along a line instead of just in a column
   list: list of cell specifications
   See Hanging Sums for a description of all other parameters
   
@@ -886,7 +886,7 @@ Hanging Sums
 ------------
 This is a function which is probably overloaded with capability, but generically, it allows the setter to define outside sum clues
 which give the sum of some selection of digits, up to some terminator. The syntax is:
-setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='First',includeTerminator=True)
+setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='First',includeTerminator=True,comparator=EQ)
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: the length of the longest run of increasing digits in the row/col
@@ -989,6 +989,22 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
 	By default, and if no second argument is given, the neighbor digits will be considered to match if they have the same parity/entropy/etc. as the digit under consideration. If a second argument is given, the property for each neighbor is compared for equality against the given value.
 	For example: ['EntropyBefore'] will match all digits whose predecessor is in the same entropy stratum
 	('ParityBoth',0) will match all digits that have two neighbors when both of those neighbors are even, regardless of the parity of the digit under consideration.
+
+	Property: '(Parity|Entropy|Modular|Primality)Run'
+	I'm done apologizing for the regex descriptions :-) For this property, we split the cells into contiguous runs with the same value of the selected property, and allow the user to select all digits in one or more of these groups.
+	Values[0]: This parameter shapes how we count the runs. There are three possible syntaxes:
+	  ['Any'] - each run is counted, regardless of the value of the property for the run
+	  
+	  ('Property',comparator,value) - only counts groups which match the property comparison with a fixed value; e.g. ('Property',p.EQ,1) counts only the runs where property equals 1
+	  
+	  ('Cell',comparator,index) - only counts groups which match the property comparison with a value in the given cell; e.g.,
+	  ('Cell',p.NE,1) counts only the runs whose property is not equal to that property of the first cell in the list (1-based)
+	  
+	Values[1]: This parameter picks which runs we select. It may be a single integer, the string 'Last', or a list containing one or more of these. 
+	
+	Property: '(Ascending|Descending)Run'
+	For this property, we split the cells into contiguous runs of increasing or decreasing digits, and allow the user to select the digits from one or more of these groups.
+	Values[0]: This parameter picks which runs we select. It may be a single integer, the string 'Last', or a list containing one or more of these. 
 	
   selectTerminator: a *list* of conditions (tuples) which describe when the sum should stop. As with summand selection,
   each tuple starts with a sting containing a property name, and is followed by values specific to that property. Note that multiple
@@ -1051,6 +1067,8 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
   behavior and sum only up to, but not including, the terminator, set includeTerminator=False. Word to the wise: not including the terminator
   may give wonky results if the first cell is the terminator. Caveat emptor.
   
+  comparator: by default equality, but can be set to LE, GE or NE using class variables.
+  
   Example:
   p.setHangingSum(1,2,p.Col,14,[],[('Fixed',1),('DigitSetReached',[2,4,6,8],1),('DigitSetReached',[1,3,5,7,9],1)],terminateOn='Any')
   
@@ -1062,7 +1080,7 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
   The sum can again terminate in the first cell, or it continues to the first parity change.
   
 Related functions:
-setHangingCount(row,col,rc,value,selectSummands,selectTerminator,terminateOn='First',includeTerminator=True) - counts the number of digits matched, instead of their sum
+setHangingCount(row,col,rc,value,selectSummands,selectTerminator,terminateOn='First',includeTerminator=True,comparator=EQ) - counts the number of digits matched, instead of their sum
 
 setHangingAverage(row,col,rc,value,selectSummands,selectTerminator,terminateOn='First',includeTerminator=True) - counts the average of the matched digits
 
@@ -1139,7 +1157,7 @@ setJapaneseSum(row,col,rc,value,includeColors): sets a Japanese sum constraint
   value: A list of values representing the sums in a clue. If there is only one color, this list can be given as a list of integers, e.g., [2,5,17]. However, if multiple colors are used, the list elements should be tuples (sum,color), where the sum is the sum of digits in the shaded group, and color is the color. Colors are given as integers starting at 1 (internally, unshaded is color 0, but it has special rules).
   includeColors: A list of color values (integers 1..numberOfColors) which must appear in the row/col
   
-  Ambiguous clues *are* supported: if a clue is given with a sum of zero, then the total sum of the shaded group is not checked. If a clue is given with a color of zero, then there must be a shaded group with the given sum, but the color is not checked. If both sum and color a zero, there must be another shaded group, but sum and color are unchecked.
+  Ambiguous clues *are* supported: if a clue is given with a sum of zero, then the total sum of the shaded group is not checked. If a clue is given with a color of zero, then there must be a shaded group with the given sum, but the color is not checked. If both sum and color are zero, there must be another shaded group, but sum and color are unchecked.
   
 If you wish to change the default color scheme for the printout of findSolution, this can be done with the setColorMap method. HOWEVER, you need to import the colorama class variables into your code as:
 
@@ -1158,7 +1176,7 @@ assertShaded(cell): asserts that an individual cell must be shaded, without spec
 assertShadedArray(list): asserts that a list of cells is shaded, without specifying colors
 	list: list of cell specifications
 	
-asserUnshaded(cell): asserts that an individual cell must not be shaded
+assertUnshaded(cell): asserts that an individual cell must not be shaded
 	cell: single cell specification
 
 assertShadedArray(list): asserts that a list of cells is unshaded

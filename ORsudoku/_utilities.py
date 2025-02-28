@@ -422,7 +422,121 @@ def _selectCellsOnLine(self,L,selectCriteria,initiatorCells=[]):
 					for i in range(1,len(L)-1):
 						self.model.AddBoolAnd([matchBackward[i].Not(),matchForward[i].Not()]).OnlyEnforceIf(criterionBools[i])
 						self.model.AddBoolOr([matchBackward[i],matchForward[i]]).OnlyEnforceIf(criterionBools[i].Not())
+			case 'ParityRun'|'EntropyRun'|'ModularRun'|'PrimalityRun':
+				if criterion[0][0:-3] not in self._propertyInitialized:
+					getattr(self,'_set'+criterion[0][0:-3])()
+				myCells = getattr(self,'cell'+criterion[0][0:-3])
 				
+				# First split the line up into contiguous runs with the same property
+				runNumber = [self.model.NewIntVar(1,len(L),'PropertyRunSelectionRunNumber') for i in range(len(L))]
+				propertySwitch = [self.model.NewBoolVar('PropertyRunSwitch') for i in range(len(L))]
+				self.model.Add(runNumber[0] == 1)
+				self.model.AddBoolAnd(propertySwitch[0].Not())
+				for i in range(1,len(L)):
+					self.model.Add(myCells[L[i-1][0]][L[i-1][1]] == myCells[L[i][0]][L[i][1]]).OnlyEnforceIf(propertySwitch[i].Not())
+					self.model.Add(myCells[L[i-1][0]][L[i-1][1]] != myCells[L[i][0]][L[i][1]]).OnlyEnforceIf(propertySwitch[i])
+					self.model.Add(runNumber[i] == runNumber[i-1]).OnlyEnforceIf(propertySwitch[i].Not())
+					self.model.Add(runNumber[i] == runNumber[i-1]+1).OnlyEnforceIf(propertySwitch[i])
+				
+				filteredRunNumber = [self.model.NewIntVar(0,len(L),'PropertyRunSelectionFilteredNumber') for i in range(len(L))]
+				filteredRunCount = [self.model.NewIntVar(0,len(L),'PropertyRunSelectionFilteredCount') for i in range(len(L))]
+				
+				match criterion[1][0]:
+					case 'Any':
+						for i in range(len(L)):
+							self.model.Add(filteredRunNumber[i] == runNumber[i])
+					case _:
+						propertyMatch = [self.model.NewBoolVar('PropertyRunMatch') for i in range(len(L))]
+						if criterion[1][0] == 'Property':
+							comparisonValue = criterion[1][2]
+						else:
+							comparisonValue = myCells[L[criterion[1][2]-1][0]][L[criterion[1][2]-1][1]]
+						for i in range(len(L)):
+							match criterion[1][1]:
+								case self.EQ:
+									self.model.Add(myCells[L[i][0]][L[i][1]] == comparisonValue).OnlyEnforceIf(propertyMatch[i])
+									self.model.Add(myCells[L[i][0]][L[i][1]] != comparisonValue).OnlyEnforceIf(propertyMatch[i].Not())
+								case self.LE:
+									self.model.Add(myCells[L[i][0]][L[i][1]] <= comparisonValue).OnlyEnforceIf(propertyMatch[i])
+									self.model.Add(myCells[L[i][0]][L[i][1]] > comparisonValue).OnlyEnforceIf(propertyMatch[i].Not())
+								case self.GE:
+									self.model.Add(myCells[L[i][0]][L[i][1]] >= comparisonValue).OnlyEnforceIf(propertyMatch[i])
+									self.model.Add(myCells[L[i][0]][L[i][1]] < comparisonValue).OnlyEnforceIf(propertyMatch[i].Not())
+								case self.NE:
+									self.model.Add(myCells[L[i][0]][L[i][1]] != comparisonValue).OnlyEnforceIf(propertyMatch[i])
+									self.model.Add(myCells[L[i][0]][L[i][1]] == comparisonValue).OnlyEnforceIf(propertyMatch[i].Not())
+							if i == 0:
+								self.model.Add(filteredRunNumber[0] == 1).OnlyEnforceIf(propertyMatch[0])
+								self.model.Add(filteredRunNumber[0] == 0).OnlyEnforceIf(propertyMatch[0].Not())
+								self.model.Add(filteredRunCount[0] == 1).OnlyEnforceIf(propertyMatch[0])
+								self.model.Add(filteredRunCount[0] == 0).OnlyEnforceIf(propertyMatch[0].Not())
+							else:
+								# propertySwitch determines if the property switch is here; if not, keep these steady
+								self.model.Add(filteredRunNumber[i] == filteredRunNumber[i-1]).OnlyEnforceIf(propertySwitch[i].Not())
+								self.model.Add(filteredRunCount[i] == filteredRunCount[i-1]).OnlyEnforceIf(propertySwitch[i].Not())
+								
+								# Now if there is a switch and the new cell is a property match, create a new filtered group number
+								self.model.Add(filteredRunNumber[i] == filteredRunCount[i-1]+1).OnlyEnforceIf([propertySwitch[i],propertyMatch[i]])
+								self.model.Add(filteredRunCount[i] == filteredRunCount[i-1]+1).OnlyEnforceIf([propertySwitch[i],propertyMatch[i]])
+							
+								# If there is a switch, but the new cell is not a match, we don't increment the countm, and we make the run number 0
+								self.model.Add(filteredRunNumber[i] == 0).OnlyEnforceIf([propertySwitch[i],propertyMatch[i].Not()])
+								self.model.Add(filteredRunCount[i] == filteredRunCount[i-1]).OnlyEnforceIf([propertySwitch[i],propertyMatch[i].Not()])
+				if type(criterion[2]) is int:
+					for i in range(len(L)):
+						self.model.Add(filteredRunNumber[i] == criterion[2]).OnlyEnforceIf(criterionBools[i])
+						self.model.Add(filteredRunNumber[i] != criterion[2]).OnlyEnforceIf(criterionBools[i].Not())
+				elif criterion[2] == 'Last':
+					for i in range(len(L)):
+						self.model.Add(filteredRunNumber[i] == filteredRunCount[-1]).OnlyEnforceIf(criterionBools[i])
+						self.model.Add(filteredRunNumber[i] != filteredRunCount[-1]).OnlyEnforceIf(criterionBools[i].Not())
+				else:
+					for i in range(len(L)):
+						myBools = [self.model.NewBoolVar('PropertyRunSelectionMultipleRanges') for j in range(len(criterion[2]))]
+						for j in range(len(criterion[2])):
+							if type(criterion[2][j]) is int:
+								self.model.Add(filteredRunNumber[i] == criterion[2][j]).OnlyEnforceIf(myBools[j])
+								self.model.Add(filteredRunNumber[i] != criterion[2][j]).OnlyEnforceIf(myBools[j].Not())
+							else:
+								self.model.Add(filteredRunNumber[i] == filteredRunCount[-1]).OnlyEnforceIf(myBools[j])
+								self.model.Add(filteredRunNumber[i] != filteredRunCount[-1]).OnlyEnforceIf(myBools[j].Not())
+						self.model.AddBoolOr(myBools).OnlyEnforceIf(criterionBools[i])
+						self.model.AddBoolAnd([x.Not() for x in myBools]).OnlyEnforceIf(criterionBools[i].Not())
+			case 'AscendingRun'|'DescendingRun':
+				# First split the line up into contiguous runs
+				runNumber = [self.model.NewIntVar(1,len(L),'UpDownRunSelectionRunNumber') for i in range(len(L))]
+				runSwitch = [self.model.NewBoolVar('UpDownRunSwitch') for i in range(len(L))]
+				self.model.Add(runNumber[0] == 1)
+				self.model.AddBoolAnd(runSwitch[0].Not())
+				for i in range(1,len(L)):
+					if criterion[0] == 'AscendingRun':
+						self.model.Add(self.cellValues[L[i-1][0]][L[i-1][1]] < self.cellValues[L[i][0]][L[i][1]]).OnlyEnforceIf(runSwitch[i].Not())
+						self.model.Add(self.cellValues[L[i-1][0]][L[i-1][1]] >= self.cellValues[L[i][0]][L[i][1]]).OnlyEnforceIf(runSwitch[i])	
+					else:
+						self.model.Add(self.cellValues[L[i-1][0]][L[i-1][1]] > self.cellValues[L[i][0]][L[i][1]]).OnlyEnforceIf(runSwitch[i].Not())
+						self.model.Add(self.cellValues[L[i-1][0]][L[i-1][1]] <= self.cellValues[L[i][0]][L[i][1]]).OnlyEnforceIf(runSwitch[i])	
+					self.model.Add(runNumber[i] == runNumber[i-1]).OnlyEnforceIf(runSwitch[i].Not())
+					self.model.Add(runNumber[i] == runNumber[i-1]+1).OnlyEnforceIf(runSwitch[i])
+				if type(criterion[1]) is int:
+					for i in range(len(L)):
+						self.model.Add(runNumber[i] == criterion[1]).OnlyEnforceIf(criterionBools[i])
+						self.model.Add(runNumber[i] != criterion[1]).OnlyEnforceIf(criterionBools[i].Not())
+				elif criterion[1] == 'Last':
+					for i in range(len(L)):
+						self.model.Add(runNumber[i] == runNumber[-1]).OnlyEnforceIf(criterionBools[i])
+						self.model.Add(runNumber[i] != runNumber[-1]).OnlyEnforceIf(criterionBools[i].Not())
+				else:
+					for i in range(len(L)):
+						myBools = [self.model.NewBoolVar('UpDownRunSelectionMultipleRanges') for j in range(len(criterion[1]))]
+						for j in range(len(criterion[1])):
+							if type(criterion[1][j]) is int:
+								self.model.Add(runNumber[i] == criterion[1][j]).OnlyEnforceIf(myBools[j])
+								self.model.Add(runNumber[i] != criterion[1][j]).OnlyEnforceIf(myBools[j].Not())
+							else:
+								self.model.Add(runNumber[i] == runNumber[-1]).OnlyEnforceIf(myBools[j])
+								self.model.Add(runNumber[i] != runNumber[-1]).OnlyEnforceIf(myBools[j].Not())
+						self.model.AddBoolOr(myBools).OnlyEnforceIf(criterionBools[i])
+						self.model.AddBoolAnd([x.Not() for x in myBools]).OnlyEnforceIf(criterionBools[i].Not())					
 		criteriaBools.insert(criterionNumber,criterionBools)
 		criterionNumber = criterionNumber + 1
 	
@@ -675,7 +789,7 @@ def _terminateCellsInRowCol(self,row,col,rc,selectTerminator):
 	terminatorCells = self._terminateCellsOnLine(L,selectTerminator)
 	return terminatorCells
 	
-def _evaluateHangingClues(self,partial,terminatorCells,value,terminateOn,includeTerminator):
+def _evaluateHangingClues(self,partial,terminatorCells,value,terminateOn,includeTerminator,comparator=None):
 	# This does the final configuration of a hanging clue, just extracting the ugly stuff away from the individual functions
 	if terminateOn == 'First':
 		if includeTerminator:
@@ -687,15 +801,48 @@ def _evaluateHangingClues(self,partial,terminatorCells,value,terminateOn,include
 				self.model.AddBoolAnd(terminatorCells[0].Not()).OnlyEnforceIf(terminatorCells[0])
 		for i in range(1,len(partial)):
 			if includeTerminator:
-				self.model.Add(partial[i] == value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i)])
+				match comparator:
+					case self.LE:
+						self.model.Add(partial[i] <= value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i)])
+					case self.GE:
+						self.model.Add(partial[i] >= value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i)])
+					case self.NE:
+						self.model.Add(partial[i] != value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i)])
+					case _:
+						self.model.Add(partial[i] == value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i)])
 			else:
-				self.model.Add(partial[i-1] == value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i)])
+				match comparator:
+					case self.LE:
+						self.model.Add(partial[i-1] <= value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i)])
+					case self.GE:
+						self.model.Add(partial[i-1] >= value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i)])
+					case self.NE:
+						self.model.Add(partial[i-1] != value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i)])
+					case _:
+						self.model.Add(partial[i-1] == value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i)])
 	elif terminateOn == 'Last':
 		for i in range(len(partial)):
 			if includeTerminator:
-				self.model.Add(partial[i] == value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i+1,len(partial))])
+				match comparator:
+					case self.LE:
+						self.model.Add(partial[i] <= value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i+1,len(partial))])
+					case self.GE:
+						self.model.Add(partial[i] >= value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i+1,len(partial))])
+					case self.NE:
+						self.model.Add(partial[i] != value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i+1,len(partial))])
+					case _:
+						self.model.Add(partial[i] == value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i+1,len(partial))])
 			else:
-				self.model.Add(partial[i-1] == value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i+1,len(partial))])
+				match comparator:
+					case self.LE:
+						self.model.Add(partial[i-1] <= value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i+1,len(partial))])
+					case self.GE:
+						self.model.Add(partial[i-1] >= value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i+1,len(partial))])
+					case self.NE:
+						self.model.Add(partial[i-1] != value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i+1,len(partial))])
+					case _:
+						self.model.Add(partial[i-1] == value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i+1,len(partial))])
+				
 	else:
 		# OK, what the heck is going on here? I want to allow for the possibility that any place that provides a possible 
 		# termination point could be chosen, so terminateOn is 'Any'. Hence the varBitmap to pick. However. I want to ensure the solution is unique, so
@@ -705,13 +852,30 @@ def _evaluateHangingClues(self,partial,terminatorCells,value,terminateOn,include
 		varBitmap = self._varBitmap('terminationPicker',len(partial))
 		self.allVars = self.allVars + varBitmap[0]
 		for i in range(len(partial)):
-			self.model.Add(partial[i] == value).OnlyEnforceIf(varBitmap[i] + [terminatorCells[i]])
+			match comparator:
+				case self.LE:
+					self.model.Add(partial[i] <= value).OnlyEnforceIf(varBitmap[i] + [terminatorCells[i]])
+				case self.GE:
+					self.model.Add(partial[i] >= value).OnlyEnforceIf(varBitmap[i] + [terminatorCells[i]])
+				case self.NE:
+					self.model.Add(partial[i] != value).OnlyEnforceIf(varBitmap[i] + [terminatorCells[i]])
+				case _:
+					self.model.Add(partial[i] == value).OnlyEnforceIf(varBitmap[i] + [terminatorCells[i]])
+						
 			self.model.AddBoolAnd(terminatorCells[i]).OnlyEnforceIf(varBitmap[i] + [terminatorCells[i].Not()])
 			  # ensures this varBitmap cannot be chosen if terminatorCells is not set
 			for j in range(i):
 				c = self.model.NewBoolVar('solutionPickerSwitch')
 				self.allVars = self.allVars + [c]
-				self.model.Add(partial[j] != value).OnlyEnforceIf(varBitmap[i] + [c])
+				match comparator:
+					case self.LE:
+						self.model.Add(partial[j] > value).OnlyEnforceIf(varBitmap[i] + [c])
+					case self.GE:
+						self.model.Add(partial[j] < value).OnlyEnforceIf(varBitmap[i] + [c])
+					case self.NE:
+						self.model.Add(partial[j] == value).OnlyEnforceIf(varBitmap[i] + [c])
+					case _:
+						self.model.Add(partial[j] != value).OnlyEnforceIf(varBitmap[i] + [c])
 				self.model.AddBoolAnd(terminatorCells[j].Not()).OnlyEnforceIf(varBitmap[i] + [c.Not()])
 				self.model.AddBoolAnd(c.Not()).OnlyEnforceIf(varBitmap[i] + [terminatorCells[j].Not()])
 				for k in range(len(partial)):

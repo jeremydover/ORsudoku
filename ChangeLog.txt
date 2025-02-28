@@ -1,3 +1,10 @@
+2/28/2025 bis
+	Added support for comparators (LE, GE, NE) in hanging count and sum clues, and conditional sum lines and conditional count lines.
+	Added new selection criteria of property runs, e.g. parity run, entropy run, etc., which allow comparisons against groups 
+	of contiguous digits satisfying the associated property. Think "second group of odd digits sums to 18" or "last group of low digits has two digits".
+	Added new selection criteria of ascending/descending runs, as above.
+	Added test cases.
+
 2/28/2025
 	Added support for star battle/sudoku hybrid puzzles.
 

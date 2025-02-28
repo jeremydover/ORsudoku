@@ -1138,7 +1138,7 @@ def setBust(self,row1,col1,rc,value,targetSum=21):
 	self.model.Add(sum(self.cellValues[row+j*vStep][col+j*hStep] for j in range(value-1)) <= targetSum)
 	self.model.Add(sum(self.cellValues[row+j*vStep][col+j*hStep] for j in range(value)) > targetSum)
 	
-def setHangingSum(self,row1,col1,rc,value,selectSummands=None,selectTerminator=None,terminateOn='First',includeTerminator=True):
+def setHangingSum(self,row1,col1,rc,value,selectSummands=None,selectTerminator=None,terminateOn='First',includeTerminator=True,comparator=None):
 	# OK, this one is going to need some comments, because I'm hoping it will cover a LOT of ground. Basically
 	# this is going to be a general function to cover a number of different constraints that start at the grid
 	# boundary and continue in, selecting digits based on some criteria, and terminating at a cell, determined
@@ -1173,9 +1173,9 @@ def setHangingSum(self,row1,col1,rc,value,selectSummands=None,selectTerminator=N
 	# Now create terminator conditions
 	terminatorCells = self._terminateCellsInRowCol(row,col,rc,selectTerminator)
 	
-	self._evaluateHangingClues(partialSum,terminatorCells,value,terminateOn,includeTerminator)
+	self._evaluateHangingClues(partialSum,terminatorCells,value,terminateOn,includeTerminator,comparator)
 	
-def setHangingCount(self,row1,col1,rc,value,selectCounts=None,selectTerminator=None,terminateOn='First',includeTerminator=True):
+def setHangingCount(self,row1,col1,rc,value,selectCounts=None,selectTerminator=None,terminateOn='First',includeTerminator=True,comparator=None):
 
 	row = row1 - 1
 	col = col1 - 1
@@ -1199,7 +1199,7 @@ def setHangingCount(self,row1,col1,rc,value,selectCounts=None,selectTerminator=N
 	# Now create terminator conditions
 	terminatorCells = self._terminateCellsInRowCol(row,col,rc,selectTerminator)
 	
-	self._evaluateHangingClues(partialCount,terminatorCells,value,terminateOn,includeTerminator)
+	self._evaluateHangingClues(partialCount,terminatorCells,value,terminateOn,includeTerminator,comparator)
 	
 def setHangingAverage(self,row1,col1,rc,value,selectCounts=None,selectTerminator=None,terminateOn='First',includeTerminator=True):
 
