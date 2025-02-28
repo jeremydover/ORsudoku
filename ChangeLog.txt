@@ -1,3 +1,6 @@
+2/28/2025
+	Added support for star battle/sudoku hybrid puzzles.
+
 2/26/2025 bis
 	Added support for ranked cages, with test cases.
 	Added additional test cases.

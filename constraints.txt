@@ -201,6 +201,7 @@ Slot Machine
 Slow Thermometers (see Thermometers)
 Split Pea Lines
 Split Pill Lines - see Split Pea Lines
+Star Battle Sudoku
 Sum Dots (see Killer Cages)
 Sum Sandwiches
 Thermometers
@@ -1966,6 +1967,44 @@ Split Pea Lines
 ---------------
 setSplitPeaLine(inlist): the sum of the interior cells on the line is equal to some concatenation of the first digit and last digit of the line, where either may be the tens digit
   inlist: list of cell specifications
+
+Star Battle Sudoku
+------------------
+Solver code for sudoku/star battle hybrid puzzles. To model a Star Battler Sudoku puzzle, you must use the class starBattleSudoku, e.g.
+
+from starBattleSudoku import starBattleSudoku
+p = starBattleSudoku(3,digitList=[1,2,3,4,5,6,7,8,9])
+
+The parameters listed above are required: the first is positional and defines the size of the grid as being a 9x9. 4 would give 16x6, etc.
+The digit list is a list of the digits that must appear in each row/column/region of the solved grid. Note that this list may have repeats.
+  A typical use case would be to denote 0 as a star, and have the digit list be [1,2,3,4,5,6,7,0,0], where each row/column/region will have 
+  each of the digits 1-7 appearing once, and two "stars", indicated by 0. Indeed, this is the default digit list.
+  
+A star battle sudoku grid can be irregular: use the parameter irregular = True, and then define the regions manually with setRegion.
+  
+There is no single standard of how to integrate star battle in with sudoku, so this code attempts to be as flexible as possible to cover
+the use cases I've seen. To do this, there are two additional parameters which can be used to control the star battle integration:
+
+  starSymbols - a list of digits from digit list which act like stars (i.e., none are neighbors, even diagonally, and counts are enforced)
+  numberOfStars - the number of star cells in each row/column/region; the symbols in starSymbols will be used, but other digits may be designated stars to ensure the number is correct
+  
+Both parameters are optional, though if neither is given results will be basically unconstrained.
+
+The use cases these parameters cover:
+a. There is a limited set of digits, and specific star symbols which are not sudoku digits (even though they are represented as digits in the computer). In this case, a row may consist of the digits from 1-7 and two stars. The puzzle constructor would look like:
+  p = starBattleSudoku(3,digitList=[1,2,3,4,5,6,7,0,0],starSymbols=[0])
+  
+b. All digits are sudoku digits, but some subset of specified digits are also treated as "stars", subject to the star battle constraint. The call would be:
+  p = starBattleSudoku(3,digitList=[1,2,3,4,5,6,7,8,9],starSymbols=[1,9])
+  
+c. All digits are sudoku digits, and some to-be-determined digits are treated as stars.
+  p = starBattleSudoku(3,digitList=[1,2,3,4,5,6,7,8,9],numberOfStars=2)
+
+d. A hybrid is possible. The call
+  p = starBattleSudoku(3,digitList=[1,2,3,4,5,6,7,8,9],starSymbols=[1],numberOfStars=2)
+would create a puzzle where 1 and some other to-be-determined digit act as stars.
+
+Note: this solver could also be used as a straight star battle solver by setting the digit set to be [0...0,1...1], where 0s are stars and 1s are not stars. But it is restricted to sqaure grids. I should probably work on that some day. But not today.
 
 Sum Sandwiches
 --------------
