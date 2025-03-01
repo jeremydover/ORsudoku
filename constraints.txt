@@ -1056,6 +1056,10 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
 	Values[3]: Shift, an integer add to the (scaled) digit in the base cell to determine the threshold for comparison
 	Values[4]: The numbered instance on which to terminate
 	  Example: ('RelatedDigit',-1,p.GE,2,0,3) would terminate at the third digit in line that is at least double the digit (plus 0) in the last cell
+	  
+	Terminator: 'ModelVariable'
+	Terminate at a location given in a solver model variable (1-based). This is advanced stuff.
+	Value: model variable
 	
   terminateOn: by default, the sum will terminate at the first cell that matches one of the termination criteria. This can also be set explicitly
     by the argument terminateOn='First'. Additional possibilities are:

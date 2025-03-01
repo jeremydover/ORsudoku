@@ -1,3 +1,9 @@
+2/28/2025 ter
+	Added terminator for conditional and hanging clues that allows user to pass a model variable to indicate the position at which to terminate.
+	Added test cases.
+	This is the first time I've used model variables in my solver building, and it is super powerful, but probably unfair 
+	to the average user.
+
 2/28/2025 bis
 	Added support for comparators (LE, GE, NE) in hanging count and sum clues, and conditional sum lines and conditional count lines.
 	Added new selection criteria of property runs, e.g. parity run, entropy run, etc., which allow comparisons against groups 
