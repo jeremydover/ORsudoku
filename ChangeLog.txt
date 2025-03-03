@@ -1,3 +1,6 @@
+3/3/2025 bis
+	Added Skyscrapers selection criterion for hanging sums and counts, and conditional lines. No need to use this versus setSkyscraper when appropriate, but this does allow more flexibility. (Hopefully for what I'm going for next.)
+
 3/3/2025
 	Made minor update to utility function to better allow model variables to be passed as values to conditional sum and count lines.
 	Added forceTermination flag to hanging clues and conditional lines, allowing the possibility that a value may still be returned if no terminator is found.

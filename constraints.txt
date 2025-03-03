@@ -1013,6 +1013,9 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
 	For this property, we split the cells into contiguous runs of increasing or decreasing digits, and allow the user to select the digits from one or more of these groups.
 	Values[0]: This parameter picks which runs we select. It may be a single integer, the string 'Last', or a list containing one or more of these. 
 	
+	Property: 'Skyscrapers'
+	For this property, we select a cell if it is the maximum of all cells which have been seen thus far. This corresponds to the concept of being "seen" in traditional Skycrapers rules.
+	
   selectTerminator: a *list* of conditions (tuples) which describe when the sum should stop. As with summand selection,
   each tuple starts with a sting containing a property name, and is followed by values specific to that property. Note that multiple
   selection criteria may be given, but for termination they are combined with a logical OR. There are three styles of termination, defined

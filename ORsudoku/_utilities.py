@@ -536,7 +536,15 @@ def _selectCellsOnLine(self,L,selectCriteria,initiatorCells=[]):
 								self.model.Add(runNumber[i] == runNumber[-1]).OnlyEnforceIf(myBools[j])
 								self.model.Add(runNumber[i] != runNumber[-1]).OnlyEnforceIf(myBools[j].Not())
 						self.model.AddBoolOr(myBools).OnlyEnforceIf(criterionBools[i])
-						self.model.AddBoolAnd([x.Not() for x in myBools]).OnlyEnforceIf(criterionBools[i].Not())					
+						self.model.AddBoolAnd([x.Not() for x in myBools]).OnlyEnforceIf(criterionBools[i].Not())
+			case 'Skyscrapers':
+				# Select the cells which are the maximum of all cells seens thus far
+				self.model.AddBoolAnd(criterionBools[0])
+				for i in range(1,len(L)):
+					maxVar = self.model.NewIntVar(0,max(self.digits),'SelectionSkyscraper{:d}'.format(i))
+					self.model.AddMaxEquality(maxVar,[self.cellValues[L[j][0]][L[j][1]] for j in range(i+1)])
+					self.model.Add(self.cellValues[L[i][0]][L[i][1]] == maxVar).OnlyEnforceIf(criterionBools[i])
+					self.model.Add(self.cellValues[L[i][0]][L[i][1]] < maxVar).OnlyEnforceIf(criterionBools[i].Not())
 		criteriaBools.insert(criterionNumber,criterionBools)
 		criterionNumber = criterionNumber + 1
 	
