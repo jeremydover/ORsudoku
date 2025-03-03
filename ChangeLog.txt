@@ -1,3 +1,10 @@
+3/3/2025
+	Made minor update to utility function to better allow model variables to be passed as values to conditional sum and count lines.
+	Added forceTermination flag to hanging clues and conditional lines, allowing the possibility that a value may still be returned if no terminator is found.
+	Added support for conditional cross counts, which perform counts across all orthogonal rays emanating from a cell...used to support
+	watchtower constraint.
+	Added test case.
+
 2/28/2025 ter
 	Added terminator for conditional and hanging clues that allows user to pass a model variable to indicate the position at which to terminate.
 	Added test cases.

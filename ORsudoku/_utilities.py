@@ -780,9 +780,6 @@ def _terminateCellsOnLine(self,L,selectTerminator):
 		self.model.AddBoolOr([terminatorBools[j][i] for j in range(len(terminatorBools))]).OnlyEnforceIf(terminatorCells[i])
 		self.model.AddBoolAnd([terminatorBools[j][i].Not() for j in range(len(terminatorBools))]).OnlyEnforceIf(terminatorCells[i].Not())
 		
-	# Ensure some terminator cell is picked
-	self.model.AddBoolOr(terminatorCells)
-	
 	return terminatorCells
 	
 def _terminateCellsInRowCol(self,row,col,rc,selectTerminator):
@@ -793,17 +790,46 @@ def _terminateCellsInRowCol(self,row,col,rc,selectTerminator):
 	terminatorCells = self._terminateCellsOnLine(L,selectTerminator)
 	return terminatorCells
 	
-def _evaluateHangingClues(self,partial,terminatorCells,value,terminateOn,includeTerminator,comparator=None):
+def _evaluateHangingClues(self,partial,terminatorCells,value,terminateOn,includeTerminator,comparator=None,forceTermination=True):
 	# This does the final configuration of a hanging clue, just extracting the ugly stuff away from the individual functions
+	
+	if forceTermination:
+		# One of the existing cells must terminate per the specified conditions
+		self.model.AddBoolOr(terminatorCells)
+	else:
+		# Otherwise we create a new final terminator as a default. If any other terminators are true, we want
+		# this to be false, but otherwise it becomes true.
+		newFinalTerminator = self.model.NewBoolVar('AlternateTerminator')
+		self.allVars.append(newFinalTerminator)
+		self.model.AddBoolAnd(newFinalTerminator).OnlyEnforceIf([x.Not() for x in terminatorCells])
+		for x in terminatorCells:
+			self.model.AddBoolAnd(newFinalTerminator.Not()).OnlyEnforceIf(x)
+		
+		if includeTerminator:
+			# If we're including the terminator in the count or sum, we need to *replace* the current
+			# final terminator in terminator cells, since its value no longer accurately determines
+			# whether or not we can actually terminate there
+			terminatorCells[-1] = newFinalTerminator
+		else:
+			# We are not including the terminator cell in the count or sum, but there is no
+			# terminator. So we should include all of the cells in the sum/count. This means we need
+			# to *append* the newFinalTerminator, allowing the possibility that the last cell of the line
+			# could be added, if it's not a *real* terminator.
+			terminatorCells.append(newFinalTerminator)
+		
 	if terminateOn == 'First':
 		if includeTerminator:
 			self.model.Add(partial[0] == value).OnlyEnforceIf(terminatorCells[0])
 		else:
-			if value == 0:
+			if type(value) is int and value == 0:
 				pass
 			else:
 				self.model.AddBoolAnd(terminatorCells[0].Not()).OnlyEnforceIf(terminatorCells[0])
-		for i in range(1,len(partial)):
+		# Note: we are changing the loop limits to range over terminatorCells, since if includeTerminator is 
+		# False and forceTermination is False, terminatorCells may be one longer than partial. However, in
+		# this case, there is no risk of over-running partial, since we'll be in the "else" clause below,
+		# where the indices are one less that the 
+		for i in range(1,len(terminatorCells)):
 			if includeTerminator:
 				match comparator:
 					case self.LE:
@@ -825,7 +851,7 @@ def _evaluateHangingClues(self,partial,terminatorCells,value,terminateOn,include
 					case _:
 						self.model.Add(partial[i-1] == value).OnlyEnforceIf([terminatorCells[i]] + [terminatorCells[j].Not() for j in range(i)])
 	elif terminateOn == 'Last':
-		for i in range(len(partial)):
+		for i in range(len(terminatorCells)):
 			if includeTerminator:
 				match comparator:
 					case self.LE:
@@ -853,18 +879,29 @@ def _evaluateHangingClues(self,partial,terminatorCells,value,terminateOn,include
 		# I want to make sure to pick the *first* location which meets the condition. I actually don't care which, just need to
 		# be canonical. The for j loop below ensures that if there is an earlier terminator that *could* be chosen, this
 		# one cannot be.
-		varBitmap = self._varBitmap('terminationPicker',len(partial))
+		varBitmap = self._varBitmap('terminationPicker',len(terminatorCells))
 		self.allVars = self.allVars + varBitmap[0]
-		for i in range(len(partial)):
-			match comparator:
-				case self.LE:
-					self.model.Add(partial[i] <= value).OnlyEnforceIf(varBitmap[i] + [terminatorCells[i]])
-				case self.GE:
-					self.model.Add(partial[i] >= value).OnlyEnforceIf(varBitmap[i] + [terminatorCells[i]])
-				case self.NE:
-					self.model.Add(partial[i] != value).OnlyEnforceIf(varBitmap[i] + [terminatorCells[i]])
-				case _:
-					self.model.Add(partial[i] == value).OnlyEnforceIf(varBitmap[i] + [terminatorCells[i]])
+		for i in range(len(terminatorCells)):
+			if includeTerminator:
+				match comparator:
+					case self.LE:
+						self.model.Add(partial[i] <= value).OnlyEnforceIf(varBitmap[i] + [terminatorCells[i]])
+					case self.GE:
+						self.model.Add(partial[i] >= value).OnlyEnforceIf(varBitmap[i] + [terminatorCells[i]])
+					case self.NE:
+						self.model.Add(partial[i] != value).OnlyEnforceIf(varBitmap[i] + [terminatorCells[i]])
+					case _:
+						self.model.Add(partial[i] == value).OnlyEnforceIf(varBitmap[i] + [terminatorCells[i]])
+			else:
+				match comparator:
+					case self.LE:
+						self.model.Add(partial[i-1] <= value).OnlyEnforceIf(varBitmap[i] + [terminatorCells[i]])
+					case self.GE:
+						self.model.Add(partial[i-1] >= value).OnlyEnforceIf(varBitmap[i] + [terminatorCells[i]])
+					case self.NE:
+						self.model.Add(partial[i-1] != value).OnlyEnforceIf(varBitmap[i] + [terminatorCells[i]])
+					case _:
+						self.model.Add(partial[i-1] == value).OnlyEnforceIf(varBitmap[i] + [terminatorCells[i]])
 						
 			self.model.AddBoolAnd(terminatorCells[i]).OnlyEnforceIf(varBitmap[i] + [terminatorCells[i].Not()])
 			  # ensures this varBitmap cannot be chosen if terminatorCells is not set
@@ -882,6 +919,6 @@ def _evaluateHangingClues(self,partial,terminatorCells,value,terminateOn,include
 						self.model.Add(partial[j] != value).OnlyEnforceIf(varBitmap[i] + [c])
 				self.model.AddBoolAnd(terminatorCells[j].Not()).OnlyEnforceIf(varBitmap[i] + [c.Not()])
 				self.model.AddBoolAnd(c.Not()).OnlyEnforceIf(varBitmap[i] + [terminatorCells[j].Not()])
-				for k in range(len(partial)):
+				for k in range(len(terminatorCells)):
 					if k != i:
 						self.model.AddBoolAnd(c).OnlyEnforceIf(varBitmap[k])

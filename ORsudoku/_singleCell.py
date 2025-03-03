@@ -559,3 +559,40 @@ def _applyRepeatedNeighborsNegative(self):
 		for j in range(self.boardWidth):
 			if (i,j) not in self.repeatedNeighborCells:
 				self.setDistinctNeighbors(i,j)
+				
+def setConditionalCountCross(self,row,col,value,selectSummands=None,selectTerminator=None,terminateOn='First',includeTerminator=True,comparator=None,forceTermination=True,includeSelf=True):
+	# Creates a conditional count condition on all orthogonal rays emanating from specified cell
+	myLists = []
+	list1 = [(row,col+i) for i in range(self.boardWidth) if col+i <= self.boardWidth]
+	if len(list1) > 1: myLists.append(list1)
+	list1 = [(row,col-i) for i in range(self.boardWidth) if col-i >= 1]
+	if len(list1) > 1: myLists.append(list1)
+	list1 = [(row+i,col) for i in range(self.boardWidth) if row+i <= self.boardWidth]
+	if len(list1) > 1: myLists.append(list1)
+	list1 = [(row-i,col) for i in range(self.boardWidth) if row-i >= 1]
+	if len(list1) > 1: myLists.append(list1)
+
+	myValues = []
+	for j in range(len(myLists)):
+		thisValue = self.model.NewIntVar(0,self.boardWidth,'ConditionalCountCrossRayCount')
+		myValues.append(thisValue)
+		self.setConditionalCountLine(myLists[j],thisValue,selectSummands+[('Location',self.GE,2)],selectTerminator,terminateOn,includeTerminator,self.EQ,forceTermination)
+
+	if value == 'self':
+		value = self.cellValues[row-1][col-1]
+
+	if includeSelf:
+		mySelf = 1
+	else:
+		mySelf = 0
+
+	match comparator:
+		case self.LE:
+			self.model.Add(sum(myValues) + mySelf <= value)
+		case self.GE:
+			self.model.Add(sum(myValues) + mySelf >= value)
+		case self.NE:
+			self.model.Add(sum(myValues) + mySelf != value)
+		case _:
+			self.model.Add(sum(myValues) + mySelf == value)
+	
