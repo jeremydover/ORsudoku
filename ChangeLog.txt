@@ -1,3 +1,9 @@
+3/4/2025
+	Added support for conditional rays sums and counts, where an initiator cell is chosen along a line, or in a row/column, which may be anywhere. The solver may count/sum selected cells along one or both of the forward/backward rays from the initiator. Line versions are setConditionalCountSegment and setConditionalSumSegment; row/column versions are setRayCount, setRaySum.
+	Added test cases.
+	Note: there is a subtle bug in the new code which is preventing countSolutions from working. There is some variable
+	flapping somewhere which is creating multiple solutions. Pushing for now since code can still be used to identify possibilities, but will need to come back and fix.
+
 3/3/2025 bis
 	Added Skyscrapers selection criterion for hanging sums and counts, and conditional lines. No need to use this versus setSkyscraper when appropriate, but this does allow more flexibility. (Hopefully for what I'm going for next.)
 

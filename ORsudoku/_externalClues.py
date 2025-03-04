@@ -1304,3 +1304,17 @@ def setInOrder(self,row1,col1,rc,values,adjacent=False):
 			self.model.Add(digitPositions[values[j-1] - self.minDigit] == digitPositions[values[j] - self.minDigit] - 1)
 		else:
 			self.model.Add(digitPositions[values[j-1] - self.minDigit] < digitPositions[values[j] - self.minDigit])
+			
+def setRayCount(self,row,col,rc,value,selectInitiator=None,selectSummands=None,selectTerminator=None,terminateOn='First',includeTerminator=True,comparator=None,forceTermination=True,includeSelf=True,backward=True,forward=True):
+	hStep = 0 if rc == self.Col else (1 if col == 1 else -1)
+	vStep = 0 if rc == self.Row else (1 if row == 1 else -1)
+	
+	L = [(row+k*vStep,col+k*hStep) for k in range(self.boardWidth)]
+	self.setConditionalCountSegment(L,value,selectInitiator,selectSummands,selectTerminator,terminateOn,includeTerminator,comparator,forceTermination,includeSelf,backward,forward)
+	
+def setRaySum(self,row,col,rc,value,selectInitiator=None,selectSummands=None,selectTerminator=None,terminateOn='First',includeTerminator=True,comparator=None,forceTermination=True,includeSelf=True,backward=True,forward=True):
+	hStep = 0 if rc == self.Col else (1 if col == 1 else -1)
+	vStep = 0 if rc == self.Row else (1 if row == 1 else -1)
+	
+	L = [(row+k*vStep,col+k*hStep) for k in range(self.boardWidth)]
+	self.setConditionalSumSegment(L,value,selectInitiator,selectSummands,selectTerminator,terminateOn,includeTerminator,comparator,forceTermination,includeSelf,backward,forward)

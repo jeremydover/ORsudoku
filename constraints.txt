@@ -28,9 +28,11 @@ Clone Regions
 Close Neighbors - see Global Whispers
 Conditional Count Cross - see Conditional Lines
 Conditional Count Lines - see Conditional Lines
+Conditional Count Segment - see Conditional Lines
 Conditional Instance Lines - see Conditional Lines
 Conditional Sandwich Sums - see Sandwich Sums
 Conditional Sum Lines - see Conditional Lines
+Conditional Sum Segment - see Conditional Lines
 Consecutive Chain Regions
 Consecutive Lines
 Consecutive Quads
@@ -168,6 +170,7 @@ Quad Sums (one digit on a quad is the sum of the three others)
 Quadro (no 2x2 in grid has all even or all odd digits) - see Parity Quads
 QuattroQuadri
 Ranked Cages - see Killer Cages
+Ray Counts and Sums - see Hanging Sums
 Ratio Pairs - see Kropki and Kropki pairs
 Region Sum Lines (sum of all cells along a line in a region is fixed)
 Region Segment Sum Lines - see Region Sum Lines
@@ -503,6 +506,10 @@ setConditionalCountCross(row,col,value,selectCriteria,terminationCriteria,termin
   value: can be an integer, or the string 'self' - in this latter case, the count matches the value in the cell
   See Hanging Sums for a description of selectCriteria, terminationCriteria, terminateOn, includeTerminator, comparator, forceTermination
   includeSelf: By default, the cell from which the rays are emanating is counted once if it meets the criteria. Setting this to false will not include the base cell.
+
+setConditionalCountSegment(list,value,selectInitiator,selectSummands,selectTerminator,terminateOn='First',includeTerminator=True,comparator=None,forceTermination=True,includeSelf=True,backward=True,forward=True): given a line in the grid, an initiating cell is chosen according to the selectInitiator criteria, and cells are counted one or both ways from the initiating cell to the ends of the line. All parameters are as described in setRayCount
+
+setConditionalSumSegment(list,value,selectInitiator,selectSummands,selectTerminator,terminateOn='First',includeTerminator=True,comparator=None,forceTermination=True,includeSelf=True,backward=True,forward=True): given a line in the grid, an initiating cell is chosen according to the selectInitiator criteria, and cells are summed one or both ways from the initiating cell to the ends of the line. All parameters are as described in setRaySum
 
 Consecutive Chain Regions
 -------------------------
@@ -896,7 +903,7 @@ which give the sum of some selection of digits, up to some terminator. The synta
 setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='First',includeTerminator=True,comparator=EQ,forceTermination=True)
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
-  value: the length of the longest run of increasing digits in the row/col
+  value: the sum of all the digits select by selectSummands which occur before a terminating cell
  
   selectSummands: a *list* of conditions (tuples) which describe whether or not to select certain cells into the sum. Generically,
   each tuple starts with a sting containing a property name, and is followed by values specific to that property. Note that multiple
@@ -1083,9 +1090,7 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
   
   comparator: by default equality, but can be set to LE, GE or NE using class variables.
   
-  forceTermination: the default behavior is that if no terminator is found (e.g., terminator is 'RepeatReached' on a line with no repeats),
-  then the solver considers there is no solution to the puzzle. If forceTermination is set to False, then the solver does not insist on a terminator, and counts/sums to the end of the specified row/column. If this option is selected, the last cell on the line is NOT considered
-  a terminator for purposes of "includeTerminator", so *all* cells are included.
+  forceTermination: the default behavior is that if no terminator is found (e.g., terminator is 'RepeatReached' on a line with no repeats), then the solver considers there is no solution to the puzzle. If forceTermination is set to False, then the solver does not insist on a terminator, and counts/sums to the end of the specified row/column. If this option is selected, the last cell on the line is NOT considered a terminator for purposes of "includeTerminator", so *all* cells are included.
   
   Example:
   p.setHangingSum(1,2,p.Col,14,[],[('Fixed',1),('DigitSetReached',[2,4,6,8],1),('DigitSetReached',[1,3,5,7,9],1)],terminateOn='Any')
@@ -1107,7 +1112,34 @@ setHangingInstance(row,col,rc,values,selectSummands,selectTerminator,terminateOn
   values: a list of values to be found meeting the conditions
   negativeConstraint: assert that the digits in values are the only digits which meet the selection criteria
 
+setRayCount(row,col,rc,value,selectInitiator,selectSummands,selectTerminator,terminateOn='First',includeTerminator=True,comparator=None,forceTermination=True,includeSelf=True,backward=True,forward=True) - in a row or column, calculates a count which has an indefinite starting point along the line, and may select cells in both directions from the starting cell
+  row,col: The coordinates of the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  value: the count of selected cells (per the selection criteria) on the rays emanating from an initiator cell (to be determined by the solver) up to some terminating cells
+  
+  selectInitiator: gives the criterion which determines which the base cell in the row/column is. Currently supported methods:
+  Initiator: 'Fixed'
+	We're initiating at a fixed index in the row/column, e.g. the third cell from the start.
+	Value: index at which to initiate counts
 	
+  Initiator: 'DigitReached'
+	Initiate at a fixed digit
+	Value: target digit to start at
+	
+  Initiator: 'Indexed'
+	Initiate at a value indexed by a cell in the row/column
+	Value: position of the cell whose value is used to indicate the starting position
+	
+  selectSummands, selectTerminator, terminateOn, includeTerminator, comparator and forceTermination are as in setHangingSum
+  
+  includeSelf: Default is True; the base cell is counted once as part of the overall count. If False, cell is not counted.
+  
+  backward: Default is True; the ray from the initiator cell back to the clue is counted according to the selection and termination criteria. If False, this ray is not included in the count
+  
+  forward: Default is True; the ray from the initiator cell away from the clue is counted according to the selection and termination criteria. If False, this ray is not included in the count
+  
+setRaySum(row,col,rc,value,selectInitiator,selectSummands,selectTerminator,terminateOn='First',includeTerminator=True,comparator=None,forceTermination=True,includeSelf=True,backward=True,forward=True) - same as setRayCount, but compares to the sum of the matching cells on the chosen rays
+
 Hidden Clones
 -------------
 setHiddenClones(list,number): assert that the region of cells defined via list has at least number exact clones (same digits in same position, no rotation or reflection)

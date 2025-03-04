@@ -72,6 +72,7 @@ def findSolution(self,test=False,debug=False):
 	elif debug is True:
 		for v in self.allVars:
 			print('%s=%i' % (v,self.solver.Value(v)))
+		print('Number of variables: '+str(len(self.allVars)))
 		return self.solveStatus
 	else:
 		print('Solver status = %s' % self.solver.StatusName(self.solveStatus))

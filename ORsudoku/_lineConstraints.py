@@ -755,12 +755,13 @@ def setConditionalSumLine(self,inlist,value,selectSummands=None,selectTerminator
 	# Copied from setHangingSum, an external clue. Just a line version, should be straightforward since the underlying support
 	# functions were converted to lines.
 	L = self._procCellList(inlist)
-	
+
 	# Need for cell transform clues. self.minDigit is the smallest base digit, not necessarily as transformed.
 	myMin = min(self.digits)
 	myMax = max(self.digits)
 	
 	partialSum = [self.model.NewIntVar(min(0,self.boardWidth*myMin),self.boardWidth*myMax,'HangingSumPartialSum{:d}'.format(i)) for i in range(len(L))]
+	self.allVars = self.allVars + partialSum
 		
 	selectionCells = self._selectCellsOnLine(L,selectSummands)
 	
@@ -780,7 +781,8 @@ def setConditionalCountLine(self,inlist,value,selectSummands=None,selectTerminat
 	# Copied from setConditionalSumLine, for counts instead of sums
 	L = self._procCellList(inlist)
 	partialCount = [self.model.NewIntVar(0,len(L),'ConditionalCountPartialCounts{:d}'.format(i)) for i in range(len(L))]
-		
+	self.allVars = self.allVars + partialCount
+	
 	selectionCells = self._selectCellsOnLine(L,selectSummands)
 	
 	# Tie the variables together
@@ -827,3 +829,112 @@ def setConditionalInstanceLine(self,inlist,values,selectSummands=None,selectTerm
 				self.model.Add(sum([matchToHereInt[d][j-1] for d in range(len(myDigits)) if myDigits[d] not in values]) == 0).OnlyEnforceIf(terminatorCells[j])
 				
 	self._evaluateHangingClues(partialMatch,terminatorCells,len(values),terminateOn,includeTerminator,forceTermination)
+	
+def _setConditionalSegment(self,countSum,inlist,value,selectInitiator=None,selectSummands=None,selectTerminator=None,terminateOn='First',includeTerminator=True,comparator=None,forceTermination=True,includeSelf=True,backward=True,forward=True):
+	# Hoochie, mama. I don't know about this one. I thought it would be easy, but the inclusion of initiator selection makes me 
+	# nervous. HOWEVER...I think this strategy will work. Let's document it.
+	# Step 1: I'm going to have to write code for initiators. I'm not looking at getting too exotic (famous last words), just
+	#         fixed location, indexed and digit location (e.g., wherever the 1 is) for starters. All are well traveled and 
+	#         behaved, and more importantly, have just a single "right" answer.
+	# Step 2: For each possible location in the row/column, create the one or two rays as arrays, as one would put into a conditional line.
+	#         For standard sudoku, this gives us 16 rays.
+	# Step 3: Put each ray through conditionalCountLine, with a variable as the value. By doing this, we're able to capture the value that
+	#         *would* apply if these rays represent where the initiator actually is. We *do* have to be a bit careful with this approach
+	#         in that the bounds applied initially on an IntVar do put constraints on the puzzle. But this should be easy to manage if
+	#         we are careful with our ranging.
+	# Step 4: For each possible initiator, instantiate the final comparison conditioned on the initiator variables.
+	# 
+	# Whew, if this works, I think it actually will be pretty easy. Except I looked back at step 1.
+	
+	L = self._procCellList(inlist)
+	Lunproc = [(L[i][0]+1,L[i][1]+1) for i in range(len(L))]
+	
+	# Step 1: Initiator cells. A lot of this code can just be modified from the analogous terminators
+	initiatorCells = [self.model.NewBoolVar('ConditionalCountRayInitiator{:d}'.format(k)) for k in range(self.boardWidth)]
+	self.allVars = self.allVars + initiatorCells
+	
+	match selectInitiator[0]:
+		case 'Fixed':
+			self.model.AddBoolAnd(initiatorCells[selectInitiator[1]-1])
+			self.model.AddBoolAnd([initiatorCells[i].Not() for i in range(len(L)) if i != selectInitiator[1]-1])
+		case 'DigitReached':
+			for i in range(len(L)):
+				self.model.Add(self.cellValues[L[i][0]][L[i][1]] == selectInitiator[1]).OnlyEnforceIf(initiatorCells[i])
+				self.model.Add(self.cellValues[L[i][0]][L[i][1]] != selectInitiator[1]).OnlyEnforceIf(initiatorCells[i].Not())
+		case 'Indexed':
+			for i in range(len(L)):
+				self.model.Add(self.cellValues[L[selectInitiator[1]-1][0]][L[selectInitiator[1]-1][1]] == i+1).OnlyEnforceIf(initiatorCells[i])
+				self.model.Add(self.cellValues[L[selectInitiator[1]-1][0]][L[selectInitiator[1]-1][1]] != i+1).OnlyEnforceIf(initiatorCells[i].Not())
+	
+	upper = len(L) if countSum == 'Count' else len(L)*max(self.digits)
+	myFunction = getattr(self,'setConditional'+countSum+'Line')
+		
+	# OK, real subtle problem here. We *cannot* force termination on these speculative rays, because many of them will not actually come to fruition. Hmm...I think we're going to need some more code here, because once forceTermination is turned off, there's no way to retroactively "turn it back on" by conditioning on the value of 
+	if forward:
+		forwardVars = [self.model.NewIntVar(0,upper,'ConditionalCountRayForwardCounts{:d}'.format(i)) for i in range(len(L))]
+		self.allVars = self.allVars + forwardVars
+		for i in range(len(L)):
+			if i == 0:
+				myFunction(Lunproc,forwardVars[i],selectSummands+[('Location',self.GE,2)],selectTerminator,terminateOn,includeTerminator,self.EQ,forceTermination=[initiatorCells[i]])
+			elif i == len(L)-1:
+				if forceTermination is True:
+					myFunction(Lunproc[i:],forwardVars[i],selectSummands+[('Location',self.GE,2)],selectTerminator,terminateOn,includeTerminator,self.EQ,forceTermination=[initiatorCells[i]])
+				else:
+					self.model.Add(forwardVars[i] == 0)
+			else:
+				myFunction(Lunproc[i:],forwardVars[i],selectSummands+[('Location',self.GE,2)],selectTerminator,terminateOn,includeTerminator,self.EQ,forceTermination=[initiatorCells[i]])
+	if backward:
+		backwardVars = [self.model.NewIntVar(0,upper,'ConditionalCountRayBackwardCounts{:d}'.format(i)) for i in range(len(L))]
+		self.allVars = self.allVars + backwardVars
+		for i in range(len(L)):
+			if i == 0:
+				if forceTermination is True:
+					myFunction(Lunproc[i::-1],backwardVars[i],selectSummands+[('Location',self.GE,2)],selectTerminator,terminateOn,includeTerminator,self.EQ,forceTermination=[initiatorCells[i]])
+				else:
+					self.model.Add(backwardVars[i] == 0)
+			elif i == len(L)-1:
+				myFunction(Lunproc[::-1],backwardVars[i],selectSummands+[('Location',self.GE,2)],selectTerminator,terminateOn,includeTerminator,self.EQ,forceTermination=[initiatorCells[i]])
+			else:
+				myFunction(Lunproc[i::-1],backwardVars[i],selectSummands+[('Location',self.GE,2)],selectTerminator,terminateOn,includeTerminator,self.EQ,forceTermination=[initiatorCells[i]])
+	
+	initiatorDigit = self.model.NewIntVar(min(self.digits),max(self.digits),'ConditionalCountRayValueInTerminus')
+	self.allVars.append(initiatorDigit)
+	for i in range(len(L)):
+		self.model.Add(initiatorDigit == self.cellValues[L[i][0]][L[i][1]]).OnlyEnforceIf(initiatorCells[i])
+	if value == 'self':
+		value = initiatorDigit
+	
+	if includeSelf:
+		if countSum == 'Count':
+			mySelf = 1
+		else:
+			mySelf = initiatorDigit
+	else:
+		mySelf = 0
+	
+	self.allVars = self.allVars + initiatorCells
+	
+	for i in range(len(L)):
+		if forward and backward:
+			myValue = forwardVars[i] + backwardVars[i]
+		elif forward:
+			myValue = forwardVars[i]
+		else:
+			myValue = backwardVars[i]
+			
+		match comparator:
+			case self.LE:
+				self.model.Add(myValue + mySelf <= value).OnlyEnforceIf(initiatorCells[i])
+			case self.GE:
+				self.model.Add(myValue + mySelf >= value).OnlyEnforceIf(initiatorCells[i])
+			case self.NE:
+				self.model.Add(myValue + mySelf != value).OnlyEnforceIf(initiatorCells[i])
+			case _:
+				self.model.Add(myValue + mySelf == value).OnlyEnforceIf(initiatorCells[i])
+				
+def setConditionalCountSegment(self,inlist,value,selectInitiator=None,selectSummands=None,selectTerminator=None,terminateOn='First',includeTerminator=True,comparator=None,forceTermination=True,includeSelf=True,backward=True,forward=True):
+	self._setConditionalSegment('Count',inlist,value,selectInitiator,selectSummands,selectTerminator,terminateOn,includeTerminator,comparator,forceTermination,includeSelf,backward,forward)
+	
+def setConditionalSumSegment(self,inlist,value,selectInitiator=None,selectSummands=None,selectTerminator=None,terminateOn='First',includeTerminator=True,comparator=None,forceTermination=True,includeSelf=True,backward=True,forward=True):
+	self._setConditionalSegment('Sum',inlist,value,selectInitiator,selectSummands,selectTerminator,terminateOn,includeTerminator,comparator,forceTermination,includeSelf,backward,forward)
+	

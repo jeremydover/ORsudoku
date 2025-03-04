@@ -81,6 +81,7 @@ def _selectCellsOnLine(self,L,selectCriteria,initiatorCells=[]):
 	# I'm going to create selection Booleans to evaluate each cell against the selectCriteria criteria. 
 	# Notice how I'm clever enough to avoid defining selectSummands as long as I can. #genius
 	selectionCells = [self.model.NewBoolVar('SelectionCondition{:d}'.format(i)) for i in range(len(L))]
+	self.allVars = self.allVars + selectionCells
 	
 	# OK, document as I go! selectCriteria is an array of criteria, all of which must be true for a cell to be
 	# selected. Each array element is itself a tuple of at least two items: property, value.
@@ -689,8 +690,8 @@ def _terminateCellsOnLine(self,L,selectTerminator):
 				else:
 					depthIndices = [x-1 for x in terminator[1]]
 				depthVars = [self.model.NewBoolVar('TerminationSelectionCellRow') for j in range(len(depthIndices))]
+				self.allVars = self.allVars + depthVars
 				self.model.AddBoolOr(depthVars)
-				#self.model.AddBoolOr(termBools)
 
 				for i in range(len(L)):
 					for j in range(len(depthVars)):
@@ -801,9 +802,12 @@ def _terminateCellsInRowCol(self,row,col,rc,selectTerminator):
 def _evaluateHangingClues(self,partial,terminatorCells,value,terminateOn,includeTerminator,comparator=None,forceTermination=True):
 	# This does the final configuration of a hanging clue, just extracting the ugly stuff away from the individual functions
 	
-	if forceTermination:
+	if forceTermination == True:
 		# One of the existing cells must terminate per the specified conditions
 		self.model.AddBoolOr(terminatorCells)
+	elif type(forceTermination) is list:
+		# Only force termination if the associated list of Bools is true
+		self.model.AddBoolOr(terminatorCells).OnlyEnforceIf(forceTermination)
 	else:
 		# Otherwise we create a new final terminator as a default. If any other terminators are true, we want
 		# this to be false, but otherwise it becomes true.
