@@ -850,7 +850,7 @@ def _setConditionalSegment(self,countSum,inlist,value,selectInitiator=None,selec
 	Lunproc = [(L[i][0]+1,L[i][1]+1) for i in range(len(L))]
 	
 	# Step 1: Initiator cells. A lot of this code can just be modified from the analogous terminators
-	initiatorCells = [self.model.NewBoolVar('ConditionalCountRayInitiator{:d}'.format(k)) for k in range(self.boardWidth)]
+	initiatorCells = [self.model.NewBoolVar('ConditionalCountRayInitiator{:d}'.format(k)) for k in range(len(L))]
 	self.allVars = self.allVars + initiatorCells
 	
 	match selectInitiator[0]:

@@ -75,6 +75,65 @@ def _selectCellsMatchDigitSet(self,myVars,L,values):
 			else:
 				self.model.Add(self.cellValues[L[i][0]][L[i][1]] != j).OnlyEnforceIf(myVars[i])
 
+def _groundConditionalVariables(self,variables,OEI):
+	for x in OEI:
+		self.model.AddBoolAnd(variables).OnlyEnforceIf(x.Not())
+
+def conditionalFixedRange(self,L,comparator,cellValue,OEI=[]):
+	conditionalCells = [self.model.NewBoolVar('ConditionalFixedRange{:d}'.format(k)) for k in range(len(L))]
+	match comparator:
+		case self.LE:
+			self.model.AddBoolAnd([conditionalCells[j] for j in range(cellValue)]).OnlyEnforceIf(OEI)
+			self.model.AddBoolAnd([conditionalCells[j].Not() for j in range(cellValue,len(L))]).OnlyEnforceIf(OEI)
+		case self.EQ:
+			self.model.AddBoolAnd([conditionalCells[cellValue-1]]).OnlyEnforceIf(OEI)
+			self.model.AddBoolAnd([conditionalCells[j].Not() for j in range(len(L)) if j != cellValue-1]).OnlyEnforceIf(OEI)
+		case self.GE:
+			self.model.AddBoolAnd([conditionalCells[j].Not() for j in range(cellValue-1)]).OnlyEnforceIf(OEI)
+			self.model.AddBoolAnd([conditionalCells[j] for j in range(cellValue-1,len(L))]).OnlyEnforceIf(OEI)
+		case self.NE:
+			self.model.AddBoolAnd([conditionalCells[cellValue-1].Not()]).OnlyEnforceIf(OEI)
+			self.model.AddBoolAnd([conditionalCells[j] for j in range(len(L)) if j != cellValue-1]).OnlyEnforceIf(OEI)
+	self._groundConditionalVariables(conditionalCells,OEI)
+	return conditionalCells
+
+def conditionalIndexedRange(self,L,comparator,indexCell,OEI=[]):
+	isIndexedCell = [self.model.NewBoolVar('ConditionalIndexedRangeIsIndexed{:d}'.format(k)) for k in range(len(L))]
+	for i in range(len(L)):
+		self.model.Add(self.cellValues[L[indexCell-1][0]][L[indexCell-1][1]] == i+1).OnlyEnforceIf([isIndexedCell[i]]+OEI)
+		self.model.Add(self.cellValues[L[indexCell-1][0]][L[indexCell-1][1]] != i+1).OnlyEnforceIf([isIndexedCell[i].Not()]+OEI)
+	self._groundConditionalVariables(isIndexedCell,OEI)
+
+	conditionalCells = [self.model.NewBoolVar('ConditionalIndexedRange{:d}'.format(k)) for k in range(len(L))]
+	for i in range(len(L)):
+		match comparator:
+			case self.LE:
+				self.model.AddBoolAnd([conditionalCells[j] for j in range(i)]).OnlyEnforceIf([isIndexedCell[i]]+OEI)
+				self.model.AddBoolAnd([conditionalCells[j].Not() for j in range(i,len(L))]).OnlyEnforceIf([isIndexedCell[i]]+OEI)
+			case self.EQ:
+				self.model.AddBoolAnd([conditionalCells[i-1]]).OnlyEnforceIf([isIndexedCell[i]]+OEI)
+				self.model.AddBoolAnd([conditionalCells[j].Not() for j in range(len(L)) if j != i-1]).OnlyEnforceIf([isIndexedCell[i]]+OEI)
+			case self.GE:
+				self.model.AddBoolAnd([conditionalCells[j].Not() for j in range(i-1)]).OnlyEnforceIf([isIndexedCell[i]]+OEI)
+				self.model.AddBoolAnd([conditionalCells[j] for j in range(i-1,len(L))]).OnlyEnforceIf([isIndexedCell[i]]+OEI)
+			case self.NE:
+				self.model.AddBoolAnd([conditionalCells[i-1].Not()]).OnlyEnforceIf([isIndexedCell[i]]+OEI)
+				self.model.AddBoolAnd([conditionalCells[j] for j in range(len(L)) if i != cellValue-1]).OnlyEnforceIf([isIndexedCell[i]]+OEI)
+	self._groundConditionalVariables(conditionalCells,OEI)
+	return conditionalCells
+	
+def conditionalDigitReached(self,L,digit,OEI=[]):
+	conditionalCells = [self.model.NewBoolVar('ConditionalDigitReached{:d}'.format(k)) for k in range(len(L))]
+	for i in range(len(L)):
+		self.model.Add(self.cellValues[L[i][0]][L[i][1]] == digit).OnlyEnforceIf([conditionalCells[i]]+OEI)
+		self.model.Add(self.cellValues[L[i][0]][L[i][1]] != digit).OnlyEnforceIf([conditionalCells[i].Not()]+OEI)
+	self._groundConditionalVariables(conditionalCells,OEI)
+	return initiatorCells
+	
+
+
+	
+
 def _selectCellsOnLine(self,L,selectCriteria,initiatorCells=[]):
 	
 	# Migrated from a version which worked on row/column, should not be too hard :-)
