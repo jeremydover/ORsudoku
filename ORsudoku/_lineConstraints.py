@@ -751,7 +751,7 @@ def setLotLine(self,inlist,lotIndex,prop):
 		self.model.Add(countInts[i] == 0).OnlyEnforceIf(countBools[i].Not())
 	self.model.Add(self.cellValues[inlist[lotIndex-1][0]][inlist[lotIndex-1][1]] == sum(countInts))
 
-def setConditionalSumLine(self,inlist,value,selectSummands=None,selectTerminator=None,terminateOn='First',includeTerminator=True,comparator=None,forceTermination=True):
+def setConditionalSumLine(self,inlist,value,selectSummands=None,selectTerminator=None,terminateOn='First',includeTerminator=True,comparator=None,forceTermination=True,OEI=[]):
 	# Copied from setHangingSum, an external clue. Just a line version, should be straightforward since the underlying support
 	# functions were converted to lines.
 	L = self._procCellList(inlist)
@@ -763,38 +763,46 @@ def setConditionalSumLine(self,inlist,value,selectSummands=None,selectTerminator
 	partialSum = [self.model.NewIntVar(min(0,self.boardWidth*myMin),self.boardWidth*myMax,'HangingSumPartialSum{:d}'.format(i)) for i in range(len(L))]
 	self.allVars = self.allVars + partialSum
 		
-	selectionCells = self._selectCellsOnLine(L,selectSummands)
+	selectionCells = self._selectCellsOnLine(L,selectSummands,OEI)
 	
 	# Tie the variables together
-	self.model.Add(partialSum[0] == self.cellValues[L[0][0]][L[0][1]]).OnlyEnforceIf(selectionCells[0])
-	self.model.Add(partialSum[0] == 0).OnlyEnforceIf(selectionCells[0].Not())
+	self.model.Add(partialSum[0] == self.cellValues[L[0][0]][L[0][1]]).OnlyEnforceIf([selectionCells[0]]+OEI)
+	self.model.Add(partialSum[0] == 0).OnlyEnforceIf([selectionCells[0].Not()]+OEI)
 	for i in range(1,len(L)):
-		self.model.Add(partialSum[i] == partialSum[i-1] + self.cellValues[L[i][0]][L[i][1]]).OnlyEnforceIf(selectionCells[i])
-		self.model.Add(partialSum[i] == partialSum[i-1]).OnlyEnforceIf(selectionCells[i].Not())
+		self.model.Add(partialSum[i] == partialSum[i-1] + self.cellValues[L[i][0]][L[i][1]]).OnlyEnforceIf([selectionCells[i]]+OEI)
+		self.model.Add(partialSum[i] == partialSum[i-1]).OnlyEnforceIf([selectionCells[i].Not()]+OEI)
+	
+	for x in OEI:
+		for i in range(len(L)):
+			self.model.Add(partialSum[i] == 0).OnlyEnforceIf(x.Not())
 	
 	# Now create terminator conditions
-	terminatorCells = self._terminateCellsOnLine(L,selectTerminator)
+	terminatorCells = self._terminateCellsOnLine(L,selectTerminator,OEI)
 	
-	self._evaluateHangingClues(partialSum,terminatorCells,value,terminateOn,includeTerminator,comparator,forceTermination)
+	self._evaluateHangingClues(partialSum,terminatorCells,value,terminateOn,includeTerminator,comparator,forceTermination,OEI)
 	
-def setConditionalCountLine(self,inlist,value,selectSummands=None,selectTerminator=None,terminateOn='First',includeTerminator=True,comparator=None,forceTermination=True):
+def setConditionalCountLine(self,inlist,value,selectSummands=None,selectTerminator=None,terminateOn='First',includeTerminator=True,comparator=None,forceTermination=True,OEI=[]):
 	# Copied from setConditionalSumLine, for counts instead of sums
 	L = self._procCellList(inlist)
 	partialCount = [self.model.NewIntVar(0,len(L),'ConditionalCountPartialCounts{:d}'.format(i)) for i in range(len(L))]
 	self.allVars = self.allVars + partialCount
 	
-	selectionCells = self._selectCellsOnLine(L,selectSummands)
+	selectionCells = self._selectCellsOnLine(L,selectSummands,OEI)
 	
 	# Tie the variables together
-	self.model.Add(partialCount[0] == 1).OnlyEnforceIf(selectionCells[0])
-	self.model.Add(partialCount[0] == 0).OnlyEnforceIf(selectionCells[0].Not())
+	self.model.Add(partialCount[0] == 1).OnlyEnforceIf([selectionCells[0]]+OEI)
+	self.model.Add(partialCount[0] == 0).OnlyEnforceIf([selectionCells[0].Not()]+OEI)
 	for i in range(1,len(L)):
-		self.model.Add(partialCount[i] == partialCount[i-1] + 1).OnlyEnforceIf(selectionCells[i])
-		self.model.Add(partialCount[i] == partialCount[i-1]).OnlyEnforceIf(selectionCells[i].Not())
+		self.model.Add(partialCount[i] == partialCount[i-1] + 1).OnlyEnforceIf([selectionCells[i]]+OEI)
+		self.model.Add(partialCount[i] == partialCount[i-1]).OnlyEnforceIf([selectionCells[i].Not()]+OEI)
+	
+	for x in OEI:
+		for i in range(len(L)):
+			self.model.Add(partialCount[i] == 0).OnlyEnforceIf(x.Not())
 	
 	# Now create terminator conditions
-	terminatorCells = self._terminateCellsOnLine(L,selectTerminator)
-	self._evaluateHangingClues(partialCount,terminatorCells,value,terminateOn,includeTerminator,comparator,forceTermination)
+	terminatorCells = self._terminateCellsOnLine(L,selectTerminator,OEI)
+	self._evaluateHangingClues(partialCount,terminatorCells,value,terminateOn,includeTerminator,comparator,forceTermination,OEI)
 	
 def setConditionalInstanceLine(self,inlist,values,selectSummands=None,selectTerminator=None,terminateOn='First',includeTerminator=True,negativeConstraint=False,forceTermination=True):
 	L = self._procCellList(inlist)
@@ -852,6 +860,7 @@ def _setConditionalSegment(self,countSum,inlist,value,selectInitiator=None,selec
 	# Step 1: Initiator cells. A lot of this code can just be modified from the analogous terminators
 	initiatorCells = [self.model.NewBoolVar('ConditionalCountRayInitiator{:d}'.format(k)) for k in range(self.boardWidth)]
 	self.allVars = self.allVars + initiatorCells
+	self.model.AddBoolOr(initiatorCells)
 	
 	match selectInitiator[0]:
 		case 'Fixed':
@@ -871,31 +880,37 @@ def _setConditionalSegment(self,countSum,inlist,value,selectInitiator=None,selec
 		
 	# OK, real subtle problem here. We *cannot* force termination on these speculative rays, because many of them will not actually come to fruition. Hmm...I think we're going to need some more code here, because once forceTermination is turned off, there's no way to retroactively "turn it back on" by conditioning on the value of 
 	if forward:
-		forwardVars = [self.model.NewIntVar(0,upper,'ConditionalCountRayForwardCounts{:d}'.format(i)) for i in range(len(L))]
+		forwardVars = [self.model.NewIntVar(-1,upper,'ConditionalCountRayForwardCounts{:d}'.format(i)) for i in range(len(L))]
 		self.allVars = self.allVars + forwardVars
 		for i in range(len(L)):
 			if i == 0:
-				myFunction(Lunproc,forwardVars[i],selectSummands+[('Location',self.GE,2)],selectTerminator,terminateOn,includeTerminator,self.EQ,forceTermination=[initiatorCells[i]])
+				myFunction(Lunproc,forwardVars[i],selectSummands+[('Location',self.GE,2)],selectTerminator,terminateOn,includeTerminator,self.EQ,forceTermination=True,OEI=[initiatorCells[i]])
+				self.model.Add(forwardVars[i] == -1).OnlyEnforceIf(initiatorCells[i].Not())
 			elif i == len(L)-1:
 				if forceTermination is True:
-					myFunction(Lunproc[i:],forwardVars[i],selectSummands+[('Location',self.GE,2)],selectTerminator,terminateOn,includeTerminator,self.EQ,forceTermination=[initiatorCells[i]])
+					myFunction(Lunproc[i:],forwardVars[i],selectSummands+[('Location',self.GE,2)],selectTerminator,terminateOn,includeTerminator,self.EQ,forceTermination=True,OEI=[initiatorCells[i]])
+					self.model.Add(forwardVars[i] == -1).OnlyEnforceIf(initiatorCells[i].Not())
 				else:
 					self.model.Add(forwardVars[i] == 0)
 			else:
-				myFunction(Lunproc[i:],forwardVars[i],selectSummands+[('Location',self.GE,2)],selectTerminator,terminateOn,includeTerminator,self.EQ,forceTermination=[initiatorCells[i]])
+				myFunction(Lunproc[i:],forwardVars[i],selectSummands+[('Location',self.GE,2)],selectTerminator,terminateOn,includeTerminator,self.EQ,forceTermination=True,OEI=[initiatorCells[i]])
+				self.model.Add(forwardVars[i] == -1).OnlyEnforceIf(initiatorCells[i].Not())
 	if backward:
-		backwardVars = [self.model.NewIntVar(0,upper,'ConditionalCountRayBackwardCounts{:d}'.format(i)) for i in range(len(L))]
+		backwardVars = [self.model.NewIntVar(-1,upper,'ConditionalCountRayBackwardCounts{:d}'.format(i)) for i in range(len(L))]
 		self.allVars = self.allVars + backwardVars
 		for i in range(len(L)):
 			if i == 0:
 				if forceTermination is True:
-					myFunction(Lunproc[i::-1],backwardVars[i],selectSummands+[('Location',self.GE,2)],selectTerminator,terminateOn,includeTerminator,self.EQ,forceTermination=[initiatorCells[i]])
+					myFunction(Lunproc[i::-1],backwardVars[i],selectSummands+[('Location',self.GE,2)],selectTerminator,terminateOn,includeTerminator,self.EQ,forceTermination=True,OEI=[initiatorCells[i]])
+					self.model.Add(backwardVars[i] == -1).OnlyEnforceIf(initiatorCells[i].Not())
 				else:
 					self.model.Add(backwardVars[i] == 0)
 			elif i == len(L)-1:
-				myFunction(Lunproc[::-1],backwardVars[i],selectSummands+[('Location',self.GE,2)],selectTerminator,terminateOn,includeTerminator,self.EQ,forceTermination=[initiatorCells[i]])
+				myFunction(Lunproc[::-1],backwardVars[i],selectSummands+[('Location',self.GE,2)],selectTerminator,terminateOn,includeTerminator,self.EQ,forceTermination=True,OEI=[initiatorCells[i]])
+				self.model.Add(backwardVars[i] == -1).OnlyEnforceIf(initiatorCells[i].Not())
 			else:
-				myFunction(Lunproc[i::-1],backwardVars[i],selectSummands+[('Location',self.GE,2)],selectTerminator,terminateOn,includeTerminator,self.EQ,forceTermination=[initiatorCells[i]])
+				myFunction(Lunproc[i::-1],backwardVars[i],selectSummands+[('Location',self.GE,2)],selectTerminator,terminateOn,includeTerminator,self.EQ,forceTermination=True,OEI=[initiatorCells[i]])
+				self.model.Add(backwardVars[i] == -1).OnlyEnforceIf(initiatorCells[i].Not())
 	
 	initiatorDigit = self.model.NewIntVar(min(self.digits),max(self.digits),'ConditionalCountRayValueInTerminus')
 	self.allVars.append(initiatorDigit)

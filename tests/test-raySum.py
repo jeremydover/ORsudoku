@@ -27,7 +27,7 @@ class TestPuzzle(unittest.TestCase):
 		p.setRaySum(9,6,p.Col,1,['Indexed',1],[['All']],[['Indexed',1]],backward=False)
 		p.setRaySum(9,9,p.Col,10,['Indexed',1],[['All']],[['Indexed',1]],backward=False)
 		
-		self.assertEqual(p.findSolution(test=True),'418236759725419368396578412241395876657182934839764125164957283572843691983621547','Failed Sudoku Variants Series (378) - Shifted X-Sums Sudoku')
+		self.assertEqual(p.countSolutions(test=True),'1:418236759725419368396578412241395876657182934839764125164957283572843691983621547','Failed Sudoku Variants Series (378) - Shifted X-Sums Sudoku')
 		
 if __name__ == '__main__':
     unittest.main()

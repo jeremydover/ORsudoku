@@ -1,3 +1,6 @@
+3/5/2025
+	All background changes. Add Boolean enforcement conditions for conditional enforcement lines. This is either the wave
+	of the future, or a prompt to re-factor. Whatevs. Nutshell: fixed the variable flapping problem with test-raySum.
 3/4/2025
 	Added support for conditional rays sums and counts, where an initiator cell is chosen along a line, or in a row/column, which may be anywhere. The solver may count/sum selected cells along one or both of the forward/backward rays from the initiator. Line versions are setConditionalCountSegment and setConditionalSumSegment; row/column versions are setRayCount, setRaySum.
 	Added test cases.
