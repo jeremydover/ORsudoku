@@ -1,6 +1,18 @@
+3/6/2025
+	Added support for multi-digit missing arrows, aka hidden arrows. Includes test case.
+	Added support for broken X-Sums, where the length of the sum is one less than, or one greater than, the indexing cell. Includes test case.
+	Added support for Potpourri N-Sums, and added test cases.
+	Added support for min values and min parity values on quads.
+	Added option for min/max quad values to specify value must be unique on the quad.
+	Added support for max/min parity on a quad, asserting the parity of the max/min digit on the quad. Includes test case.
+	Added support for X-Distance clues, including test case.
+	I should mention, most of my recent work has been mining the Sudoku Variants Series of Richard Stolk. I
+	throw a couple of my own ideas in there, particularly for generalizations, but most of the base logic
+	owes an enormous debt of gratitude. Thanks Richard!
+	
 3/5/2025
-	All background changes. Add Boolean enforcement conditions for conditional enforcement lines. This is either the wave
-	of the future, or a prompt to re-factor. Whatevs. Nutshell: fixed the variable flapping problem with test-raySum.
+	All background changes. Add Boolean enforcement conditions for conditional enforcement lines. This is either the wave of the future, or a prompt to re-factor. Whatevs. Nutshell: fixed the variable flapping problem with test-raySum.
+	
 3/4/2025
 	Added support for conditional rays sums and counts, where an initiator cell is chosen along a line, or in a row/column, which may be anywhere. The solver may count/sum selected cells along one or both of the forward/backward rays from the initiator. Line versions are setConditionalCountSegment and setConditionalSumSegment; row/column versions are setRayCount, setRaySum.
 	Added test cases.

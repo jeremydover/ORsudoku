@@ -8,7 +8,7 @@ def setLittleKiller(self,row1,col1,row2,col2,value):
 	cells = [(row1+vStep*k,col1+hStep*k) for k in range(self.boardWidth) if row1+vStep*k-1 in range(self.boardWidth) and col1+hStep*k-1 in range(self.boardWidth)]
 	self.setRepeatingCage(cells,value)
 	
-def setXSumBase(self,row1,col1,rc,value,pm,depth=1,depthStyle=None):
+def setXSumBase(self,row1,col1,rc,value,pm,depth=1,depthStyle=None,broken=False):
 	#row,col are the coordinates of the cell containing the length, value is the sum
 	#rc: 0 -> if adding in row, 1 -> if adding in column. Needed for corner cells.
 	#pm: determines if these are normal X-sums (including the digit) or reverse X-Sums (sum on the other side)
@@ -24,7 +24,10 @@ def setXSumBase(self,row1,col1,rc,value,pm,depth=1,depthStyle=None):
 	hStep = pm * hStep	# Change direction in case we're doing reverse
 	vStep = pm * vStep
 	
-	digits = list(self.digits)
+	if broken:
+		digits = list({x+1 for x in self.digits} | {x-1 for x in self.digits})
+	else:
+		digits = list(self.digits)
 	varBitmap = self._varBitmap('XSumRow{:d}Col{:d}RC{:d}'.format(row,col,rc),len(digits))
 	if depth != 1:
 		if depth > 1:
@@ -59,11 +62,25 @@ def setXSumBase(self,row1,col1,rc,value,pm,depth=1,depthStyle=None):
 			self.model.AddBoolAnd([varBitmap[i][0].Not()]).OnlyEnforceIf(varBitmap[i])	
 		elif digits[i] > 0:
 			if depth == 1:
-				self.model.Add(self.cellValues[row][col] == digits[i]).OnlyEnforceIf(varBitmap[i])
+				if broken:
+					c = self.model.NewBoolVar('switch')
+					self.model.AddBoolAnd(varBitmap[i]).OnlyEnforceIf(c)
+					self.model.Add(self.cellValues[row][col] == digits[i]+1).OnlyEnforceIf(varBitmap[i]+[c])
+					self.model.Add(self.cellValues[row][col] == digits[i]-1).OnlyEnforceIf(varBitmap[i]+[c.Not()])
+				else:
+					self.model.Add(self.cellValues[row][col] == digits[i]).OnlyEnforceIf(varBitmap[i])
 			else:
 				for j in range(len(depthVars)):
-					self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] == digits[i]).OnlyEnforceIf(varBitmap[i] + [depthVars[j]])
-					self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] != digits[i]).OnlyEnforceIf(varBitmap[i] + [depthVars[j].Not()])
+					if broken:
+						c = self.model.NewBoolVar('switch')
+						self.model.AddBoolAnd(varBitmap[i]+ [depthVars[j]]).OnlyEnforceIf(c)
+						self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] == digits[i]+1).OnlyEnforceIf(varBitmap[i] + [depthVars[j],c])
+						self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] == digits[i]-1).OnlyEnforceIf(varBitmap[i] + [depthVars[j],c.Not()])
+						self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] != digits[i]+1).OnlyEnforceIf(varBitmap[i] + [depthVars[j].Not()])
+						self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] != digits[i]-1).OnlyEnforceIf(varBitmap[i] + [depthVars[j].Not()])
+					else:
+						self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] == digits[i]).OnlyEnforceIf(varBitmap[i] + [depthVars[j]])
+						self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] != digits[i]).OnlyEnforceIf(varBitmap[i] + [depthVars[j].Not()])
 			self.model.Add(sum(self.cellValues[sumRow+j*vStep][sumCol+j*hStep] for j in range(digits[i])) == value).OnlyEnforceIf(varBitmap[i])
 		else: # So if a digit is negative, we reverse the intended direction
 			mySumRow = self.boardWidth-1-sumRow if rc == self.Col else sumRow
@@ -71,18 +88,32 @@ def setXSumBase(self,row1,col1,rc,value,pm,depth=1,depthStyle=None):
 			myHStep = -1 * hStep
 			myVStep = -1 * vStep				
 			if depth == 1:
-				self.model.Add(self.cellValues[row][col] == digits[i]).OnlyEnforceIf(varBitmap[i])
+				if broken:
+					c = self.model.NewBoolVar('switch')
+					self.model.AddBoolAnd(varBitmap[i]).OnlyEnforceIf(c)
+					self.model.Add(self.cellValues[row][col] == digits[i]+1).OnlyEnforceIf(varBitmap[i]+[c])
+					self.model.Add(self.cellValues[row][col] == digits[i]-1).OnlyEnforceIf(varBitmap[i]+[c.Not()])
+				else:
+					self.model.Add(self.cellValues[row][col] == digits[i]).OnlyEnforceIf(varBitmap[i])
 			else:
 				for j in range(len(depthVars)):
-					self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] == digits[i]).OnlyEnforceIf(varBitmap[i] + [depthVars[j]])
-					self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] != digits[i]).OnlyEnforceIf(varBitmap[i] + [depthVars[j.Not()]])
+					if broken:
+						c = self.model.NewBoolVar('switch')
+						self.model.AddBoolAnd(varBitmap[i]+ [depthVars[j]]).OnlyEnforceIf(c)
+						self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] == digits[i]+1).OnlyEnforceIf(varBitmap[i] + [depthVars[j],c])
+						self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] == digits[i]-1).OnlyEnforceIf(varBitmap[i] + [depthVars[j],c.Not()])
+						self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] != digits[i]+1).OnlyEnforceIf(varBitmap[i] + [depthVars[j].Not()])
+						self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] != digits[i]-1).OnlyEnforceIf(varBitmap[i] + [depthVars[j].Not()])
+					else:
+						self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] == digits[i]).OnlyEnforceIf(varBitmap[i] + [depthVars[j]])
+						self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] != digits[i]).OnlyEnforceIf(varBitmap[i] + [depthVars[j].Not()])
 			self.model.Add(sum(self.cellValues[mySumRow+j*myVStep][mySumCol+j*myHStep] for j in range(-1*digits[i])) == value).OnlyEnforceIf(varBitmap[i])
 			
-def setXSum(self,row1,col1,rc,value,depth=1,depthStyle=None):
-	self.setXSumBase(row1,col1,rc,value,1,depth,depthStyle)
+def setXSum(self,row1,col1,rc,value,depth=1,depthStyle=None,broken=False):
+	self.setXSumBase(row1,col1,rc,value,1,depth,depthStyle,broken)
 	
-def setReverseXSum(self,row1,col1,rc,value,depth=1,depthStyle=None):
-	self.setXSumBase(row1,col1,rc,value,-1,depth,depthStyle)
+def setReverseXSum(self,row1,col1,rc,value,depth=1,depthStyle=None,broken=False):
+	self.setXSumBase(row1,col1,rc,value,-1,depth,depthStyle,broken)
 			
 def setDoubleXSum(self,row1,col1,rc,value):
 	# A double X sum clue gives the sum of the X sums from each direction (top/bottom or left/right) in the clued row or column.
@@ -196,8 +227,6 @@ def setXCountBase(self,row1,col1,rc,value,pm,selectCriteria=None,terminateCriter
 	vStep = pm * vStep
 	
 	self._initializeXCount(prop,comp,compValue)
-	
-	
 	
 	digits = list(self.digits)
 	varBitmap = self._varBitmap('XSumRow{:d}Col{:d}RC{:d}'.format(row,col,rc),len(digits))
@@ -1318,3 +1347,40 @@ def setRaySum(self,row,col,rc,value,selectInitiator=None,selectSummands=None,sel
 	
 	L = [(row+k*vStep,col+k*hStep) for k in range(self.boardWidth)]
 	self.setConditionalSumSegment(L,value,selectInitiator,selectSummands,selectTerminator,terminateOn,includeTerminator,comparator,forceTermination,includeSelf,backward,forward)
+	
+def setPotpourriNSums(self,border,clues):
+	row = self.boardWidth-1 if border == self.Bottom else 0
+	col = self.boardWidth-1 if border == self.Right else 0
+	hStep = 1 if border == self.Left else -1 if border == self.Right else 0
+	vStep = 1 if border == self.Top else -1 if border == self.Bottom else 0
+	
+	sumLengthVars = []
+	for i in range(len(clues)):
+		if clues[i] is not None:
+			sumLength = self.model.NewIntVar(1,self.boardWidth,'sumLength{:d}'.format(i))
+			sumLengthVars.append(sumLength)
+			varBitmap = self._varBitmap('SumLengthPicker{:d}'.format(i),self.boardWidth)
+			for j in range(self.boardWidth):
+				self.model.Add(sumLength == j+1).OnlyEnforceIf(varBitmap[j])
+				self.model.Add(sum(self.cellValues[row+i*abs(hStep)+k*vStep][col+i*abs(vStep)+k*hStep] for k in range(j)) == clues[i]).OnlyEnforceIf(varBitmap[j])
+	self.model.AddAllDifferent(sumLengthVars)
+	
+def setXDistance(self,row1,col1,rc,value1,value2):
+	row = row1 - 1
+	col = col1 - 1
+	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
+	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
+	
+	firstVars = [self.model.NewBoolVar('XDistanceFirstPosition{:d}'.format(i)) for i in range(self.boardWidth)]
+	secondVars = [self.model.NewBoolVar('XDistanceSecondPosition{:d}'.format(j)) for j in range(self.boardWidth)]
+	self.allVars = self.allVars + firstVars + secondVars
+	for k in range(self.boardWidth):
+		self.model.Add(self.cellValues[row+k*vStep][col+k*hStep] == value1).OnlyEnforceIf(firstVars[k])
+		self.model.Add(self.cellValues[row+k*vStep][col+k*hStep] != value1).OnlyEnforceIf(firstVars[k].Not())
+		self.model.Add(self.cellValues[row+k*vStep][col+k*hStep] == value2).OnlyEnforceIf(secondVars[k])
+		self.model.Add(self.cellValues[row+k*vStep][col+k*hStep] != value2).OnlyEnforceIf(secondVars[k].Not())
+		self.model.AddBoolAnd([secondVars[j].Not() for j in range(k+1)]).OnlyEnforceIf(firstVars[k])
+		
+	for i in range(self.boardWidth):
+		for j in range(i+1,self.boardWidth):
+			self.model.Add(self.cellValues[row][col] == j-i).OnlyEnforceIf([firstVars[i],secondVars[j]])

@@ -328,22 +328,67 @@ def setQuadMaxArrow(self,row,col=-1,dir1=-1,dir2=-1):
 def setQuadMaxArrowArray(self,cells):
 	for x in cells: self.setQuadMaxArrow(x)
 	
-def setQuadMaxValue(self,row,col=-1,value=-1):
+def setQuadValueBase(self,maxMin,row,col,value,unique=False):
 	# row,col defines the 2x2 to which the clue applies
-	# value is the largest value which occurs in the quad
-	if col == -1:
-		(row,col,value) = self._procCell(row)
+	# value is the value which occurs in the quad
 
 	equalVars = [self.model.NewBoolVar('QuadMaxValueEqualRow{:d}Col{:d}'.format(row+i,col+j)) for i in range(2) for j in range(2)]
 	for i in range(2):
 		for j in range(2):
 			self.model.Add(self.cellValues[row+i][col+j] == value).OnlyEnforceIf(equalVars[2*i+j])
-			self.model.Add(self.cellValues[row+i][col+j] < value).OnlyEnforceIf(equalVars[2*i+j].Not())
+			if maxMin == self.Max:
+				self.model.Add(self.cellValues[row+i][col+j] < value).OnlyEnforceIf(equalVars[2*i+j].Not())
+			else:
+				self.model.Add(self.cellValues[row+i][col+j] > value).OnlyEnforceIf(equalVars[2*i+j].Not())
 	self.model.AddBoolOr(equalVars)
+	if unique:
+		for i in range(len(equalVars)):
+			self.model.AddBoolAnd([equalVars[j].Not() for j in range(len(equalVars)) if j != i]).OnlyEnforceIf(equalVars[i])
+
+def setQuadMaxValue(self,row,col=-1,value=-1,unique=False):
+	# row,col defines the 2x2 to which the clue applies
+	# value is the largest value which occurs in the quad
+	if col == -1:
+		(row,col,value) = self._procCell(row)
+	self.setQuadValueBase(self.Max,row,col,value,unique)
 	
-def setQuadMaxValueArray(self,cells):
-	for x in cells: self.setQuadMaxValue(x)
+def setQuadMaxValueArray(self,cells,unique=False):
+	for x in cells: self.setQuadMaxValue(x,-1,-1,unique)
 	
+def setQuadMinValue(self,row,col=-1,value=-1,unique=False):
+	# row,col defines the 2x2 to which the clue applies
+	# value is the largest value which occurs in the quad
+	if col == -1:
+		(row,col,value) = self._procCell(row)
+	self.setQuadValueBase(self.Min,row,col,value,unique)
+	
+def setQuadMinValueArray(self,cells,unique=False):
+	for x in cells: self.setQuadMinValue(x,-1,-1,unique)
+
+def setQuadParityValueBase(self,maxMin,row,col,values,unique):
+	pBits = [self.model.NewBoolVar('QuadMaxParityValue') for i in range(4)]
+	pBitPairs = [[pBits[i],pBits[i].Not()] for i in range(4)]
+	for i in range(4):
+		self.model.Add(self.cellParity[row+(i//2)][col+(i%2)] == 1).OnlyEnforceIf(pBits[i].Not())
+		self.model.Add(self.cellParity[row+(i//2)][col+(i%2)] == 0).OnlyEnforceIf(pBits[i])
+	for x in values:
+		vBits = [self.model.NewBoolVar('QuadMaxParityValue') for i in range(4)]
+		for i in range(4):
+			self.model.Add(self.cellValues[row+(i//2)][col+(i%2)] == x).OnlyEnforceIf(vBits[i])
+			if maxMin == self.Max:
+				self.model.Add(self.cellValues[row+(i//2)][col+(i%2)] < x).OnlyEnforceIf([vBits[i].Not(),pBitPairs[i][x%2]])
+			else:
+				self.model.Add(self.cellValues[row+(i//2)][col+(i%2)] > x).OnlyEnforceIf([vBits[i].Not(),pBitPairs[i][x%2]])
+			self.model.Add(self.cellValues[row+(i//2)][col+(i%2)] != x).OnlyEnforceIf([vBits[i].Not(),pBitPairs[i][x%2].Not()])
+		self.model.AddBoolOr(vBits)	# Ensures the max value appears
+	
+		if unique is True:
+			vInts = [self.model.NewIntVar(0,1,'QuadMaxParityValue') for i in range(4)]
+			for i in range(4):
+				self.model.Add(vInts[i] == 1).OnlyEnforceIf(vBits[i])
+				self.model.Add(vInts[i] == 0).OnlyEnforceIf(vBits[i].Not())
+			self.model.Add(sum(vInts) == 1)
+
 def setQuadMaxParityValue(self,row,col=-1,values=-1,unique=True):
 	# row,col defines the 2x2 to which the clue applies
 	# value is the largest value *of its parity* which occurs in the quad
@@ -358,25 +403,47 @@ def setQuadMaxParityValue(self,row,col=-1,values=-1,unique=True):
 	else:
 		row = row - 1
 		col = col - 1
-	pBits = [self.model.NewBoolVar('QuadMaxParityValue') for i in range(4)]
-	pBitPairs = [[pBits[i],pBits[i].Not()] for i in range(4)]
-	for i in range(4):
-		self.model.Add(self.cellParity[row+(i//2)][col+(i%2)] == 1).OnlyEnforceIf(pBits[i].Not())
-		self.model.Add(self.cellParity[row+(i//2)][col+(i%2)] == 0).OnlyEnforceIf(pBits[i])
-	for x in values:
-		vBits = [self.model.NewBoolVar('QuadMaxParityValue') for i in range(4)]
-		for i in range(4):
-			self.model.Add(self.cellValues[row+(i//2)][col+(i%2)] == x).OnlyEnforceIf(vBits[i])
-			self.model.Add(self.cellValues[row+(i//2)][col+(i%2)] < x).OnlyEnforceIf([vBits[i].Not(),pBitPairs[i][x%2]])
-			self.model.Add(self.cellValues[row+(i//2)][col+(i%2)] != x).OnlyEnforceIf([vBits[i].Not(),pBitPairs[i][x%2].Not()])
-		self.model.AddBoolOr(vBits)	# Ensures the max value appears
 	
-		if unique is True:
-			vInts = [self.model.NewIntVar(0,1,'QuadMaxParityValue') for i in range(4)]
-			for i in range(4):
-				self.model.Add(vInts[i] == 1).OnlyEnforceIf(vBits[i])
-				self.model.Add(vInts[i] == 0).OnlyEnforceIf(vBits[i].Not())
-			self.model.Add(sum(vInts) == 1)
+	self.setQuadParityValueBase(self.Max,row,col,values,unique)
+
+def setQuadMinParityValue(self,row,col=-1,values=-1,unique=True):
+	# row,col defines the 2x2 to which the clue applies
+	# value is the largest value *of its parity* which occurs in the quad
+	if 'Parity' not in self._propertyInitialized:
+		self._setParity()
+		
+	if col == -1:
+		T = self._procCell(row)
+		row = T[0]
+		col = T[1]
+		values = [T[i] for i in range(2,len(T))]
+	else:
+		row = row - 1
+		col = col - 1
+	
+	self.setQuadParityValueBase(self.Min,row,col,values,unique)
+
+def setQuadParityBase(self,maxMin,row,col,evenOdd):
+	extremum = self.model.NewIntVar(min(self.digits),max(self.digits),'QuadParityExtremeValue')
+	self.setQuadValueBase(maxMin,row,col,extremum)
+	comparator = 0 if evenOdd == self.Even else 1
+	self.model.AddModuloEquality(comparator,extremum,2)
+
+def setQuadMaxParity(self,row,col=-1,evenOdd=-1):
+	if col == -1:
+		(row,col,evenOdd) = self._procCell(row)
+	self.setQuadParityBase(self.Max,row,col,evenOdd)
+	
+def setQuadMinParity(self,row,col=-1,evenOdd=-1):
+	if col == -1:
+		(row,col,evenOdd) = self._procCell(row)
+	self.setQuadParityBase(self.Min,row,col,evenOdd)
+
+def setQuadMaxParityArray(self,cells):
+	for x in cells: self.setQuadMaxParity(x)
+	
+def setQuadMinParityArray(self,cells):
+	for x in cells: self.setQuadMinParity(x)
 	
 def setConsecutiveQuad(self,row,col=-1,value=-1):
 	# Of the SIX pairs of cells, if value is 0 (white), exactly one pair is consecutive. If value is 1 (black), at least two pairs are consecutive. If value is 2 (anti), no pairs are consecutive

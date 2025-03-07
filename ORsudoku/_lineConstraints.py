@@ -46,6 +46,26 @@ def setMissingArrow(self,inlist):
 	else:
 		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] == self.cellValues[inlist[1][0]][inlist[1][1]])
 	
+def setMultiDigitSumMissingArrow(self,inlist):
+	# Arrow where which end is the sum of the others is unknown, and the sum may be multiple digits
+	inlist = self._procCellList(inlist)
+	if (len(inlist) > 2):
+		tsilni = inlist[::-1]
+		c = self.model.NewBoolVar('MultiDigitSumMissingArrowDirection')
+		maxSum = (len(inlist)-1)*max(self.digits)
+		maxDigits = math.floor(math.log10(maxSum)) + 1
+		varBitmap = self._varBitmap('MultiDigitSumMissingArrowCircleSize',maxDigits)
+		for i in range(maxDigits):
+			circleC = 0
+			circleNotC = 0
+			for j in range(i+1):
+				circleC = 10*circleC + self.cellValues[inlist[j][0]][inlist[j][1]]
+				circleNotC = 10*circleNotC + self.cellValues[tsilni[j][0]][tsilni[j][1]]
+			self.model.Add(circleC == sum(self.cellValues[inlist[j][0]][inlist[j][1]] for j in range(i+1,len(inlist)))).OnlyEnforceIf([c]+varBitmap[i])
+			self.model.Add(circleNotC == sum(self.cellValues[tsilni[j][0]][tsilni[j][1]] for j in range(i+1,len(tsilni)))).OnlyEnforceIf([c.Not()]+varBitmap[i])
+	else:
+		self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] == self.cellValues[inlist[1][0]][inlist[1][1]])
+		
 def setRepeatingArrow(self,inlist,repeat=2):
 	inlist = self._procCellList(inlist)
 	bulb = inlist.pop(0)

@@ -18,6 +18,7 @@ Bent Diagonals - see XSudoku
 Between Lines
 Block Cages
 Broken Thermos - see Thermometers
+Broken X-Sums - see X-Sum
 Bust
 Capsules
 Cell Index Lines
@@ -92,6 +93,7 @@ Global Neighbor Sums
 Global Whispers (Dutch, et. al.)
 Gurth's Symmetric Placement (GSP)
 Hanging Sums/Counts/Averages/Instances
+Hidden Arrows - see Missing Multi-Digit Arrow under Arrows
 Hidden Clones
 In Order
 Indexing
@@ -155,6 +157,7 @@ Parity Quads (2x2 regions which contain both parities)
 Parity Snakes
 Pencilmarks
 Pool
+Potpourri N-Sums
 Psycho Killer Cages - see Killer Cages
 Psycho Look-And-Say Cages - see Zones
 Pointing Arrows - see Arrows
@@ -164,8 +167,9 @@ Primality Mirror - see Diagonal Mirrors
 Punctured Cages - see Killer Cages
 Quadruple
 Quad Max Arrows
-Quad Max Parity Values - see Odd Max Values
-Quad Max Values
+Quad Max/Min Parity - see Quad Max/Min Values
+Quad Max/Min Parity Values - see Quad Max/Min Values
+Quad Max/Min Values
 Quad Sums (one digit on a quad is the sum of the three others)
 Quadro (no 2x2 in grid has all even or all odd digits) - see Parity Quads
 QuattroQuadri
@@ -183,7 +187,7 @@ Repeated Neighbors
 Repeating Arrows - see Arrows
 Repelling Digits
 Reverse Numbered Rooms - see Numbered Rooms
-Reverse X-Sums - see X-Sums
+Reverse X-Sums - see X-Sum
 Roman Sums - see XV/XV Pairs
 Roping
 Rossini Clues
@@ -217,6 +221,7 @@ Vaults
 Weak Palindrome Lines
 Windoku
 X-Average - see X-Sum
+X-Distance
 X-Kropki
 X-Outside
 XSudoku
@@ -361,6 +366,9 @@ setMissingArrow(list): an arrow where either end cell of the arrow may be the su
 setRepeatingArrow(list,repeat): an arrow where the arrow portion can be paritioned into contiguous cells whose sum is the value in the bulb
   list: a list of cells along arrow, where the first element of list is the circle
   repeat (optional): the number of times the circle sum will repeat, default is 2
+  
+setMultiDigitSumMissingArrow(list): (also known as hidden arrows) a missing arrow (so either end can be the circle) where the circle can contain multiple digits, interpreted base 10
+  list: a list of cells along arrow
   
 Ascending Starters
 ------------------
@@ -1717,6 +1725,13 @@ setPositionSum(row,col,rc,positionSum,valueSum): set a position sum, namely givi
   positionSum: The sum of the first two cells from the clue direction
   valueSum: The sume of the cells indexed by the first two cells from the clue direction (see Indexing)
 
+Potpourri N-Sums
+================
+setPotpourriNSums(border,list): for each integer entry in the list, assert that there is a sum of contiguous digits starting from the border which equals this value; moreover, the length of these sums is different for all clued rows/columns on this border
+  border: placement of clues; use Top,Bottom,Left,Right class variables
+  list: list of clues, integers give sums, non-clued entries should be None, e.g. [15,None,24,None,16,43,5,5]
+        unclued rows/columns at the end may simply be omitted
+
 Quadruple
 ---------
 setQuadruple(cellVals): create a quadruple constraint on a 2x2 region
@@ -1733,19 +1748,45 @@ setQuadMaxArrow(cellDir): constraint on a 2x2 points to the unique maximum value
 setQuadMaxArrowArray(list): set multiple Quad Max arrow constraints
   list: list of extended cell specifications per setQuadMaxArrow method
   
-Quad Max Values
----------------
-setQuadMaxValue(cellValue): constraint on a 2x2 indicating the maximum value in the quad
+Quad Max/Min Values
+-------------------
+setQuadMaxValue(cellValue,unique): constraint on a 2x2 indicating the maximum value in the quad
   cellValue: an extended cell specification which has the coordinates of the 2x2, followed by the maximum value in the quad
+  unique (optional): If True, only one cell can equal the maximum. Defaults to False.
   
-setQuadMaxValueArray(list): set multiple Quad Max value constraints
+setQuadMaxValueArray(list,unique): set multiple Quad Max value constraints
   list: list of extended cell specifications per setQuadMaxValue method
+  unique (optional): If True, only one cell can equal the maximum. Defaults to False.
+  
+setQuadMinValue(cellValue,unique): constraint on a 2x2 indicating the minimum value in the quad
+  cellValue: an extended cell specification which has the coordinates of the 2x2, followed by the minimum value in the quad
+  unique (optional): If True, only one cell can equal the maximum. Defaults to False.
+  
+setQuadMinValueArray(list,unique): set multiple Quad Min value constraints
+  list: list of extended cell specifications per setQuadMinValue method
+  unique (optional): If True, only one cell can equal the maximum. Defaults to False.
+  
+setQuadMaxParity(cellValue): constraint on a 2x2 indicating the parity of the maximum value in the quad
+  cellValue: an extended cell specification which has the coordinates of the 2x2, followed by the parity of the maximum value in the quad; can use 0 for odd and 1 for even in shorthand notation, or the Even/Odd class variables
+  
+setQuadMaxParityArray(list): set multiple Quad Max parity constraints
+  list: list of extended cell specifications per setQuadMaxParity method
+  
+setQuadMinParity(cellValue): same as QuadMaxParity, but for minima
+  
+setQuadMinParityArray(list): same as QuadMaxParityArray, but for minima
   
 setQuadMaxParityValue(row,col,values,unique): 2x2 constraint indicating the largest value *of its parity* appearing in the quad
   row,col: the coordinates of the quad being clued
-  values: a list of up to two values (one of each parity) which are specified as the maximum
+  values: a list of up to two values (one of each parity) which are specified as the maxima
   unique: Optional, if True, forces the maximum parity value to be unique. Default is True.
   Note: If using the default unique=True, the argument can be specified in shorthand without punctuation, e.g., 1234, meaning quad 1,2 has max odd 3 and max even 4.
+  
+setQuadMinParityValue(row,col,values,unique): 2x2 constraint indicating the smallest value *of its parity* appearing in the quad
+  row,col: the coordinates of the quad being clued
+  values: a list of up to two values (one of each parity) which are specified as the minima
+  unique: Optional, if True, forces the minimum parity value to be unique. Default is True.
+  Note: If using the default unique=True, the argument can be specified in shorthand without punctuation, e.g., 1234, meaning quad 1,2 has min odd 3 and min even 4.
 
 Quad Sums
 ---------
@@ -2186,6 +2227,14 @@ Windoku
 -------
 setWindoku(): assert Windoku rules
 
+X-Distance
+----------
+setXDistance(row,col,rc,value1,value2): In the row/column, value1 appears before value2, and the distance between them is the digit in the first cell in the row/column
+  row,col: coordinates of the cell next to the clue
+  rc: indicates whether rule applies to row or column. Use Row and Col class variables
+  value1: first digit to appear
+  value2: second digit to appear
+
 X-Kropki
 --------
 setXKropki(row,col,rc,wb,neg): The first cell next to the Kropki dot (outside the grid) indicates the position (0-7) of the corresponding Kropki dot in the row/column. Designed by Zegres.
@@ -2213,23 +2262,25 @@ setXOutside(row,col,rc,values): assert that all of the digits in values must app
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   values: List of digits to appear
 
-X-Sums
-------
-setXSum(row,col,rc,value,depth,depthStyle): set an X sum constraint on a row or column
+X-Sum
+-----
+setXSum(row,col,rc,value,depth,depthStyle,broken): set an X sum constraint on a row or column
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: The sum of the first X cells in the row/column from the clue, where X is the value in the adjacent cell
   Note: for negative digits, the behavior of an X-Sum is to take digits from the other side of the row/column, a la a reverse sum
   depth (Optional): depth=1 is the default, which acts like a normal X-Sums clue. If depth is greater than 1, then the cell which picks the length of the sum can be anywhere in the first "depth" cells of the clued row/column. If depth is 0, then the cell which picks the length of the sum can be anywhere where the clued row/column meets the region containing the cell next to the clue.
   depthStyle (Optional): By default, any cell allowed to have the length picker by depth can contain it. depthStyle can be set to 'Smallest' or 'Largest' to force the smallest or largest value in the set of possible cells to be the one chosen.
+  broken (Optional): If True, the length of the sum is either +1 or -1 from a length picker. False by default.
   
-setReverseXSum(row,col,rc,value): set a reverse X sum constraint on a row or column, where the sum is taken on cells starting from the end of the row/column opposite the clue
+setReverseXSum(row,col,rc,value,depth,depthStyle,broken): set a reverse X sum constraint on a row or column, where the sum is taken on cells starting from the end of the row/column opposite the clue
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: The sum of the first X cells on the other side of the row/column from the clue, where X is the value in the adjacent cell
   Note: for negative digits, the behavior of a Reverse X-Sum is to take digits from the other side of the row/column, a la regular X-Sum
   depth (Optional): depth=1 is the default, which acts like a normal X-Sums clue. If depth is greater than 1, then the cell which picks the length of the sum can be anywhere in the first "depth" cells of the clued row/column. If depth is 0, then the cell which picks the length of the sum can be anywhere where the clued row/column meets the region containing the cell next to the clue.
   depthStyle (Optional): By default, any cell allowed to have the length picker by depth can contain it. depthStyle can be set to 'Smallest' or 'Largest' to force the smallest or largest value in the set of possible cells to be the one chosen.
+  broken (Optional): If True, the length of the sum is either +1 or -1 from a length picker. False by default.
   
 setDoubleXSum(row,col,rc,value): set a double X sum constraint on a row or column, where the clue is the sum of the X sums taken from both sides of the row/column
   row,col: The coordinates of the cell next to which the clue value sits
