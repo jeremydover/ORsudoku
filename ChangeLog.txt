@@ -1,3 +1,7 @@
+3/7/2025
+	Extended X-Distance concept to crust sandwich sudoku, where the digit next to the clue gives the distance between the crusts.
+	Included test case.
+
 3/6/2025
 	Added support for multi-digit missing arrows, aka hidden arrows. Includes test case.
 	Added support for broken X-Sums, where the length of the sum is one less than, or one greater than, the indexing cell. Includes test case.

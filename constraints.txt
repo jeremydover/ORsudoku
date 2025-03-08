@@ -1935,6 +1935,12 @@ p = crustSandwichSudoku(boardSizeRoot,enforceRegions=True,includeCrust=False,sel
 To set a crust sandwich clue, the normal setSandwichSum call as above can be used, and it will be applied with the selectCriteria defined in initialization, if any. There are additional methods:
 setCrustHasLength(): asserts that one of the crust digits must equal the number of cells in the sandwich for each sandwich
 setTwoCrustDigits(): asserts that the pair of crust digits are the same for each row/column
+setXDistanceCrust(row,col,rc): the distance between the two crust cells is given by the first cell in the grid next to the clue
+  row,col: the coordinates of the cell
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+setXDistanceCrustNegative(row,col,rc): the distance between the two crust cells is *not* given by the first cell in the grid next to the clue
+  row,col: the coordinates of the cell
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   
 Scary Cells
 -----------

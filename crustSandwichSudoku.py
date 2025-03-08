@@ -169,7 +169,25 @@ class crustSandwichSudoku(sudoku):
 				self.model.Add(crustDigit1 == self.cellValues[i][j]).OnlyEnforceIf([self.crust[i][j],c])
 				self.model.Add(crustDigit2 == self.cellValues[i][j]).OnlyEnforceIf([self.crust[i][j],c.Not()])
 				self.model.AddBoolAnd(c).OnlyEnforceIf(self.crust[i][j].Not())
-	
+				
+	def setXDistanceCrust(self,row1,col1,rc):
+		row = row1 - 1
+		col = col1 - 1
+		hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
+		vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
+		for j in range(self.boardWidth):
+			for k in range(j+1,self.boardWidth):
+				self.model.Add(self.cellValues[row][col] == k-j).OnlyEnforceIf([self.crust[row+j*vStep][col+j*hStep],self.crust[row+k*vStep][col+k*hStep]])
+
+	def setXDistanceCrustNegative(self,row1,col1,rc):
+		row = row1 - 1
+		col = col1 - 1
+		hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
+		vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
+		for j in range(self.boardWidth):
+			for k in range(j+1,self.boardWidth):
+				self.model.Add(self.cellValues[row][col] != k-j).OnlyEnforceIf([self.crust[row+j*vStep][col+j*hStep],self.crust[row+k*vStep][col+k*hStep]])
+
 	def printCurrentSolution(self):
 		dW = max([len(str(x)) for x in self.digits])
 		colorama.init()
