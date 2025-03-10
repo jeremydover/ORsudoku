@@ -1008,9 +1008,15 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
 	  Both: cell must have two neighbors, and both must match
 	  Neither: cell must have two neighbors, and neither may match
 	  
-	By default, and if no second argument is given, the neighbor digits will be considered to match if they have the same parity/entropy/etc. as the digit under consideration. If a second argument is given, the property for each neighbor is compared for equality against the given value.
+	Values[1]: Possible values are not given, an integer, the string 'Fixed' or the string 'Indexed'
+	  If no second argument is given, the neighbor digits will be considered to match if they have the same	parity/entropy/etc. as the digit under consideration.
+	  If the second argument is an integer, the property for each neighbor is compared for equality against the given value.
+	  If the second argument is 'Fixed', then the property is compared against the same property of the Nth digit in the list, where N is the third argument.
+	  If the second argument is 'Indexed', then the property is compared against the same property of the cell whose position is indexed by the Nth digit in the list, where N is the third argument.
+	Values[2]: A position in the list, must be preceded by 'Fixed' or 'Indexed'.
+	
 	For example: ['EntropyBefore'] will match all digits whose predecessor is in the same entropy stratum
-	('ParityBoth',0) will match all digits that have two neighbors when both of those neighbors are even, regardless of the parity of the digit under consideration.
+	('ParityBoth',0) will match all digits that have two neighbors when both of those neighbors are even, regardless of the parity of the digit under consideration. ('ModularNeither','Fixed',1) will match all digits which are not adjacent to a digit of the same residue class as the first digit in the list.
 
 	Property: '(Parity|Entropy|Modular|Primality)Run'
 	I'm done apologizing for the regex descriptions :-) For this property, we split the cells into contiguous runs with the same value of the selected property, and allow the user to select all digits in one or more of these groups.

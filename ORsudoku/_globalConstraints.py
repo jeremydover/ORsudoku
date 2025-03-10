@@ -609,3 +609,68 @@ def setPool(self,value,digit=9):
 	self.model.Add(afterSums[self.boardWidth-1] <= value)
 	for i in range(self.boardWidth-1):
 		self.model.Add(afterSums[i] + beforeSums[i+1] <= value)
+		
+def setBattleships(self):
+	myGrid = {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)}
+	isBattleship = []
+	for i in range(self.boardWidth):
+		temp = []
+		for j in range(self.boardWidth):
+			c = self.model.NewBoolVar('BattleshipsCell{:d}{:d}'.format(i,j))
+			temp.append(c)
+		isBattleship.insert(i,temp)
+		
+	# Rows
+	for i in range(self.boardWidth):
+		candidates = [{(i,j),(i,j+1)} for j in range(self.boardWidth-1)] + [{(i,j),(i,j+1),(i,j+2)} for j in range(self.boardWidth-2)] + [{(i,j),(i,j+1),(i,j+2),(i,j+3)} for j in range(self.boardWidth-3)] + [{(i,j),(i,j+1),(i,j+2),(i,j+3),(i,j+4)} for j in range(self.boardWidth-4)]
+		battleshipTest = [self.model.NewBoolVar('BattleshipsShipTester{:d}'.format(j)) for j in range(len(candidates))]
+		for j in range(len(candidates)):
+			mySupersets = [k for k in range(len(candidates)) if candidates[j] < candidates[k]]
+			# If battleshipTest is true, then sum of battleship values is 5, 10 or 15, and no superset is a battleship
+			d = self.model.NewIntVar(0,9,'MySumDiv5')
+			self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in candidates[j]) >= 5*d)
+			self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in candidates[j]) < 5*d + 5)
+			self.model.Add(d >= 1).OnlyEnforceIf(battleshipTest[j])
+			self.model.Add(d <= 3).OnlyEnforceIf(battleshipTest[j])
+			self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in candidates[j]) - 5*d == 0).OnlyEnforceIf(battleshipTest[j])
+			self.model.AddBoolAnd([battleshipTest[k].Not() for k in mySupersets]).OnlyEnforceIf(battleshipTest[j])
+			
+			# If this is a battleship, set the appropriate isBattleship variables
+			allTouching = {(x[0]+k,x[1]+m) for x in candidates[j] for k in range(-1,2) for m in range(-1,2)} & myGrid
+			self.model.AddBoolAnd([isBattleship[x[0]][x[1]] for x in candidates[j]]).OnlyEnforceIf(battleshipTest[j])
+			self.model.AddBoolAnd([isBattleship[x[0]][x[1]].Not() for x in allTouching if x not in candidates[j]]).OnlyEnforceIf(battleshipTest[j])
+			
+			# If battleshipTest is false, then either sum of battleship values is none of 5, 10 or 15, or a superset is a battleship
+			c = self.model.NewBoolVar('FalsePicker')
+			self.model.AddBoolAnd(c).OnlyEnforceIf(battleshipTest[j])
+			self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in candidates[j]) != 5).OnlyEnforceIf([battleshipTest[j].Not(),c])
+			self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in candidates[j]) != 10).OnlyEnforceIf([battleshipTest[j].Not(),c])
+			self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in candidates[j]) != 15).OnlyEnforceIf([battleshipTest[j].Not(),c])
+			self.model.AddBoolOr([battleshipTest[k] for k in mySupersets]).OnlyEnforceIf([battleshipTest[j].Not(),c.Not()])
+			
+	for i in range(self.boardWidth):
+		candidates = [{(j,i),(j+1,i)} for j in range(self.boardWidth-1)] + [{(j,i),(j+1,i),(j+2,i)} for j in range(self.boardWidth-2)] + [{(j,i),(j+1,i),(j+2,i),(j+3,i)} for j in range(self.boardWidth-3)] + [{(j,i),(j+1,i),(j+2,i),(j+3,i),(j+4,i)} for j in range(self.boardWidth-4)]
+		battleshipTest = [self.model.NewBoolVar('BattleshipsShipTester{:d}'.format(j)) for j in range(len(candidates))]
+		for j in range(len(candidates)):
+			mySupersets = [k for k in range(len(candidates)) if candidates[j] < candidates[k]]
+			# If battleshipTest is true, then sum of battleship values is 5, 10 or 15, and no superset is a battleship
+			varBitmap = self._varBitmap('SumValueChecker',3)
+			self.model.AddBoolAnd(varBitmap[0]).OnlyEnforceIf(battleshipTest[j].Not())
+			self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in candidates[j]) == 5).OnlyEnforceIf([battleshipTest[j]]+varBitmap[0])
+			self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in candidates[j]) == 10).OnlyEnforceIf([battleshipTest[j]]+varBitmap[1])
+			self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in candidates[j]) == 15).OnlyEnforceIf([battleshipTest[j]]+varBitmap[2])
+			self.model.AddBoolAnd([battleshipTest[k].Not() for k in mySupersets]).OnlyEnforceIf(battleshipTest[j])
+			
+			# If this is a battleship, set the appropriate isBattleship variables
+			allTouching = {(x[0]+k,x[1]+m) for x in candidates[j] for k in range(-1,2) for m in range(-1,2)} & myGrid
+			self.model.AddBoolAnd([isBattleship[x[0]][x[1]] for x in candidates[j]]).OnlyEnforceIf(battleshipTest[j])
+			self.model.AddBoolAnd([isBattleship[x[0]][x[1]].Not() for x in allTouching if x not in candidates[j]]).OnlyEnforceIf(battleshipTest[j])
+			
+			# If battleshipTest is false, then either sum of battleship values is none of 5, 10 or 15, or a superset is a battleship
+			c = self.model.NewBoolVar('FalsePicker')
+			self.model.AddBoolAnd(c).OnlyEnforceIf(battleshipTest[j])
+			self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in candidates[j]) != 5).OnlyEnforceIf([battleshipTest[j].Not(),c])
+			self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in candidates[j]) != 10).OnlyEnforceIf([battleshipTest[j].Not(),c])
+			self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in candidates[j]) != 15).OnlyEnforceIf([battleshipTest[j].Not(),c])
+			self.model.AddBoolOr([battleshipTest[k] for k in mySupersets]).OnlyEnforceIf([battleshipTest[j].Not(),c.Not()])
+	

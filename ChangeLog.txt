@@ -1,3 +1,6 @@
+3/9/2025
+	Augmented the PropertyNeighbors (e.g. ParityNeighbors) functionality to allow comparisons to the property of a cell at a fixed position in the list, or to a cell indexed by a cell at a fixed position in the list. Added test case.
+
 3/7/2025
 	Extended X-Distance concept to crust sandwich sudoku, where the digit next to the clue gives the distance between the crusts.
 	Included test case.

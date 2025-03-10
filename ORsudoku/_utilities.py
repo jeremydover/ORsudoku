@@ -400,11 +400,31 @@ def _selectCellsOnLine(self,L,selectCriteria,OEI=[]):
 				for x in OEI:
 					self.model.AddBoolAnd(matchForward).OnlyEnforceIf(x.Not())
 					self.model.AddBoolAnd(matchBackward).OnlyEnforceIf(x.Not())
+				
+				# The value we're matching may be fixed for the whole line, or may depend on the cell we're looking at
+				# To avoid making a hash of things, we'll do the "whole line" stuff first, and leave the value as none
+				# if it's supposed to match the current cell.
+				if len(criterion) > 2:
+					if criterion[1] == 'Fixed':
+						testValue = myCells[L[criterion[2]-1][0]][L[criterion[2]-1][1]]
+					elif criterion[1] == 'Indexed':
+						testValue = self.model.NewIntVar(-1,4,'PropertyMatchIndexedValue')
+						for i in range(len(L)):
+							if i+1 in self.digits:
+								c = self.model.NewBoolVar('PropertyMatchIndexPicker{:d}'.format(i))
+								self.allVars.append(c)
+								self.model.Add(self.cellValues[L[criterion[2]-1][0]][L[criterion[2]-1][1]] == i+1).OnlyEnforceIf([c] + OEI)
+								self.model.Add(self.cellValues[L[criterion[2]-1][0]][L[criterion[2]-1][1]] != i+1).OnlyEnforceIf([c.Not()] + OEI)
+								self.model.Add(testValue == myCells[L[i][0]][L[i][1]]).OnlyEnforceIf([c] + OEI)
+				elif len(criterion) > 1:
+					testValue = criterion[1]
+				else:
+					testValue = None
+				
 				for i in range(len(L)):
-					if len(criterion) > 1:
-						testValue = criterion[1]
-					else:
+					if testValue is None:
 						testValue = myCells[L[i][0]][L[i][1]]
+
 					if i == 0:
 						self.model.AddBoolAnd(matchBackward[i].Not()).OnlyEnforceIf(OEI)
 					else:
