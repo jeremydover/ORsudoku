@@ -908,7 +908,7 @@ Hanging Sums
 ------------
 This is a function which is probably overloaded with capability, but generically, it allows the setter to define outside sum clues
 which give the sum of some selection of digits, up to some terminator. The syntax is:
-setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='First',includeTerminator=True,comparator=EQ,forceTermination=True)
+setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='First',includeTerminator=True,comparator=EQ,forceTermination=True,failedTerminationBehavior='partial')
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: the sum of all the digits select by selectSummands which occur before a terminating cell
@@ -1104,7 +1104,7 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
   
   comparator: by default equality, but can be set to LE, GE or NE using class variables.
   
-  forceTermination: the default behavior is that if no terminator is found (e.g., terminator is 'RepeatReached' on a line with no repeats), then the solver considers there is no solution to the puzzle. If forceTermination is set to False, then the solver does not insist on a terminator, and counts/sums to the end of the specified row/column. If this option is selected, the last cell on the line is NOT considered a terminator for purposes of "includeTerminator", so *all* cells are included.
+  forceTermination: the default behavior is that if no terminator is found (e.g., terminator is 'RepeatReached' on a line with no repeats), then the solver considers there is no solution to the puzzle. If forceTermination is set to False, the solver does not fail if no cell meets the termination condition; behavior depends on the failedTerminationBehavior argument...see below.
   
   Example:
   p.setHangingSum(1,2,p.Col,14,[],[('Fixed',1),('DigitSetReached',[2,4,6,8],1),('DigitSetReached',[1,3,5,7,9],1)],terminateOn='Any')
@@ -1116,6 +1116,8 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
   
   The sum can again terminate in the first cell, or it continues to the first parity change.
   
+  failedTerminationBehavior: There are two options: 'partial' and 'zero', with 'partial' being the default. For 'partial', the solver counts/sums to the end of the specified row/column/line for purposes of comparison with 'value'. If this option is selected, the last cell on the line is NOT considered a terminator for purposes of "includeTerminator", so *all* cells are included. For 'zero', the solver insists that 'value' be 0...this can be a useful way for testing negative conditions, since the value on failure will be predictable.
+  
 Related functions:
 setHangingCount(row,col,rc,value,selectSummands,selectTerminator,terminateOn='First',includeTerminator=True,comparator=EQ,forceTermination=True) - counts the number of digits matched, instead of their sum
 
@@ -1126,7 +1128,7 @@ setHangingInstance(row,col,rc,values,selectSummands,selectTerminator,terminateOn
   values: a list of values to be found meeting the conditions
   negativeConstraint: assert that the digits in values are the only digits which meet the selection criteria
 
-setRayCount(row,col,rc,value,selectInitiator,selectSummands,selectTerminator,terminateOn='First',includeTerminator=True,comparator=None,forceTermination=True,includeSelf=True,backward=True,forward=True) - in a row or column, calculates a count which has an indefinite starting point along the line, and may select cells in both directions from the starting cell
+setRayCount(row,col,rc,value,selectInitiator,selectSummands,selectTerminator,terminateOn='First',includeTerminator=True,comparator=None,forceTermination=True,includeSelf=True,backward=True,forward=True,failedTerminationBehavior='partial') - in a row or column, calculates a count which has an indefinite starting point along the line, and may select cells in both directions from the starting cell
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: the count of selected cells (per the selection criteria) on the rays emanating from an initiator cell (to be determined by the solver) up to some terminating cells
@@ -1152,7 +1154,11 @@ setRayCount(row,col,rc,value,selectInitiator,selectSummands,selectTerminator,ter
   
   forward: Default is True; the ray from the initiator cell away from the clue is counted according to the selection and termination criteria. If False, this ray is not included in the count
   
-setRaySum(row,col,rc,value,selectInitiator,selectSummands,selectTerminator,terminateOn='First',includeTerminator=True,comparator=None,forceTermination=True,includeSelf=True,backward=True,forward=True) - same as setRayCount, but compares to the sum of the matching cells on the chosen rays
+  failedTerminationBehavior: If a ray fails to meet one the termination criteria, and forceTermination is False, there are two possible behaviors. The default is 'partial', where we evaluate against the count of the selected values to the end of the line; effectively the end of the line becomes the terminator. The other possible value is 'zero', in which case the count is evaluated against 0. This is useful for cases where we will terminate in one direction or the other, but we don't know which in advance. A good use case (using raySum) is:
+    p.setRaySum(1,1,p.Col,24,('DigitReached',1),[['All']],[('DigitReached',9)],includeTerminator=False,forceTermination=False,includeSelf=False,failedTerminationBehavior='zero')
+  which is just a long way to write a sandwich sum clue.
+  
+setRaySum(row,col,rc,value,selectInitiator,selectSummands,selectTerminator,terminateOn='First',includeTerminator=True,comparator=None,forceTermination=True,includeSelf=True,backward=True,forward=True,failedTerminationBehavior='partial') - same as setRayCount, but compares to the sum of the matching cells on the chosen rays
 
 Hidden Clones
 -------------

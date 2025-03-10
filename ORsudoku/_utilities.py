@@ -406,24 +406,26 @@ def _selectCellsOnLine(self,L,selectCriteria,OEI=[]):
 				# if it's supposed to match the current cell.
 				if len(criterion) > 2:
 					if criterion[1] == 'Fixed':
-						testValue = myCells[L[criterion[2]-1][0]][L[criterion[2]-1][1]]
+						myTestValue = myCells[L[criterion[2]-1][0]][L[criterion[2]-1][1]]
 					elif criterion[1] == 'Indexed':
-						testValue = self.model.NewIntVar(-1,4,'PropertyMatchIndexedValue')
+						myTestValue = self.model.NewIntVar(-1,4,'PropertyMatchIndexedValue')
 						for i in range(len(L)):
 							if i+1 in self.digits:
 								c = self.model.NewBoolVar('PropertyMatchIndexPicker{:d}'.format(i))
 								self.allVars.append(c)
 								self.model.Add(self.cellValues[L[criterion[2]-1][0]][L[criterion[2]-1][1]] == i+1).OnlyEnforceIf([c] + OEI)
 								self.model.Add(self.cellValues[L[criterion[2]-1][0]][L[criterion[2]-1][1]] != i+1).OnlyEnforceIf([c.Not()] + OEI)
-								self.model.Add(testValue == myCells[L[i][0]][L[i][1]]).OnlyEnforceIf([c] + OEI)
+								self.model.Add(myTestValue == myCells[L[i][0]][L[i][1]]).OnlyEnforceIf([c] + OEI)
 				elif len(criterion) > 1:
-					testValue = criterion[1]
+					myTestValue = criterion[1]
 				else:
-					testValue = None
+					myTestValue = None
 				
 				for i in range(len(L)):
-					if testValue is None:
+					if myTestValue is None:
 						testValue = myCells[L[i][0]][L[i][1]]
+					else:
+						testValue = myTestValue
 
 					if i == 0:
 						self.model.AddBoolAnd(matchBackward[i].Not()).OnlyEnforceIf(OEI)
@@ -894,33 +896,36 @@ def _terminateCellsInRowCol(self,row,col,rc,selectTerminator):
 	terminatorCells = self._terminateCellsOnLine(L,selectTerminator)
 	return terminatorCells
 	
-def _evaluateHangingClues(self,partial,terminatorCells,value,terminateOn,includeTerminator,comparator=None,forceTermination=True,OEI=[]):
+def _evaluateHangingClues(self,partial,terminatorCells,value,terminateOn,includeTerminator,comparator=None,forceTermination=True,OEI=[],failedTerminationBehavior='partial'):
 	# This does the final configuration of a hanging clue, just extracting the ugly stuff away from the individual functions
 	
 	if forceTermination == True:
 		# One of the existing cells must terminate per the specified conditions
 		self.model.AddBoolOr(terminatorCells).OnlyEnforceIf(OEI)
 	else:
-		# Otherwise we create a new final terminator as a default. If any other terminators are true, we want
-		# this to be false, but otherwise it becomes true.
-		newFinalTerminator = self.model.NewBoolVar('AlternateTerminator')
-		self.allVars.append(newFinalTerminator)
-		self.model.AddBoolAnd(newFinalTerminator).OnlyEnforceIf([x.Not() for x in terminatorCells]+OEI)
-		for x in terminatorCells:
-			self.model.AddBoolAnd(newFinalTerminator.Not()).OnlyEnforceIf([x]+OEI)
-		self.model.AddBoolAnd(OEI).OnlyEnforceIf(newFinalTerminator)
-		
-		if includeTerminator:
-			# If we're including the terminator in the count or sum, we need to *replace* the current
-			# final terminator in terminator cells, since its value no longer accurately determines
-			# whether or not we can actually terminate there
-			terminatorCells[-1] = newFinalTerminator
+		if failedTerminationBehavior == 'partial':
+			# Otherwise we create a new final terminator as a default. If any other terminators are true, we want
+			# this to be false, but otherwise it becomes true.
+			newFinalTerminator = self.model.NewBoolVar('AlternateTerminator')
+			self.allVars.append(newFinalTerminator)
+			self.model.AddBoolAnd(newFinalTerminator).OnlyEnforceIf([x.Not() for x in terminatorCells]+OEI)
+			for x in terminatorCells:
+				self.model.AddBoolAnd(newFinalTerminator.Not()).OnlyEnforceIf([x]+OEI)
+			self.model.AddBoolAnd(OEI).OnlyEnforceIf(newFinalTerminator)
+			
+			if includeTerminator:
+				# If we're including the terminator in the count or sum, we need to *replace* the current
+				# final terminator in terminator cells, since its value no longer accurately determines
+				# whether or not we can actually terminate there
+				terminatorCells[-1] = newFinalTerminator
+			else:
+				# We are not including the terminator cell in the count or sum, but there is no
+				# terminator. So we should include all of the cells in the sum/count. This means we need
+				# to *append* the newFinalTerminator, allowing the possibility that the last cell of the line
+				# could be added, if it's not a *real* terminator.
+				terminatorCells.append(newFinalTerminator)
 		else:
-			# We are not including the terminator cell in the count or sum, but there is no
-			# terminator. So we should include all of the cells in the sum/count. This means we need
-			# to *append* the newFinalTerminator, allowing the possibility that the last cell of the line
-			# could be added, if it's not a *real* terminator.
-			terminatorCells.append(newFinalTerminator)
+			self.model.Add(value == 0).OnlyEnforceIf(OEI + [x.Not() for x in terminatorCells])
 		
 	if terminateOn == 'First':
 		if includeTerminator:
