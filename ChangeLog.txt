@@ -1,3 +1,6 @@
+3/10/2025 ter
+	Added some more test cases.
+
 3/10/2025 bis
 	Added RelatedDigit selection criterion for conditional sums and counts.
 	Added support for sweeper cells using conditional sum selection criteria, allowing for many different types. Included negative constraint, and added test case.
