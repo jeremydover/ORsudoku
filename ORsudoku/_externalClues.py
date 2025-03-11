@@ -1384,3 +1384,22 @@ def setXDistance(self,row1,col1,rc,value1,value2):
 	for i in range(self.boardWidth):
 		for j in range(i+1,self.boardWidth):
 			self.model.Add(self.cellValues[row][col] == j-i).OnlyEnforceIf([firstVars[i],secondVars[j]])
+			
+def setRCRegionSum(self,row1,col1,rc,value):
+	row = row1 - 1
+	col = col1 - 1
+	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
+	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
+	
+	myRegions = []
+	myCellSet = {(row+i*vStep,col+i*hStep) for i in range(self.boardWidth)}
+	for x in self.regions:
+		myRegion = set(x) & myCellSet
+		if len(myRegion) > 0:
+			myRegions.append(myRegion)
+	
+	testVars = [self.model.NewBoolVar('RCRegionSum{:d}'.format(i)) for i in range(len(myRegions))]
+	for i in range(len(myRegions)):
+		self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in myRegions[i]) == value).OnlyEnforceIf(testVars[i])
+		self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in myRegions[i]) != value).OnlyEnforceIf(testVars[i].Not())
+	self.model.AddBoolOr(testVars)

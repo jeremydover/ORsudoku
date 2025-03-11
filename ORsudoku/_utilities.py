@@ -337,6 +337,7 @@ def _selectCellsOnLine(self,L,selectCriteria,OEI=[]):
 						case self.NE:
 							self.model.Add(instanceCount[i] != criterion[2]).OnlyEnforceIf([criterionBools[i]] + OEI)
 							self.model.Add(instanceCount[i] == criterion[2]).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
+
 			case 'NoRepeats':
 				matchVars = []
 				for i in range(len(L)):
@@ -350,6 +351,7 @@ def _selectCellsOnLine(self,L,selectCriteria,OEI=[]):
 				for i in range(len(L)):
 					self.model.AddBoolAnd([x.Not() for x in matchVars[i]] + [matchVars[j][i].Not() for j in range(i+1,len(L))]).OnlyEnforceIf([criterionBools[i]] + OEI)
 					self.model.AddBoolOr(matchVars[i] + [matchVars[j][i] for j in range(i+1,len(L))]).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
+
 			case 'ConsecutiveNeighbor'|'ConsecutiveBefore'|'ConsecutiveAfter'|'ConsecutiveNone':
 				consecPair = [self.model.NewBoolVar('ConsecPair') for j in range(len(L)-1)]
 				maxPair = [self.model.NewIntVar(self.minDigit,self.maxDigit,'ConsecPairMax') for j in range(len(L)-1)]
@@ -388,6 +390,7 @@ def _selectCellsOnLine(self,L,selectCriteria,OEI=[]):
 					for i in range(1,len(L)-1):
 						self.model.AddBoolAnd([consecPair[i-1].Not(),consecPair[i].Not()]).OnlyEnforceIf([criterionBools[i]] + OEI)
 						self.model.AddBoolOr([consecPair[i-1],consecPair[i]]).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
+
 			case 'ParityNeighbor'|'ParityBefore'|'ParityAfter'|'ParityNone'|'ParityAll'|'ParityBoth'|'ParityNeither'|'EntropyNeighbor'|'EntropyBefore'|'EntropyAfter'|'EntropyNone'|'EntropyAll'|'EntropyBoth'|'EntropyNeither'|'ModularNeighbor'|'ModularBefore'|'ModularAfter'|'ModularNone'|'ModularAll'|'ModularBoth'|'ModularNeither'|'PrimalityNeighbor'|'PrimalityBefore'|'PrimalityAfter'|'PrimalityNone'|'PrimalityAll'|'PrimalityBoth'|'PrimalityNeither':
 				x = re.search("(Parity|Entropy|Modular|Primality)(.*)",criterion[0])
 				mode = x.group(1)
@@ -472,6 +475,7 @@ def _selectCellsOnLine(self,L,selectCriteria,OEI=[]):
 					for i in range(1,len(L)-1):
 						self.model.AddBoolAnd([matchBackward[i].Not(),matchForward[i].Not()]).OnlyEnforceIf([criterionBools[i]] + OEI)
 						self.model.AddBoolOr([matchBackward[i],matchForward[i]]).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
+
 			case 'ParityRun'|'EntropyRun'|'ModularRun'|'PrimalityRun':
 				if criterion[0][0:-3] not in self._propertyInitialized:
 					getattr(self,'_set'+criterion[0][0:-3])()
@@ -565,6 +569,7 @@ def _selectCellsOnLine(self,L,selectCriteria,OEI=[]):
 								self.model.Add(filteredRunNumber[i] != filteredRunCount[-1]).OnlyEnforceIf([myBools[j].Not()] + OEI)
 						self.model.AddBoolOr(myBools).OnlyEnforceIf([criterionBools[i]] + OEI)
 						self.model.AddBoolAnd([x.Not() for x in myBools]).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
+
 			case 'AscendingRun'|'DescendingRun':
 				# First split the line up into contiguous runs
 				runNumber = [self.model.NewIntVar(1,len(L),'UpDownRunSelectionRunNumber') for i in range(len(L))]
@@ -606,6 +611,7 @@ def _selectCellsOnLine(self,L,selectCriteria,OEI=[]):
 								self.model.Add(runNumber[i] != runNumber[-1]).OnlyEnforceIf([myBools[j].Not()] + OEI)
 						self.model.AddBoolOr(myBools).OnlyEnforceIf([criterionBools[i]] + OEI)
 						self.model.AddBoolAnd([x.Not() for x in myBools]).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
+
 			case 'Skyscrapers':
 				# Select the cells which are the maximum of all cells seens thus far
 				self.model.AddBoolAnd(criterionBools[0]).OnlyEnforceIf(OEI)
@@ -614,6 +620,62 @@ def _selectCellsOnLine(self,L,selectCriteria,OEI=[]):
 					self.model.AddMaxEquality(maxVar,[self.cellValues[L[j][0]][L[j][1]] for j in range(i+1)])
 					self.model.Add(self.cellValues[L[i][0]][L[i][1]] == maxVar).OnlyEnforceIf([criterionBools[i]] + OEI)
 					self.model.Add(self.cellValues[L[i][0]][L[i][1]] < maxVar).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
+
+			case 'RelatedDigit':
+				base = criterion[1]-1
+				comparator = criterion[2]
+				scale = criterion[3]
+				shift = criterion[4]
+				
+				for i in range(len(L)):
+					match comparator:
+						case self.LE:
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] <= scale*self.cellValues[L[base][0]][L[base][1]] + shift).OnlyEnforceIf([criterionBools[i]] + OEI)
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] > scale*self.cellValues[L[base][0]][L[base][1]] + shift).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
+						case self.EQ:
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] == scale*self.cellValues[L[base][0]][L[base][1]] + shift).OnlyEnforceIf([criterionBools[i]] + OEI)
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] != scale*self.cellValues[L[base][0]][L[base][1]] + shift).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
+						case self.GE:
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] >= scale*self.cellValues[L[base][0]][L[base][1]] + shift).OnlyEnforceIf([criterionBools[i]] + OEI)
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] < scale*self.cellValues[L[base][0]][L[base][1]] + shift).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
+						case self.NE:
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] != scale*self.cellValues[L[base][0]][L[base][1]] + shift).OnlyEnforceIf([criterionBools[i]] + OEI)
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] == scale*self.cellValues[L[base][0]][L[base][1]] + shift).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
+
+			case 'MajorityParity'|'MajorityEntropy'|'MajorityModularity'|'MajorityPrimality'|'MinorityParity'|'MinorityEntropy'|'MinorityModularity'|'MinorityPrimality':
+				if criterion[0][8:] not in self._propertyInitialized:
+					getattr(self,'_set'+criterion[0][8:])()
+				myCells = getattr(self,'cell'+criterion[0][8:])
+				
+				countSame = [self.model.NewIntVar(0,len(L),'MajorityPropertyMatchCount') for i in range(len(L))]
+				for x in OEI:
+					for i in range(len(L)):
+						self.model.Add(countSame[i] == 0).OnlyEnforceIf(x.Not())
+				
+				for i in range(len(L)):
+					isSame = [self.model.NewBoolVar('MajorityPropertyComparisonBool') for j in range(len(L))]
+					isSameInt = [self.model.NewIntVar(0,1,'MajorityPropertyComparisonInt') for j in range(len(L))]
+					for x in OEI:
+						self.model.AddBoolAnd(isSame).OnlyEnforceIf(x.Not())
+						for j in range(len(L)):
+							self.model.Add(isSameInt[j] == 0).OnlyEnforceIf(x.Not())
+					for j in range(len(L)):
+						self.model.Add(isSameInt[j] == 1).OnlyEnforceIf([isSame[j]] + OEI)
+						self.model.Add(isSameInt[j] == 0).OnlyEnforceIf([isSame[j].Not()] + OEI)
+						self.model.Add(myCells[L[i][0]][L[i][1]] == myCells[L[j][0]][L[j][1]]).OnlyEnforceIf([isSame[j]] + OEI)
+						self.model.Add(myCells[L[i][0]][L[i][1]] != myCells[L[j][0]][L[j][1]]).OnlyEnforceIf([isSame[j].Not()] + OEI)
+					self.model.Add(countSame[i] == sum(isSameInt)).OnlyEnforceIf(OEI)
+				
+				extremum = self.model.NewIntVar(0,len(L),'MajorityPropertyExtremumCount')
+				if criterion[0][:8] == 'Majority':
+					self.model.AddMaxEquality(extremum,countSame)
+				else:
+					self.model.AddMinEquality(extremum,countSame)
+					
+				for i in range(len(L)):
+					self.model.Add(countSame[i] == extremum).OnlyEnforceIf([criterionBools[i]] + OEI)
+					self.model.Add(countSame[i] != extremum).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
+					
 		criteriaBools.insert(criterionNumber,criterionBools)
 		criterionNumber = criterionNumber + 1
 	

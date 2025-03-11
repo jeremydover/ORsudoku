@@ -97,6 +97,7 @@ Hidden Arrows - see Missing Multi-Digit Arrow under Arrows
 Hidden Clones
 In Order
 Indexing
+Indexed Pair Sums
 Irregular Sudoku
 Isotopes
 Japanese Sum Sudoku
@@ -192,6 +193,7 @@ Roman Sums - see XV/XV Pairs
 Roping
 Rossini Clues
 Rotational Pairs - see Gurth's Symmetric Placement
+Row/Column Region Sum
 Run-On Renban Lines - see Renban Lines
 Run-On Nabner Lines - see Extended Whispers Lines
 Samurai Sudoku
@@ -212,6 +214,7 @@ Split Pill Lines - see Split Pea Lines
 Star Battle Sudoku
 Sum Dots (see Killer Cages)
 Sum Sandwiches
+Sweepers
 Thermometers
 Triple Tabs
 Unicorn Digits
@@ -956,11 +959,11 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
 	
 	Property: 'Primality'
 	For this property, we pick cells based on whether their digit is prime or not. Which brings up the 1 problem.
-	By default, "not prime" is 0: 4,6,8,9; "maybe kinda" is 1: 1; "prime" is 2: 2,3,5,7. Like modular, even though the LE and GE comparisons don't really make sense, you can use them. The behavior of 1 can be configured with the configurePrimality method.
+	By default, "prime" is 0: 2,3,5,7; "maybe kinda" is 1: 1; "not prime" is 2: 4,6,8,9. Like modular, even though the LE and GE comparisons don't really make sense, you can use them. The behavior of 1 can be configured with the configurePrimality method.
 	
 	Property: 'MatchParity', 'MatchEntropy', 'MatchModular', 'MatchPrimality'
 	For this property, we pick cells if they match the given property of the cell specified in value
-	Value: cell whose property to match
+	Value: index of cell in line whose property to match (e.g., 1 is first cell, 2 is second, etc.)
 	
 	Property: 'ParityChange', 'EntropyChange', 'ModularChange', 'PrimalityChange'
 	For this property, we pick a cell if it is part of a change in the given property
@@ -1036,6 +1039,16 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
 	
 	Property: 'Skyscrapers'
 	For this property, we select a cell if it is the maximum of all cells which have been seen thus far. This corresponds to the concept of being "seen" in traditional Skycrapers rules.
+	
+	Property: 'RelatedDigit'
+	For this property, we select digits having a given relationship with a fixed cell in the line.
+	Values[0]: Location of the base digit along the line (one-based)
+	Values[1]: A comparator: use the class variables GE, EQ or LE, or NE
+	Values[2]: Scale, an integer multiplied by the digit in the base cell to determine the threshold for comparison
+	Values[3]: Shift, an integer add to the (scaled) digit in the base cell to determine the threshold for comparison
+	
+	Property: '(Majority|Minority)(Parity|Entropy|Modular|Primality)'
+	For this property, we select the digits with the property that has the largest or smallest *non-zero* incidence on the line. In case two or more classes are tied for the extreme count, ALL digits in those classes are selected.
 	
   selectTerminator: a *list* of conditions (tuples) which describe when the sum should stop. As with summand selection,
   each tuple starts with a sting containing a property name, and is followed by values specific to that property. Note that multiple
@@ -1173,6 +1186,13 @@ setInOrder(row,col,rc,values,adjacent): when viewed from the clue location, the 
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   values: list of digits in the order that they are to be seen
   adjacent (optional): Defaults to False. If True, values must be in a contiguous group of cells.
+
+Indexed Pair Sums
+-----------------
+setIndexedPairSum(row,col,uldr,value): In a cell row,col containing digit N, an arrow points to a cell N cells away whose sum with N is value
+  row,col: The coordinates of the cell with the arrow
+  uldr: the direction the arrow points; use Up, Down, Left, Right class variables
+  value: the sum of the two cell values
 
 Indexing (159)
 --------------
@@ -1896,6 +1916,13 @@ setRossiniLength(value): changes cluing behavior to work on a fixed number of ce
 	
 setRossiniNegative(): assert a negative constraint on the Rossini conditions, i.e. rows/columns without clues do not strictly increase/decrease in the Rossini window
 
+Row/Column Region Sums
+----------------------
+setRCRegionSum(row,col,rc,value): Asserts that the sum of the cells in the intersection of the clued row/column with some region equals value
+  row,col: The coordinates of the cell next to which the clue values sit
+  rc: row/column specification, use class variables Row and Col
+  value: the sum of the values in the row/column in some region
+
 Samurai Sudoku
 --------------
 To model a Samurai Sudoku puzzle, you must use the class samuraiSudoku, e.g.
@@ -1938,21 +1965,36 @@ Another option for sandwiches is to have specially designated "crust cells", sub
 sandwich sum is defined as being between the two crusts. Crust sandwich requires use of a different class, like so:
 
 from crustSandwichSudoku import crustSandwichSudoku
-p = crustSandwichSudoku(boardSizeRoot,enforceRegions=True,includeCrust=False,selectCriteria=[['All']])
+p = crustSandwichSudoku(boardSizeRoot,enforceRegions=False,includeCrust=False,selectCriteria=[['All']])
   Each row and column must have exactly two crust cells. By default, each region(box) will have two crust cells as well, but this restriction 
   can be relaxed by setting enforceRegions to False. As in regular sandwich rules, the sandwich sum by default does not include the crust digits,
   but this can also be relaxed by setting includeCrust to True. This class also inherits the irregular and digitSet parameters, which may be used
   to define irregular regions and alternate digit sets. It might even work.
   
 To set a crust sandwich clue, the normal setSandwichSum call as above can be used, and it will be applied with the selectCriteria defined in initialization, if any. There are additional methods:
-setCrustHasLength(): asserts that one of the crust digits must equal the number of cells in the sandwich for each sandwich
-setTwoCrustDigits(): asserts that the pair of crust digits are the same for each row/column
-setXDistanceCrust(row,col,rc): the distance between the two crust cells is given by the first cell in the grid next to the clue
-  row,col: the coordinates of the cell
-  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
-setXDistanceCrustNegative(row,col,rc): the distance between the two crust cells is *not* given by the first cell in the grid next to the clue
-  row,col: the coordinates of the cell
-  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  setCrustHasLength(): asserts that one of the crust digits must equal the number of cells in the sandwich for each sandwich
+  
+  setTwoCrustDigits(): asserts that the pair of crust digits are the same for each row/column
+  
+  setCrustStarBattle(): asserts that the crust digits must satisfy Star Battle constraints, i.e. no two crust digits can be adjacent either orthogonally or diagonally. Enforcing the additional constraint that there are two crust cells per region can be done with the "enforceRegions" parameter to the puzzle initiation.
+
+  setXDistanceCrust(row,col,rc): the distance between the two crust cells is given by the first cell in the grid next to the clue
+    row,col: the coordinates of the cell
+    rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+
+  setXDistanceCrustNegative(row,col,rc): the distance between the two crust cells is *not* given by the first cell in the grid next to the clue
+    row,col: the coordinates of the cell
+    rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+
+  setCrustSum(row,col,rc,value): constrains the sum of the values of the crust cells in row/column to be value
+    row,col: the coordinates of the cell
+    rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+    value: sum of the crust cells
+
+  setCrustInstance(row,col,rc,values): forces the digits in values to be crust digits in the clued row/column
+    row,col: the coordinates of the cell
+    rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+    values: a list of 1 or 2 digits which must appear as crust digits in the row/column
   
 Scary Cells
 -----------
@@ -2097,7 +2139,7 @@ setSplitPeaLine(inlist): the sum of the interior cells on the line is equal to s
 
 Star Battle Sudoku
 ------------------
-Solver code for sudoku/star battle hybrid puzzles. To model a Star Battler Sudoku puzzle, you must use the class starBattleSudoku, e.g.
+Solver code for sudoku/star battle hybrid puzzles. To model a Star Battle Sudoku puzzle, you must use the class starBattleSudoku, e.g.
 
 from starBattleSudoku import starBattleSudoku
 p = starBattleSudoku(3,digitList=[1,2,3,4,5,6,7,8,9])
@@ -2141,6 +2183,19 @@ setSumSandwich(row,col,rc,values,neg=False): sets a sum sandwich - in a row/colu
   values: a list of values who are the "filling" in a sum sandwich in the designated row/column
   neg: Optional, default False. Asserts that digits not in the value list are *not* the sum of their neighbors
   
+Sweepers
+--------
+setSweeper(row,col,selectSummands,includeSelf=True,orthogonalOnly=False): Defines cell to be a sweeper cell, whose value is the number of neighboring cells which satisfy the the defined selection criteria
+  row,col: Coordinates of the sweeper cell
+  selectSummands: See Hanging Sums for description of available selection criteria to pick "matching" cells.
+    ***!!!NOTE!!!***: When giving selection criteria that match the sweeper cell, use position 1.
+  includeSelf: Default is True; if True, cell itself counts as one of its neighbors.
+  orthogonalOnly: Default is False; if True, only neighbors sharing an edge with the sweeper cell are counted. If False, all orthogonal and diagonal neighbors are counted.
+  
+setAntiSweeper(row,col,selectSummands,includeSelf=True,orthogonalOnly=False): Defines cell to not be a sweeper cell
+
+setSweeperNegative(selectSummands,includeSelf=True,orthogonalOnly=False): Asserts that all cells not specifically designated as sweeper cells will not be sweeper cells.
+
 Thermometers
 ------------
 setThermo(list,slow,missing,speed,broken,brokenThreshold,brokenMinDrop): asserts that the values in cells increase from the beginning of the line to the end

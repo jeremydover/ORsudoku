@@ -8,7 +8,7 @@ class TestPuzzle(unittest.TestCase):
 	# Constraints tested: crustSandwichSudoku, setSandwichSum, setCrustHasLength
 	
 	def test_puzzle(self):
-		p = crustSandwichSudoku(3)
+		p = crustSandwichSudoku(3,enforceRegions=True)
 		p.setSandwichSum(1,1,p.Row,35)
 		p.setSandwichSum(2,1,p.Row,13)
 		p.setSandwichSum(4,1,p.Row,18)

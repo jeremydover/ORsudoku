@@ -1,3 +1,11 @@
+3/10/2025 bis
+	Added RelatedDigit selection criterion for conditional sums and counts.
+	Added support for sweeper cells using conditional sum selection criteria, allowing for many different types. Included negative constraint, and added test case.
+	Added crust sum, crust digit instance, and star battle configuration options for crust cell sudoku. Reset the "enforceRegions" default for crust cells to False, and updated test cases accordingly. Added test case.
+	Added support for indexed pair sums, and added test case.
+	Added support for Majority Property/Minority Property selection criteria, where the property with the largest or smallest incidence is selected for summing or counting.
+	Added support for Row/Column Region Sums, asserting the sum of the cells in the intersection of the row/column with some region.
+
 3/10/2025
 	Fixed bug in PropertyNeighbors changes from 3/9/2025 push. That's what I get for only spot testing instead of running the full test suite.
 	Adding support to rayCount and raySum to let them work on constraints which could go other either direction, but only one. Included test case.

@@ -547,7 +547,6 @@ def setDistinctNeighboursArray(self,cells):
 
 def setRepeatedNeighborsNegative(self):
 	if 'RepeatedNeighbors' not in self._constraintInitialized:	
-		self.repeatedNeighborCells = [(row,col)]
 		self._constraintInitialized.append('RepeatedNeighbors')
 	self._constraintNegative.append('RepeatedNeighbors')
 	
@@ -596,3 +595,63 @@ def setConditionalCountCross(self,row,col,value,selectSummands=None,selectTermin
 		case _:
 			self.model.Add(sum(myValues) + mySelf == value)
 	
+def _initializeSweeper(self,selectSummands=None,includeSelf=None,orthogonalOnly=None):
+	if 'Sweeper' not in self._constraintInitialized:
+		self._constraintInitialized.append('Sweeper')
+		self.selectSummandsSweeper = [['All']] if selectSummands is None else selectSummands
+		self.includeSelfSweeper = True if includeSelf is None else includeSelf
+		self.orthogonalOnlySweeper = True if orthogonalOnly is None else orthogonalOnly
+		self.sweeperCells = []
+
+def _setSweeperCellBase(self,pm,row,col,selectSummands,includeSelf,orthogonalOnly):
+	self._initializeSweeper(selectSummands,includeSelf,orthogonalOnly)
+	if pm == self.Pos:
+		comp = self.EQ
+		self.sweeperCells.append((row,col))
+	else:
+		comp = self.NE
+
+	myNeighbors = {(row+i,col+j) for i in range(-1,2) for j in range(-1,2) if i*j == 0 and (i,j) != (0,0)} if self.orthogonalOnlySweeper else {(row+i,col+j) for i in range(-1,2) for j in range(-1,2) if (i,j) != (0,0)} 
+	L = [(row,col)] + list(myNeighbors & {(i+1,j+1) for i in range(self.boardWidth) for j in range(self.boardWidth)})
+
+	if self.includeSelfSweeper:
+		mySummands = self.selectSummandsSweeper
+	else:
+		mySummands = self.selectSummandsSweeper + [('Location',self.GE,2)]
+
+	self.setConditionalCountLine(L,self.cellValues[row-1][col-1],mySummands,[['Last']],comparator=comp)
+	
+def setSweeper(self,row,col,selectSummands=None,includeSelf=True,orthogonalOnly=False):
+	self._setSweeperCellBase(self.Pos,row,col,selectSummands,includeSelf,orthogonalOnly)
+	
+def setAntiSweeper(self,row,col,selectSummands=None,includeSelf=True,orthogonalOnly=False):
+	self._setSweeperCellBase(self.Neg,row,col,selectSummands,includeSelf,orthogonalOnly)
+	
+def setSweeperNegative(self,selectSummands=None,includeSelf=None,orthogonalOnly=None):
+	self._initializeSweeper(selectSummands,includeSelf,orthogonalOnly)
+	self._constraintNegative.append('Sweeper')
+	
+def _applySweeperNegative(self):
+	for i in range(self.boardWidth):
+		for j in range(self.boardWidth):
+			if (i+1,j+1) not in self.sweeperCells:
+				self.setAntiSweeper(i+1,j+1)
+				
+def setIndexedPairSum(self,row1,col1,uldr,value):
+	if uldr == self.Left:
+		hStep = -1
+		vStep = 0
+	elif uldr == self.Right:
+		hStep = 1
+		vStep = 0
+	elif uldr == self.Up:
+		hStep = 0
+		vStep = -1
+	elif uldr == self.Down:
+		hStep = 0
+		vStep = 1
+	# OK, this is weird. The problem is how we're repurposing indexing...the value in the puzzle is really a distance, not an index: when an index is 1, it means the first in the line; when a distance is 1, it means one cell over. By putting the indexing cell at the end of the line, we line these concepts up. Except shoot, it can select itself. So we add a criterion in that the last cell cannot be selected. I think this fixes it.
+	L = [(row1+i*vStep,col1+i*hStep) for i in range(1,self.boardWidth) if (row1+i*vStep-1,col1+i*hStep-1) in {(j,k) for j in range(self.boardWidth) for k in range(self.boardWidth)}] + [(row1,col1)]
+	remoteValue = self.model.NewIntVar(min(self.digits),max(self.digits),'IndexedPairSumRemoteValue')
+	self.setConditionalSumLine(L,remoteValue,[('Location','Indexed',len(L)),('Location',self.LE,len(L)-1)],[['Last']])
+	self.model.Add(self.cellValues[row1-1][col1-1] + remoteValue == value)

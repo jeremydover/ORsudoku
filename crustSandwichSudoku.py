@@ -12,7 +12,7 @@ init()
 class crustSandwichSudoku(sudoku):
 	"""A class used to implement crust puzzles, where two cells per row/column (and optionally region) are designated crusts of a sandwich, and sandwich clues refer to the digits between the crusts."""	
 	
-	def __init__(self,boardSizeRoot,enforceRegions=True,includeCrust=False,irregular=None,digitSet=None,selectCriteria=[['All']]):
+	def __init__(self,boardSizeRoot,enforceRegions=False,includeCrust=False,irregular=None,digitSet=None,selectCriteria=[['All']]):
 		self.boardSizeRoot = boardSizeRoot
 		self.boardWidth = boardSizeRoot*boardSizeRoot
 		self.enforceRegions = enforceRegions
@@ -137,7 +137,7 @@ class crustSandwichSudoku(sudoku):
 		self.regions.append(inlist)
 		self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in self.regions[-1]])
 		if self.enforceRegions:
-			self.model.Add(sum(self.crustInt[x[0]][x[1]] for x in inlist) == 1)	# Ensure one doubler per region
+			self.model.Add(sum(self.crustInt[x[0]][x[1]] for x in inlist) == 2)	# Want two crusts per region
 
 	def setSandwichSum(self,row1,col1,rc,value):
 		# Convert from 1-base to 0-base
@@ -187,6 +187,37 @@ class crustSandwichSudoku(sudoku):
 		for j in range(self.boardWidth):
 			for k in range(j+1,self.boardWidth):
 				self.model.Add(self.cellValues[row][col] != k-j).OnlyEnforceIf([self.crust[row+j*vStep][col+j*hStep],self.crust[row+k*vStep][col+k*hStep]])
+				
+	def setCrustSum(self,row1,col1,rc,value):
+		row = row1 - 1
+		col = col1 - 1
+		hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
+		vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
+		
+		for i in range(self.boardWidth):
+			for j in range(i+1,self.boardWidth):
+				self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] + self.cellValues[row+j*vStep][col+j*hStep] == value).OnlyEnforceIf([self.crust[row+i*vStep][col+i*hStep],self.crust[row+j*vStep][col+j*hStep]])
+				
+	def setCrustInstance(self,row1,col1,rc,values):
+		row = row1 - 1
+		col = col1 - 1
+		hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
+		vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
+		
+		for i in range(self.boardWidth):
+			for j in range(i+1,self.boardWidth):
+				c = self.model.NewBoolVar('CrustInstanceSwitch')
+				self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] == values[0]).OnlyEnforceIf([c,self.crust[row+i*vStep][col+i*hStep],self.crust[row+j*vStep][col+j*hStep]])
+				self.model.Add(self.cellValues[row+j*vStep][col+j*hStep] == values[0]).OnlyEnforceIf([c.Not(),self.crust[row+i*vStep][col+i*hStep],self.crust[row+j*vStep][col+j*hStep]])
+				if len(values) > 1:
+					self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] == values[1]).OnlyEnforceIf([c.Not(),self.crust[row+i*vStep][col+i*hStep],self.crust[row+j*vStep][col+j*hStep]])
+					self.model.Add(self.cellValues[row+j*vStep][col+j*hStep] == values[1]).OnlyEnforceIf([c,self.crust[row+i*vStep][col+i*hStep],self.crust[row+j*vStep][col+j*hStep]])
+				
+	def setCrustStarBattle(self):
+		for row in range(self.boardWidth):
+			for col in range(self.boardWidth):
+				myNeighbors = {(row+i,col+j) for i in range(-1,2) for j in range(-1,2) if (i,j) != (0,0)} & {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)}
+				self.model.AddBoolAnd(self.crust[x[0]][x[1]].Not() for x in myNeighbors).OnlyEnforceIf(self.crust[row][col])
 
 	def printCurrentSolution(self):
 		dW = max([len(str(x)) for x in self.digits])
