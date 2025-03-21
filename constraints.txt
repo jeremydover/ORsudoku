@@ -300,8 +300,23 @@ Quadruples are indexed similarly, from 11 to 88:
 
 Edge constraints are indexed by the top- or left-most cell in the pair of adjacent cells. An additional parameter hv is provided to determine whether the pair is horizontal or vertical. The class variables Horz and Vert can be used for this designation. 
 
-Notes on primes: By default, 1 is considered neither prime, nor not prime. This behavior can be configured with the method:
-configurePrimality(whatIsOne): set behavior of 1 in primality constraints. Options are 'Prime', 'NotPrime' or 'Neither'
+Properties
+----------
+There are several properties of digits which can be tracked for certain types on constraints that are "universal", i.e. they trigger tracking that is used across multiple constraints. They are mostly useful in the normal 1-9 sudoku case, though parity is likely to work otherwise.
+
+  Parity: 0 indicates an even digit; 1 an odd digit. Class variables: Even and Odd work too, if p is your puzzle, use p.Even or p.Odd.
+  
+  Entropy: 0 indicates a low digit (1,2,3); 1 a middle digit (4,5,6); and 2 a high digit (7,8,9). Class variables: Low, Middle, High.
+
+  Modular: 1 indicates a digit = 1 (mod 3) (1,4,7); 2 a digit = 2 (mod 3) (2,5,8); and 3 for (3,6,9).
+  
+  Primality: 0 indicates a prime (2,3,5,7); 1 indicates "kinda" (1); 2 indicates not prime (4,6,8,9). By default, 1 is considered neither prime, nor not prime. This behavior can be configured with the method:
+    configurePrimality(whatIsOne): set behavior of 1 in primality constraints.
+	  whatisOne: a string, options are 'Prime', 'NotPrime' or 'Neither'
+  
+  DigitSize: 0 indicates a small digit (1,2,3,4); 1 indicates "kinda" (5); 2 indicates a big digit (6,7,8,9). By default, 5 is considered neither big nor small. This behavior can be configured with the method
+    configureDigitSize(whatIsFive): set behavior of 5 in digit size constraints.
+	  whatisOne: a string, options are 'Big', 'Neither' or 'Small'
 
 10 Lines
 --------
@@ -957,15 +972,20 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
 	 Values[0]: Use any comparator class variable: NE, EQ, LE, GE. Mathematically, LE and GE don't really make much sense, but they work.
 	 Values[1]: Values for comparison: again, use class variables Low, Middle, High
 	
-	Property: 'Primality'
+	Property: 'Primality' (9x9 sudoku with 1-9 digits only)
 	For this property, we pick cells based on whether their digit is prime or not. Which brings up the 1 problem.
 	By default, "prime" is 0: 2,3,5,7; "maybe kinda" is 1: 1; "not prime" is 2: 4,6,8,9. Like modular, even though the LE and GE comparisons don't really make sense, you can use them. The behavior of 1 can be configured with the configurePrimality method.
 	
-	Property: 'MatchParity', 'MatchEntropy', 'MatchModular', 'MatchPrimality'
+	Property: 'DigitSize' (9x9 sudoku with 1-9 digits only)
+	For this property, we pick cells based on whether their digit is "big" or "small". Which brings up the 5 problem.
+	By default "small" is 0: 1,2,3,4; "maybe kinda" is 1: 5; "big" is 2: 6,7,8,9. The LE and GE compartors can be used to count
+	5 as "both" situationally. The behavior of 5 can be configured with the configureDigitSize method.
+
+	Property: 'MatchParity', 'MatchEntropy', 'MatchModular', 'MatchPrimality', 'MatchDigitSize'
 	For this property, we pick cells if they match the given property of the cell specified in value
 	Value: index of cell in line whose property to match (e.g., 1 is first cell, 2 is second, etc.)
 	
-	Property: 'ParityChange', 'EntropyChange', 'ModularChange', 'PrimalityChange'
+	Property: 'ParityChange', 'EntropyChange', 'ModularChange', 'PrimalityChange', 'DigitSizeChange'
 	For this property, we pick a cell if it is part of a change in the given property
 	Value: 'before' picks the first cell in the change, 'after' picks the second
 	
@@ -1000,8 +1020,8 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
 	Property: 'ConsecutiveBefore','ConsecutiveAfter','ConsecutiveNeighbor'
 	For these properties, we pick digits that are consecutive with the digit before, after, or either (respectively) in the line
 	
-	Property: '(Parity|Entropy|Modular|Primality)(Neighbor|Before|After|All|None|Both|Neither)'
-	Sorry for Regex description here, but there are actually 28 different possibilities, as any characteristic in the first list can be paired with any location in the second list to create a property, e.g., ParityAfter, ModularNone, etc.
+	Property: '(Parity|Entropy|Modular|Primality|DigitSize)(Neighbor|Before|After|All|None|Both|Neither)'
+	Sorry for Regex description here, but there are actually 35 different possibilities, as any characteristic in the first list can be paired with any location in the second list to create a property, e.g., ParityAfter, ModularNone, etc.
 	For these properties we pick digits whose described neighbors meet the associated property matching condition
 	  Neighbor: either the digit before or after, possibly both
 	  Before: the digit before
@@ -1021,7 +1041,7 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
 	For example: ['EntropyBefore'] will match all digits whose predecessor is in the same entropy stratum
 	('ParityBoth',0) will match all digits that have two neighbors when both of those neighbors are even, regardless of the parity of the digit under consideration. ('ModularNeither','Fixed',1) will match all digits which are not adjacent to a digit of the same residue class as the first digit in the list.
 
-	Property: '(Parity|Entropy|Modular|Primality)Run'
+	Property: '(Parity|Entropy|Modular|Primality|DigitSize)Run'
 	I'm done apologizing for the regex descriptions :-) For this property, we split the cells into contiguous runs with the same value of the selected property, and allow the user to select all digits in one or more of these groups.
 	Values[0]: This parameter shapes how we count the runs. There are three possible syntaxes:
 	  ['Any'] - each run is counted, regardless of the value of the property for the run
@@ -1047,8 +1067,17 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
 	Values[2]: Scale, an integer multiplied by the digit in the base cell to determine the threshold for comparison
 	Values[3]: Shift, an integer add to the (scaled) digit in the base cell to determine the threshold for comparison
 	
-	Property: '(Majority|Minority)(Parity|Entropy|Modular|Primality)'
+	Property: '(Majority|Minority)(Parity|Entropy|Modular|Primality|DigitSize)'
 	For this property, we select the digits with the property that has the largest or smallest *non-zero* incidence on the line. In case two or more classes are tied for the extreme count, ALL digits in those classes are selected.
+	
+	Property: 'ContiguousSum'
+	For this property, we select the first cell in a run of contiguous cells that add up to a given value
+	Values[0]: The sum to look for
+	By default, the solver will look for any length run of cells to add to Values[0]. To restrict the number of cells in the
+	sum, additional parameters may be given
+	Values[1]: (optional) a comparator: use the class variables GE, EQ or LE, or NE
+	Values[2]: the length of cells in the sum to which to compare
+	For example, ('ContiguousSum',10,p.GE,3) will look for sums containing three or more digits adding up to 10.
 	
   selectTerminator: a *list* of conditions (tuples) which describe when the sum should stop. As with summand selection,
   each tuple starts with a sting containing a property name, and is followed by values specific to that property. Note that multiple
@@ -1075,7 +1104,7 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
 	Values[0]: list of target digits
 	Values[1]: nth instance of target to stop at
 	
-	Terminator: '(Parity|Entropy|Modular|Primality)(Change|Repeat)Reached'
+	Terminator: '(Parity|Entropy|Modular|Primality|DigitSize)(Change|Repeat)Reached'
 	Again, apologies for the regex notation, but there are 8 possible combinations here. This terminator keeps track of the number of changes or repeats in some property (parity, entropy, etc.), and terminates on a specified instance of said change.
 	Value: nth instance of target
 	Note: in any case, the terminating cell is the *second* in the pair where the change/repeat is determined, so the first cell can never be a terminator.

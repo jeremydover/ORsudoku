@@ -204,7 +204,7 @@ def _selectCellsOnLine(self,L,selectCriteria,OEI=[]):
 							self.model.Add(self.cellValues[L[i][0]][L[i][1]] != criterion[2]).OnlyEnforceIf([criterionBools[i]] + OEI)
 							self.model.Add(self.cellValues[L[i][0]][L[i][1]] == criterion[2]).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
 			
-			case 'Parity' | 'Entropy' | 'Modular' | 'Primality':
+			case 'Parity' | 'Entropy' | 'Modular' | 'Primality' | 'DigitSize':
 				if criterion[0] not in self._propertyInitialized:
 					getattr(self,'_set'+criterion[0])()
 				myCells = getattr(self,'cell'+criterion[0])
@@ -236,7 +236,7 @@ def _selectCellsOnLine(self,L,selectCriteria,OEI=[]):
 					self.model.Add(self.cellParity[L[i][0]][L[i][1]] == 0).OnlyEnforceIf([criterionBools[i].Not(),d] + OEI)
 				self.model.AddBoolXOr([c,d])
 							
-			case 'MatchParity' | 'MatchEntropy' | 'MatchModular' | 'MatchPrimality':
+			case 'MatchParity' | 'MatchEntropy' | 'MatchModular' | 'MatchPrimality' | 'MatchDigitSize':
 				if criterion[0][5:] not in self._propertyInitialized:
 					getattr(self,'_set'+criterion[0][5:])()
 				mCell = criterion[1] - 1
@@ -245,7 +245,7 @@ def _selectCellsOnLine(self,L,selectCriteria,OEI=[]):
 					self.model.Add(myCells[L[i][0]][L[i][1]] == myCells[L[mCell][0]][L[mCell][1]]).OnlyEnforceIf([criterionBools[i]] + OEI)
 					self.model.Add(myCells[L[i][0]][L[i][1]] != myCells[L[mCell][0]][L[mCell][1]]).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
 							
-			case 'ParityChange' | 'EntropyChange' | 'ModularChange' | 'PrimalityChange':
+			case 'ParityChange' | 'EntropyChange' | 'ModularChange' | 'PrimalityChange' | 'DigitSizeChange':
 				if criterion[0][0:-6] not in self._propertyInitialized:
 					getattr(self,'_set'+criterion[0][0:-6])()
 				if criterion[1] == 'before':
@@ -391,8 +391,8 @@ def _selectCellsOnLine(self,L,selectCriteria,OEI=[]):
 						self.model.AddBoolAnd([consecPair[i-1].Not(),consecPair[i].Not()]).OnlyEnforceIf([criterionBools[i]] + OEI)
 						self.model.AddBoolOr([consecPair[i-1],consecPair[i]]).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
 
-			case 'ParityNeighbor'|'ParityBefore'|'ParityAfter'|'ParityNone'|'ParityAll'|'ParityBoth'|'ParityNeither'|'EntropyNeighbor'|'EntropyBefore'|'EntropyAfter'|'EntropyNone'|'EntropyAll'|'EntropyBoth'|'EntropyNeither'|'ModularNeighbor'|'ModularBefore'|'ModularAfter'|'ModularNone'|'ModularAll'|'ModularBoth'|'ModularNeither'|'PrimalityNeighbor'|'PrimalityBefore'|'PrimalityAfter'|'PrimalityNone'|'PrimalityAll'|'PrimalityBoth'|'PrimalityNeither':
-				x = re.search("(Parity|Entropy|Modular|Primality)(.*)",criterion[0])
+			case 'ParityNeighbor'|'ParityBefore'|'ParityAfter'|'ParityNone'|'ParityAll'|'ParityBoth'|'ParityNeither'|'EntropyNeighbor'|'EntropyBefore'|'EntropyAfter'|'EntropyNone'|'EntropyAll'|'EntropyBoth'|'EntropyNeither'|'ModularNeighbor'|'ModularBefore'|'ModularAfter'|'ModularNone'|'ModularAll'|'ModularBoth'|'ModularNeither'|'PrimalityNeighbor'|'PrimalityBefore'|'PrimalityAfter'|'PrimalityNone'|'PrimalityAll'|'PrimalityBoth'|'PrimalityNeither'|'DigitSizeNeighbor'|'DigitSizeBefore'|'DigitSizeAfter'|'DigitSizeNone'|'DigitSizeAll'|'DigitSizeBoth'|'DigitSizeNeither':
+				x = re.search("(Parity|Entropy|Modular|Primality|DigitSize)(.*)",criterion[0])
 				mode = x.group(1)
 				where = x.group(2)
 				if mode not in self._propertyInitialized:
@@ -476,7 +476,7 @@ def _selectCellsOnLine(self,L,selectCriteria,OEI=[]):
 						self.model.AddBoolAnd([matchBackward[i].Not(),matchForward[i].Not()]).OnlyEnforceIf([criterionBools[i]] + OEI)
 						self.model.AddBoolOr([matchBackward[i],matchForward[i]]).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
 
-			case 'ParityRun'|'EntropyRun'|'ModularRun'|'PrimalityRun':
+			case 'ParityRun'|'EntropyRun'|'ModularRun'|'PrimalityRun'|'DigitSizeRun':
 				if criterion[0][0:-3] not in self._propertyInitialized:
 					getattr(self,'_set'+criterion[0][0:-3])()
 				myCells = getattr(self,'cell'+criterion[0][0:-3])
@@ -642,7 +642,7 @@ def _selectCellsOnLine(self,L,selectCriteria,OEI=[]):
 							self.model.Add(self.cellValues[L[i][0]][L[i][1]] != scale*self.cellValues[L[base][0]][L[base][1]] + shift).OnlyEnforceIf([criterionBools[i]] + OEI)
 							self.model.Add(self.cellValues[L[i][0]][L[i][1]] == scale*self.cellValues[L[base][0]][L[base][1]] + shift).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
 
-			case 'MajorityParity'|'MajorityEntropy'|'MajorityModularity'|'MajorityPrimality'|'MinorityParity'|'MinorityEntropy'|'MinorityModularity'|'MinorityPrimality':
+			case 'MajorityParity'|'MajorityEntropy'|'MajorityModularity'|'MajorityPrimality'|'MajorityDigitSize'|'MinorityParity'|'MinorityEntropy'|'MinorityModularity'|'MinorityPrimality'|'MinorityDigitSize':
 				if criterion[0][8:] not in self._propertyInitialized:
 					getattr(self,'_set'+criterion[0][8:])()
 				myCells = getattr(self,'cell'+criterion[0][8:])
@@ -675,6 +675,35 @@ def _selectCellsOnLine(self,L,selectCriteria,OEI=[]):
 				for i in range(len(L)):
 					self.model.Add(countSame[i] == extremum).OnlyEnforceIf([criterionBools[i]] + OEI)
 					self.model.Add(countSame[i] != extremum).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
+			
+			case 'ContiguousSum':
+				for i in range(len(L)):
+					if len(criterion) == 2:
+						jRange = range(i,len(L))
+					else:
+						match criterion[2]:
+							case self.LE:
+								jRange = range(i,min(i+criterion[3],len(L)))
+							case self.EQ:
+								jRange = range(i+criterion[3]-1,min(i+criterion[3],len(L)))
+							case self.GE:
+								jRange = range(i+criterion[3]-1,len(L))
+							case self.NE:
+								jRange = list(range(i,i+criterion[3]-2)) + list(range(i+criterion[3],len(L)))
+					
+					mySumVars = []
+					
+					for j in jRange:
+						c = self.model.NewBoolVar('ContiguousSumSelector{:d}-{:d}'.format(i,j))
+						mySumVars.append(c)
+						self.allVars.append(c)
+						self.model.Add(sum(self.cellValues[L[k][0]][L[k][1]] for k in range(i,j+1)) == criterion[1]).OnlyEnforceIf([c] + OEI)
+						self.model.Add(sum(self.cellValues[L[k][0]][L[k][1]] for k in range(i,j+1)) != criterion[1]).OnlyEnforceIf([c.Not()] + OEI)
+					self.model.AddBoolOr(mySumVars).OnlyEnforceIf([criterionBools[i]] + OEI)
+					self.model.AddBoolAnd([x.Not() for x in mySumVars]).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
+
+					for x in OEI:
+						self.model.AddBoolAnd(mySumVars).OnlyEnforceIf(x.Not())
 					
 		criteriaBools.insert(criterionNumber,criterionBools)
 		criterionNumber = criterionNumber + 1
@@ -795,7 +824,7 @@ def _terminateCellsOnLine(self,L,selectTerminator,OEI=[]):
 					self.model.Add(instanceCount[i-1] >= terminator[2]).OnlyEnforceIf([c,termBools[i].Not()] + OEI)
 					self.model.Add(instanceCount[i] < terminator[2]).OnlyEnforceIf([c.Not(),termBools[i].Not()] + OEI)
 					self.model.AddBoolAnd(c).OnlyEnforceIf([termBools[i]] + OEI)
-			case 'ParityChangeReached' | 'EntropyChangeReached' | 'ModularChangeReached' | 'PrimalityChangeReached' | 'ParityRepeatReached' | 'EntropyRepeatReached' | 'ModularRepeatReached' | 'PrimalityRepeatReached':
+			case 'ParityChangeReached' | 'EntropyChangeReached' | 'ModularChangeReached' | 'PrimalityChangeReached' | 'DigitSizeChangeReached' |'ParityRepeatReached' | 'EntropyRepeatReached' | 'ModularRepeatReached' | 'PrimalityRepeatReached' | 'DigitSizeRepeatReached':
 				if terminator[0][0:-13] not in self._propertyInitialized:
 					getattr(self,'_set'+terminator[0][0:-13])()
 				myTransition = terminator[0][-13:-7] # 'Change' or 'Repeat'

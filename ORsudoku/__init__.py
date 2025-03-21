@@ -83,6 +83,10 @@ class sudoku:
 	Pos = 0		# Constant to assert a condition is "positive"
 	Neg = 1     # Constant to assert a condition is "negative"
 	
+	Big = 2		# Constant to assert a "big" digit size
+	Neither = 1 # Constant to assert an "in-between" digit size, i.e., 5
+	Small = 0 	# Constant to assert a "small" digit size
+	
 	def mySuper(self):
 		return super()
 
@@ -299,6 +303,55 @@ class sudoku:
 				t.append(c)
 			self.cellPrimality.insert(i,t)
 		self._propertyInitialized.append('Primality')
+
+	def _initializeDigitSize(self):
+		if 'DigitSize' not in self._propertyInitialized:
+			self._setDigitSize()
+
+	def configureDigitSize(self,whatIsFive='Neither'):
+		match whatIsFive:
+			case 'Big':
+				five = 2
+			case 'Small':
+				five = 0
+			case 'Neither':
+				five = 1
+		self._setDigitSize(five)
+	
+	def _setDigitSize(self,whatIsFive=1):
+		if self.boardWidth != 9 or self.minDigit < 0 or self.maxDigit > 9:
+			print("DigitSize constraints only supported for digits {0..9} on 9x9 boards or smaller.")
+			sys.exit()
+
+		# Set up variables to track magnitude constraints
+		self.cellDigitSize = []
+		for i in range(self.boardWidth):
+			t = []
+			for j in range(self.boardWidth):
+				c = self.model.NewIntVar(0,2,'MagnitudeValue{:d}{:d}'.format(i,j))
+				if whatIsFive == 0:
+					varBitmap = self._varBitmap('MagnitudeRow{:d}Col{:d}'.format(i,j),2)
+					self.model.Add(self.cellValues[i][j] <= 5).OnlyEnforceIf(varBitmap[0])
+					self.model.Add(c == 0).OnlyEnforceIf(varBitmap[0])
+					self.model.Add(self.cellValues[i][j] > 5).OnlyEnforceIf(varBitmap[1])
+					self.model.Add(c == 2).OnlyEnforceIf(varBitmap[1])
+				elif whatIsFive == 2:	
+					varBitmap = self._varBitmap('MagnitudeRow{:d}Col{:d}'.format(i,j),2)
+					self.model.Add(self.cellValues[i][j] < 5).OnlyEnforceIf(varBitmap[0])
+					self.model.Add(c == 0).OnlyEnforceIf(varBitmap[0])
+					self.model.Add(self.cellValues[i][j] >= 5).OnlyEnforceIf(varBitmap[1])
+					self.model.Add(c == 2).OnlyEnforceIf(varBitmap[1])
+				else:
+					varBitmap = self._varBitmap('MagnitudeRow{:d}Col{:d}'.format(i,j),2)
+					self.model.Add(self.cellValues[i][j] < 5).OnlyEnforceIf(varBitmap[0])
+					self.model.Add(c == 0).OnlyEnforceIf(varBitmap[0])
+					self.model.Add(self.cellValues[i][j] == 5).OnlyEnforceIf(varBitmap[1])
+					self.model.Add(c == 1).OnlyEnforceIf(varBitmap[1])
+					self.model.Add(self.cellValues[i][j] > 5).OnlyEnforceIf(varBitmap[2])
+					self.model.Add(c == 2).OnlyEnforceIf(varBitmap[2])
+				t.append(c)
+			self.cellDigitSize.insert(i,t)
+		self._propertyInitialized.append('DigitSize')
 		
 	def getCellVar(self,i,j):
 		# Returns the model variable associated with a cell value. Useful when tying several puzzles together, e.g. Samurai

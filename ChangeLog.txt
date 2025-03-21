@@ -1,3 +1,7 @@
+3/20/2025
+	Added support for ContiguousSum selection criterion for conditional sums and count. Included test case.
+	Implemented new property "DigitSize", which can be used for "big/small" type constraints, particularly in conditional sums and counts. Included test case.
+	
 3/10/2025 ter
 	Added some more test cases.
 
