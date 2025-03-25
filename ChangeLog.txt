@@ -1,3 +1,13 @@
+3/24/2025 bis
+	Added selection criterion for conditional sum and count clues to select digits in an increasing/decreasing pair along the line.
+	Added clock quad constraints, which assert that the digits around a quad increase either clockwise or counterclockwise from some starting point. Negative constraint implemented, and test case provided.
+
+3/24/2025
+	Added support for sweeper cells to match all neighbors, not just the value of the sweeper cell.
+	Added new selection criterion for conditional sums and counts to *not* match the parity, entropy, etc. of a taret cell.
+	Added support for order sum cages (a list of cages ordered by increasing sum) to calculate the sum as if reading the cage as a base 10 number. Also fixed a bug which caused the previous code to fail.
+	Added test cases.
+
 3/20/2025
 	Added support for ContiguousSum selection criterion for conditional sums and count. Included test case.
 	Implemented new property "DigitSize", which can be used for "big/small" type constraints, particularly in conditional sums and counts. Included test case.

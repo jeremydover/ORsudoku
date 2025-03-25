@@ -25,6 +25,7 @@ Cell Index Lines
 Cell Transform Sudoku
 Chinese Whispers Lines - see Whispers Lines
 Clock Lines
+Clock Quads
 Clone Regions
 Close Neighbors - see Global Whispers
 Conditional Count Cross - see Conditional Lines
@@ -499,6 +500,44 @@ Clock Lines
 -----------
 setClockLine(list): ceates a clock line, where adjacent cells on the line differ by either 2 or 7
   list: list of cell specifications
+
+Clock Quads (aka Clock Faces)
+-----------------------------
+setClockQuadWhite(cell): asserts that the digits around a quad increase in the clockwise direction from some starting point
+  cell: cell specification
+  
+setClockQuadBlack(cell): asserts that the digits around a quad increase in the counter-clockwise direction from some starting point
+  cell: cell specification
+
+setClockQuadGray(cell): asserts that the digits around a quad increase in one or the other direction from some starting point
+  cell: cell specification
+  
+setClockQuadWhiteArray(list): creates multiple white clock quads
+  list: list of cell specifications
+
+setClockQuadBlackArray(list): creates multiple black clock quads
+  list: list of cell specifications
+
+setClockQuadGrayArray(list): creates multiple gray clock quads
+  list: list of cell specifications
+
+setClockQuadArray(list): creates multiple clock quads
+  list: list of cellWBG specifications, which include a cell spec, and a WBG spec, specifying the color of the dot. When given as a tuple, the White, Black and Gray variables can be used to specify W/B. Shorthand is possible, with white being 0, black 1, and gray 2.
+  Example: 171 incidates a black dot (1 WB spec is third) on quad 1,7 (17 cell spec is first), which includes cells 17,18,27,28. This can also be written as the tuple (1,7,p.Black)
+  
+setAntiClockQuad(cell): asserts that the quads do not strictly increase in either direction around the quad from some starting point
+	cell: cell specification
+setAntiClockQuadWhite(cell): same, but for white clock quads only
+setAntiClockQuadBlack(cell): same, but for black clock quads only
+
+setAntiClockQuadArray(list): creates multiple anti-ClockQuad constraints
+  list: list of cell specifications
+setAntiKropkiClockQuadArray(list): same, but for white clock quads only
+setAntiKropkiClockQuadArray(list): same, but for black clock quads only
+  
+setClockQuadNegative(): implements negative constraint on all cells not specifically noted with a clock quad dot
+setClockQuadWhiteNegative(): sets a negative constraint on only white clock quads
+setClockQuadBlackNegative(): sets a negative constraint on only black clock quads
 
 Clone Regions
 -------------
@@ -985,6 +1024,10 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
 	For this property, we pick cells if they match the given property of the cell specified in value
 	Value: index of cell in line whose property to match (e.g., 1 is first cell, 2 is second, etc.)
 	
+	Property: 'DoNotMatchParity', 'DoNotMatchEntropy', 'DoNotMatchModular', 'DoNotMatchPrimality', 'DoNotMatchDigitSize'
+	For this property, we pick cells if they *do not* match the given property of the cell specified in value
+	Value: index of cell in line whose property to match (e.g., 1 is first cell, 2 is second, etc.)
+	
 	Property: 'ParityChange', 'EntropyChange', 'ModularChange', 'PrimalityChange', 'DigitSizeChange'
 	For this property, we pick a cell if it is part of a change in the given property
 	Value: 'before' picks the first cell in the change, 'after' picks the second
@@ -1078,6 +1121,10 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
 	Values[1]: (optional) a comparator: use the class variables GE, EQ or LE, or NE
 	Values[2]: the length of cells in the sum to which to compare
 	For example, ('ContiguousSum',10,p.GE,3) will look for sums containing three or more digits adding up to 10.
+	
+	Property: 'Increase','Decrease'
+	For this property, we pick a cell if it represents an increase (resp. decrease)
+	Value: 'before' picks the first cell in the change, 'after' picks the second
 	
   selectTerminator: a *list* of conditions (tuples) which describe when the sum should stop. As with summand selection,
   each tuple starts with a sting containing a property name, and is followed by values specific to that property. Note that multiple
@@ -1658,10 +1705,11 @@ setOffsetDigit(digit): for each instance of the selected digit, the digit below 
 
 Order Sum Cages
 ---------------
-setOrderSumCages(list,slow,repeat): a set of cages with indeterminate sums, but whose sum order increases directly with order in the list
+setOrderSumCages(list,slow,repeat,readAsNumber): a set of cages with indeterminate sums, but whose sum order increases directly with order in the list
   list: a list OF LISTS of cell specifications
   slow: Optional, default is False. If False, each cage sum must be strictly less than its successor. If True, relationship is less than or equal.
   repeat: Optional, default is False. If False, digits may not repeat in cages. If True, digits may repeat.
+  readAsNumber: Optional, default is False. If False, value of cage is the sum of digits in the cage. If True, value of cage is determined as if reading the cage as a base-10 number with place values, e.g. a cage with 2,8 would be "bigger" than a cage with 2,5. Note that order of the cage specification matters in this case.
   
 Outside Clues
 -------------
@@ -2214,12 +2262,13 @@ setSumSandwich(row,col,rc,values,neg=False): sets a sum sandwich - in a row/colu
   
 Sweepers
 --------
-setSweeper(row,col,selectSummands,includeSelf=True,orthogonalOnly=False): Defines cell to be a sweeper cell, whose value is the number of neighboring cells which satisfy the the defined selection criteria
+setSweeper(row,col,selectSummands,includeSelf=True,orthogonalOnly=False,allInsteadOfValue=False): Defines cell to be a sweeper cell, whose value is the number of neighboring cells (or all neighbors) which satisfy the defined selection criteria
   row,col: Coordinates of the sweeper cell
   selectSummands: See Hanging Sums for description of available selection criteria to pick "matching" cells.
     ***!!!NOTE!!!***: When giving selection criteria that match the sweeper cell, use position 1.
   includeSelf: Default is True; if True, cell itself counts as one of its neighbors.
   orthogonalOnly: Default is False; if True, only neighbors sharing an edge with the sweeper cell are counted. If False, all orthogonal and diagonal neighbors are counted.
+  allInsteadOfValue: Default is False; if True, all neighbors must meet the constraint, regardless of sweeper cell value
   
 setAntiSweeper(row,col,selectSummands,includeSelf=True,orthogonalOnly=False): Defines cell to not be a sweeper cell
 

@@ -537,3 +537,125 @@ def setDiagonalConsecutivePairs(self,row,col=-1):
 	
 def setDiagonalConsecutivePairsArray(self,cells):
 	for x in cells: self.DiagonalConsecutivePairs(x)
+	
+def _initializeClockQuadWhite(self):
+	if 'ClockQuadWhite' not in self._constraintInitialized:
+		self._constraintInitialized.append('ClockQuadWhite')
+		if 'ClockQuadBlack' not in self._constraintInitialized:
+			self.clockQuads = []
+
+def _initializeClockQuadBlack(self):
+	if 'ClockQuadBlack' not in self._constraintInitialized:
+		self._constraintInitialized.append('ClockQuadBlack')
+		if 'ClockQuadWhite' not in self._constraintInitialized:
+			self.clockQuads = []
+
+def setClockQuadWhite(self,row,col=-1):
+	if col == -1:
+		(row,col) = self._procCell(row)
+	self._initializeClockQuadWhite()
+	self.clockQuads.append((row,col))
+	L = [(row+1,col+1),(row+1,col+2),(row+2,col+2),(row+2,col+1),(row+1,col+1)]
+	# Note: if there is a digit from which we can start and increase around clockwise, there will be exactly one decrease.
+	# This count eliminates the messy logic of finding a minimum and comparing from there.
+	self.setConditionalCountLine(L,3,[['Increase','before']],[['Last']])
+	
+def setClockQuadBlack(self,row,col=-1):
+	if col == -1:
+		(row,col) = self._procCell(row)
+	self._initializeClockQuadBlack()
+	self.clockQuads.append((row,col))
+	L = [(row+1,col+1),(row+1,col+2),(row+2,col+2),(row+2,col+1),(row+1,col+1)]
+	# Note: if there is a digit from which we can start and increase around clockwise, there will be exactly one decrease.
+	# This count eliminates the messy logic of finding a minimum and comparing from there.
+	self.setConditionalCountLine(L,3,[['Decrease','before']],[['Last']])
+	
+def setClockQuadGray(self,row,col=-1):
+	if col == -1:
+		(row,col) = self._procCell(row)
+	self._initializeClockQuadWhite()
+	self._initializeClockQuadBlack()
+	self.clockQuads.append((row,col))
+	L = [(row+1,col+1),(row+1,col+2),(row+2,col+2),(row+2,col+1),(row+1,col+1)]
+	# Note: if there is a digit from which we can start and increase around clockwise, there will be exactly one decrease.
+	# This count eliminates the messy logic of finding a minimum and comparing from there.
+	self.setConditionalCountLine(L,2,[['Decrease','before']],[['Last']],comparator=self.NE)
+	
+def setClockQuadWhiteArray(self,cells):
+	for x in cells: self.setClockQuadWhite(x)
+	
+def setClockQuadBlackArray(self,cells):
+	for x in cells: self.setClockQuadBlack(x)
+	
+def setClockQuadGrayArray(self,cells):
+	for x in cells: self.setClockQuadGray(x)
+	
+def setClockQuadArray(self,cells):
+	cellList = self._procCellList(cells)
+	for x in cellList:
+		if x[2] == self.White:
+			self.setClockQuadWhite(x[0],x[1])
+		elif x[2] == self.Black:
+			self.setClockQuadBlack(x[0],x[1])
+		else:
+			self.setClockQuadGray(x[0],x[1])
+			
+def setClockQuadWhiteNegative(self):
+	self._initializeClockQuadWhite()
+	self._constraintNegative.append('ClockQuadWhite')
+
+def setClockQuadBlackNegative(self):
+	self._initializeClockQuadBlack()
+	self._constraintNegative.append('ClockQuadBlack')
+	
+def setClockQuadNegative(self):
+	self.setClockQuadWhiteNegative()
+	self.setClockQuadBlackNegative()
+	
+def setAntiClockQuadWhite(self,row,col=-1):
+	if col == -1:
+		(row,col) = self._procCell(row)
+	L = [(row+1,col+1),(row+1,col+2),(row+2,col+2),(row+2,col+1),(row+1,col+1)]
+	# Note: if there is a digit from which we can start and increase around clockwise, there will be exactly one decrease.
+	# This count eliminates the messy logic of finding a minimum and comparing from there.
+	self.setConditionalCountLine(L,3,[['Increase','before']],[['Last']],comparator=self.NE)
+
+def setAntiClockQuadBlack(self,row,col=-1):
+	if col == -1:
+		(row,col) = self._procCell(row)
+	L = [(row+1,col+1),(row+1,col+2),(row+2,col+2),(row+2,col+1),(row+1,col+1)]
+	# Note: if there is a digit from which we can start and increase around clockwise, there will be exactly one decrease.
+	# This count eliminates the messy logic of finding a minimum and comparing from there.
+	self.setConditionalCountLine(L,3,[['Decrease','before']],[['Last']],comparator=self.NE)
+	
+def setAntiClockQuad(self,row,col=-1):
+	if col == -1:
+		(row,col) = self._procCell(row)
+	L = [(row+1,col+1),(row+1,col+2),(row+2,col+2),(row+2,col+1),(row+1,col+1)]
+	# Note: if there is a digit from which we can start and increase around clockwise, there will be exactly one decrease.
+	# This count eliminates the messy logic of finding a minimum and comparing from there.
+	self.setAntiClockQuadWhite(row,col)
+	self.setAntiClockQuadBlack(row,col)
+	
+def setAntiClockQuadWhiteArray(self,cells):
+	for x in cells: self.setAntiClockQuadWhite(x)
+
+def setAntiClockQuadBlackArray(self,cells):
+	for x in cells: self.setAntiClockQuadBlack(x)
+
+def setAntiClockQuadArray(self,cells):
+	for x in cells:
+		self.setAntiClockQuadWhite(x)
+		self.setAntiClockQuadBlack(x)
+		
+def _applyClockQuadWhiteNegative(self):
+	cells = {(i,j) for i in range(self.boardWidth-1) for j in range(self.boardWidth-1) if (i,j) not in self.clockQuads}
+	for x in cells:
+		self.setAntiClockQuadWhite(x[0],x[1])
+		
+def _applyClockQuadBlackNegative(self):
+	cells = {(i,j) for i in range(self.boardWidth-1) for j in range(self.boardWidth-1) if (i,j) not in self.clockQuads}
+	for x in cells:
+		self.setAntiClockQuadBlack(x[0],x[1])
+		
+	

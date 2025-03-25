@@ -917,17 +917,25 @@ def setPsychoLookAndSayCage(self,inlist,value):
 			
 		self.model.Add(sum(xVars) == count)
 		
-def setOrderSumCages(self,inlist,slow=False,repeat=False):
+def setOrderSumCages(self,inlist,slow=False,repeat=False,readAsNumber=False):
 	# A list of cages whose sum increases based on the order in the list
 	inlist = list(map(self._procCellList,inlist))
+	myVarSum=[]
 	for j in range(len(inlist)):
 		if repeat is False:
 			self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in inlist[j]])
-		if j < len(inlist)-1:
-			if slow is True:
-				self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in inlist[j]) <= sum(self.cellValues[x[0]][x[1]] for x in inlist[j]))
-			else:
-				self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in inlist[j]) < sum(self.cellValues[x[0]][x[1]] for x in inlist[j]))
+		if readAsNumber:
+			mySum = self.cellValues[inlist[j][0][0]][inlist[j][0][1]]
+			for k in range(1,len(inlist[j])):
+				mySum = 10*mySum + self.cellValues[inlist[j][k][0]][inlist[j][k][1]]
+		else:
+			mySum = sum(self.cellValues[x[0]][x[1]] for x in inlist[j])
+		myVarSum.append(mySum)
+	for j in range(len(inlist)-1):
+		if slow is True:
+			self.model.Add(myVarSum[j] <= myVarSum[j+1])
+		else:
+			self.model.Add(myVarSum[j] < myVarSum[j+1])
 
 def setMagicSquare(self,row,col=-1):
 	if col == -1:

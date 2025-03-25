@@ -595,16 +595,17 @@ def setConditionalCountCross(self,row,col,value,selectSummands=None,selectTermin
 		case _:
 			self.model.Add(sum(myValues) + mySelf == value)
 	
-def _initializeSweeper(self,selectSummands=None,includeSelf=None,orthogonalOnly=None):
+def _initializeSweeper(self,selectSummands=None,includeSelf=None,orthogonalOnly=None,allInsteadOfValue=None):
 	if 'Sweeper' not in self._constraintInitialized:
 		self._constraintInitialized.append('Sweeper')
 		self.selectSummandsSweeper = [['All']] if selectSummands is None else selectSummands
 		self.includeSelfSweeper = True if includeSelf is None else includeSelf
-		self.orthogonalOnlySweeper = True if orthogonalOnly is None else orthogonalOnly
+		self.orthogonalOnlySweeper = False if orthogonalOnly is None else orthogonalOnly
+		self.allInsteadOfValueSweeper = False if allInsteadOfValue is None else allInsteadOfValue
 		self.sweeperCells = []
 
-def _setSweeperCellBase(self,pm,row,col,selectSummands,includeSelf,orthogonalOnly):
-	self._initializeSweeper(selectSummands,includeSelf,orthogonalOnly)
+def _setSweeperCellBase(self,pm,row,col,selectSummands,includeSelf,orthogonalOnly,allInsteadOfValue):
+	self._initializeSweeper(selectSummands,includeSelf,orthogonalOnly,allInsteadOfValue)
 	if pm == self.Pos:
 		comp = self.EQ
 		self.sweeperCells.append((row,col))
@@ -616,19 +617,25 @@ def _setSweeperCellBase(self,pm,row,col,selectSummands,includeSelf,orthogonalOnl
 
 	if self.includeSelfSweeper:
 		mySummands = self.selectSummandsSweeper
+		if self.allInsteadOfValueSweeper:
+			self.setConditionalCountLine(L,len(L),mySummands,[['Last']],comparator=comp)
+		else:		
+			self.setConditionalCountLine(L,self.cellValues[row-1][col-1],mySummands,[['Last']],comparator=comp)
 	else:
 		mySummands = self.selectSummandsSweeper + [('Location',self.GE,2)]
-
-	self.setConditionalCountLine(L,self.cellValues[row-1][col-1],mySummands,[['Last']],comparator=comp)
+		if self.allInsteadOfValueSweeper:
+			self.setConditionalCountLine(L,len(L)-1,mySummands,[['Last']],comparator=comp)
+		else:		
+			self.setConditionalCountLine(L,self.cellValues[row-1][col-1],mySummands,[['Last']],comparator=comp)
 	
-def setSweeper(self,row,col,selectSummands=None,includeSelf=True,orthogonalOnly=False):
-	self._setSweeperCellBase(self.Pos,row,col,selectSummands,includeSelf,orthogonalOnly)
+def setSweeper(self,row,col,selectSummands=None,includeSelf=True,orthogonalOnly=False,allInsteadOfValue=False):
+	self._setSweeperCellBase(self.Pos,row,col,selectSummands,includeSelf,orthogonalOnly,allInsteadOfValue)
 	
-def setAntiSweeper(self,row,col,selectSummands=None,includeSelf=True,orthogonalOnly=False):
-	self._setSweeperCellBase(self.Neg,row,col,selectSummands,includeSelf,orthogonalOnly)
+def setAntiSweeper(self,row,col,selectSummands=None,includeSelf=True,orthogonalOnly=False,allInsteadOfValue=False):
+	self._setSweeperCellBase(self.Neg,row,col,selectSummands,includeSelf,orthogonalOnly,allInsteadOfValue)
 	
-def setSweeperNegative(self,selectSummands=None,includeSelf=None,orthogonalOnly=None):
-	self._initializeSweeper(selectSummands,includeSelf,orthogonalOnly)
+def setSweeperNegative(self,selectSummands=None,includeSelf=None,orthogonalOnly=None,allInsteadOfValue=False):
+	self._initializeSweeper(selectSummands,includeSelf,orthogonalOnly,allInsteadOfValue)
 	self._constraintNegative.append('Sweeper')
 	
 def _applySweeperNegative(self):

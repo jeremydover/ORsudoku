@@ -245,6 +245,15 @@ def _selectCellsOnLine(self,L,selectCriteria,OEI=[]):
 					self.model.Add(myCells[L[i][0]][L[i][1]] == myCells[L[mCell][0]][L[mCell][1]]).OnlyEnforceIf([criterionBools[i]] + OEI)
 					self.model.Add(myCells[L[i][0]][L[i][1]] != myCells[L[mCell][0]][L[mCell][1]]).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
 							
+			case 'DoNotMatchParity' | 'DoNotMatchEntropy' | 'DoNotMatchModular' | 'DoNotMatchPrimality' | 'DoNotMatchDigitSize':
+				if criterion[0][10:] not in self._propertyInitialized:
+					getattr(self,'_set'+criterion[0][10:])()
+				mCell = criterion[1] - 1
+				myCells = getattr(self,'cell'+criterion[0][10:])
+				for i in range(len(L)):
+					self.model.Add(myCells[L[i][0]][L[i][1]] != myCells[L[mCell][0]][L[mCell][1]]).OnlyEnforceIf([criterionBools[i]] + OEI)
+					self.model.Add(myCells[L[i][0]][L[i][1]] == myCells[L[mCell][0]][L[mCell][1]]).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
+					
 			case 'ParityChange' | 'EntropyChange' | 'ModularChange' | 'PrimalityChange' | 'DigitSizeChange':
 				if criterion[0][0:-6] not in self._propertyInitialized:
 					getattr(self,'_set'+criterion[0][0:-6])()
@@ -704,6 +713,25 @@ def _selectCellsOnLine(self,L,selectCriteria,OEI=[]):
 
 					for x in OEI:
 						self.model.AddBoolAnd(mySumVars).OnlyEnforceIf(x.Not())
+						
+			case 'Increase'|'Decrease':
+				if criterion[1] == 'before':
+					self.model.AddBoolAnd(criterionBools[-1].Not()).OnlyEnforceIf(OEI)  # last cell cannot be picked
+				else:
+					self.model.AddBoolAnd(criterionBools[0].Not()).OnlyEnforceIf(OEI)  # first cell cannot be picked
+				for i in range(1,len(L)):
+					if criterion[0] == 'Increase':
+						myComp = self.cellValues[L[i][0]][L[i][1]] - self.cellValues[L[i-1][0]][L[i-1][1]]
+					else:
+						myComp = self.cellValues[L[i-1][0]][L[i-1][1]] - self.cellValues[L[i][0]][L[i][1]]
+						
+					if criterion[1] == 'before':
+						myBool = criterionBools[i-1]
+					else:
+						myBool = criterionBools[i]
+						
+					self.model.Add(myComp > 0).OnlyEnforceIf([myBool] + OEI)
+					self.model.Add(myComp <= 0).OnlyEnforceIf([myBool.Not()] + OEI)
 					
 		criteriaBools.insert(criterionNumber,criterionBools)
 		criterionNumber = criterionNumber + 1
