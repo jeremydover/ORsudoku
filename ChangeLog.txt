@@ -1,3 +1,8 @@
+5/29/2025
+	Added 'Distance' type for conditional sum Location clues.
+	Found and fixed bug in conditional line evaluation which was failing to respect a given comparator in certain cases.
+	Added test cases.
+
 3/24/2025 bis
 	Added selection criterion for conditional sum and count clues to select digits in an increasing/decreasing pair along the line.
 	Added clock quad constraints, which assert that the digits around a quad increase either clockwise or counterclockwise from some starting point. Negative constraint implemented, and test case provided.

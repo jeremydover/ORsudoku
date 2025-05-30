@@ -177,6 +177,10 @@ def _selectCellsOnLine(self,L,selectCriteria,OEI=[]):
 							for i in range(len(L)):
 								self.model.Add(self.cellValues[L[criterion[n+1]-1][0]][L[criterion[n+1]-1][1]] == i+1).OnlyEnforceIf([thisCriterionBools[i]] + OEI)
 								self.model.Add(self.cellValues[L[criterion[n+1]-1][0]][L[criterion[n+1]-1][1]] != i+1).OnlyEnforceIf([thisCriterionBools[i].Not()] + OEI)
+						case 'Distance':
+							for i in range(len(L)):
+								self.model.Add(self.cellValues[L[criterion[n+1]-1][0]][L[criterion[n+1]-1][1]] == i-criterion[n+1]+1).OnlyEnforceIf([thisCriterionBools[i]] + OEI)
+								self.model.Add(self.cellValues[L[criterion[n+1]-1][0]][L[criterion[n+1]-1][1]] != i-criterion[n+1]+1).OnlyEnforceIf([thisCriterionBools[i].Not()] + OEI)
 			
 					theseCriteria.insert(thisCriterion,thisCriterionBools)
 					thisCriterion = thisCriterion + 1
@@ -1044,11 +1048,27 @@ def _evaluateHangingClues(self,partial,terminatorCells,value,terminateOn,include
 				# could be added, if it's not a *real* terminator.
 				terminatorCells.append(newFinalTerminator)
 		else:
-			self.model.Add(value == 0).OnlyEnforceIf(OEI + [x.Not() for x in terminatorCells])
+			match comparator:
+				case self.LE:
+					self.model.Add(value >= 0).OnlyEnforceIf(OEI + [x.Not() for x in terminatorCells])
+				case self.GE:
+					self.model.Add(value <= 0).OnlyEnforceIf(OEI + [x.Not() for x in terminatorCells])
+				case self.NE:
+					self.model.Add(value != 0).OnlyEnforceIf(OEI + [x.Not() for x in terminatorCells])
+				case _:
+					self.model.Add(value == 0).OnlyEnforceIf(OEI + [x.Not() for x in terminatorCells])
 		
 	if terminateOn == 'First':
 		if includeTerminator:
-			self.model.Add(partial[0] == value).OnlyEnforceIf([terminatorCells[0]]+OEI)
+			match comparator:
+				case self.LE:
+					self.model.Add(partial[0] <= value).OnlyEnforceIf([terminatorCells[0]]+OEI)
+				case self.GE:
+					self.model.Add(partial[0] >= value).OnlyEnforceIf([terminatorCells[0]]+OEI)
+				case self.NE:
+					self.model.Add(partial[0] != value).OnlyEnforceIf([terminatorCells[0]]+OEI)
+				case _:
+					self.model.Add(partial[0] == value).OnlyEnforceIf([terminatorCells[0]]+OEI)
 		else:
 			if type(value) is int and value == 0:
 				pass

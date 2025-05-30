@@ -980,8 +980,8 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
 	  
 	Property: 'Location'
 	  For this property, we are picking cells based on their position within the clued row/column.
-	  Values[0]: A comparator: use the class variables GE, EQ or LE, or NE, or the string 'Indexed'
-	  Values[1]: For comparators, provides the limit of comparison for fixed locations in the column; for index, provides a cell which indexes the location to be selected
+	  Values[0]: A comparator: use the class variables GE, EQ or LE, or NE; the string 'Indexed'; or the string 'Distance'
+	  Values[1]: For comparators, provides the limit of comparison for fixed locations in the column; for 'Indexed', provides a cell which indexes the location along the line to be selected (e.g., 1 picks first cell in line); for 'Distance', provides a cell whose value is the distance to the cell along the line to be picked (e.g, for 'Distance',3, if the 3rd cell along the line is a 4, this picks the 7th cell on the line)
 	  So for example, ('Location',p.GE,4) would include all cells in the two boxes not adjacent to the clue. Yes, this is just a cage. I get it.
 	  This property can be extended with additional value specifications, all of which will be joined with logical OR, so for example, the tuple ('Location',EQ,1,'Indexed',1) selects the first cell, and the cell indexed by the digit in the first cell. If multiple criteria point to cell, it is only selected once...its value is not multiplied.
 	
