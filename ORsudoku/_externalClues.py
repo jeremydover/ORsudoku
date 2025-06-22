@@ -1403,3 +1403,25 @@ def setRCRegionSum(self,row1,col1,rc,value):
 		self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in myRegions[i]) == value).OnlyEnforceIf(testVars[i])
 		self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in myRegions[i]) != value).OnlyEnforceIf(testVars[i].Not())
 	self.model.AddBoolOr(testVars)
+	
+def setRussianDollSum(self,row1,col1,rc,value):
+	row = row1 - 1
+	col = col1 - 1
+	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
+	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
+	
+	pairVars = []
+	for i in range(self.boardWidth):
+		for j in range(i+1,self.boardWidth):
+			thisPair = self.model.NewBoolVar('RussianDollSum')
+			pairSumCorrect = self.model.NewBoolVar('RussianDollSum')
+			fillingSumCorrect = self.model.NewBoolVar('RussianDollSum')
+			self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] + self.cellValues[row+j*vStep][col+j*hStep] == value).OnlyEnforceIf(pairSumCorrect)
+			self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] + self.cellValues[row+j*vStep][col+j*hStep] != value).OnlyEnforceIf(pairSumCorrect.Not())
+			self.model.Add(sum(self.cellValues[row+k*vStep][col+k*hStep] for k in range(i+1,j)) == value).OnlyEnforceIf(fillingSumCorrect)
+			self.model.Add(sum(self.cellValues[row+k*vStep][col+k*hStep] for k in range(i+1,j)) != value).OnlyEnforceIf(fillingSumCorrect.Not())
+			self.model.AddBoolAnd(pairSumCorrect,fillingSumCorrect).OnlyEnforceIf(thisPair)
+			self.model.AddBoolOr(pairSumCorrect.Not(),fillingSumCorrect.Not()).OnlyEnforceIf(thisPair.Not())
+			pairVars.append(thisPair)
+	self.model.AddBoolOr(pairVars)
+			

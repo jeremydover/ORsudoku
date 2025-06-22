@@ -197,6 +197,7 @@ Rotational Pairs - see Gurth's Symmetric Placement
 Row/Column Region Sum
 Run-On Renban Lines - see Renban Lines
 Run-On Nabner Lines - see Extended Whispers Lines
+Russian Doll Sums
 Samurai Sudoku
 Sandwich Sums
 Scary Cells
@@ -1999,6 +2000,13 @@ setRCRegionSum(row,col,rc,value): Asserts that the sum of the cells in the inter
   row,col: The coordinates of the cell next to which the clue values sit
   rc: row/column specification, use class variables Row and Col
   value: the sum of the values in the row/column in some region
+
+Russian Doll Sums
+-----------------
+setRussianDollSum(row,col,rc,value): Asserts there exists a pair of digits in the clued row/column whose sum equals value AND the sum of the digits between them also equals value
+  row,col: The coordinates of the cell next to which the clue values sit
+  rc: row/column specification, use class variables Row and Col
+  value: the sum of the shell and the interior of the Russian doll
 
 Samurai Sudoku
 --------------
