@@ -512,21 +512,25 @@ def setNoSeven(self):
 def setCountingCircles(self,inlist):
 	inlist = self._procCellList(inlist)
 	for d in self.digits:
-		circleDigit = []
-		for x in inlist:
-			dx = self.model.NewBoolVar('countingCircle')
-			dxInt = self.model.NewIntVar(0,1,'countingCircle')
-			circleDigit.append(dxInt)
-			self.model.Add(dxInt == 1).OnlyEnforceIf(dx)
-			self.model.Add(dxInt == 0).OnlyEnforceIf(dx.Not())
+		if d > 0:
+			circleDigit = []
+			for x in inlist:
+				dx = self.model.NewBoolVar('countingCircle')
+				dxInt = self.model.NewIntVar(0,1,'countingCircle')
+				circleDigit.append(dxInt)
+				self.model.Add(dxInt == 1).OnlyEnforceIf(dx)
+				self.model.Add(dxInt == 0).OnlyEnforceIf(dx.Not())
+				
+				self.model.Add(self.cellValues[x[0]][x[1]] == d).OnlyEnforceIf(dx)
+				self.model.Add(self.cellValues[x[0]][x[1]] != d).OnlyEnforceIf(dx.Not())
 			
-			self.model.Add(self.cellValues[x[0]][x[1]] == d).OnlyEnforceIf(dx)
-			self.model.Add(self.cellValues[x[0]][x[1]] != d).OnlyEnforceIf(dx.Not())
-		
-		dAppears = self.model.NewBoolVar('countingCircleValueAppears')
-		self.model.Add(sum(circleDigit) == d).OnlyEnforceIf(dAppears)
-		self.model.Add(sum(circleDigit) == 0).OnlyEnforceIf(dAppears.Not())
-		
+			dAppears = self.model.NewBoolVar('countingCircleValueAppears')
+			self.model.Add(sum(circleDigit) == d).OnlyEnforceIf(dAppears)
+			self.model.Add(sum(circleDigit) == 0).OnlyEnforceIf(dAppears.Not())
+		else:
+			for x in inlist:
+				self.model.Add(self.cellValues[x[0]][x[1]] != d)
+				
 def setOffsetDigit(self,digit):
 	# The digit that appears below the offset digit is its number of cells away from the offset digit in its row
 	digitPlace = []

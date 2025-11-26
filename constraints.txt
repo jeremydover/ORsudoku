@@ -629,7 +629,7 @@ setCountTheOddsLine(list): set a count the odds line, where the digit in the fir
   
 Counting Circles
 ----------------
-setCountingCircles(list): given a list of circled cells, a digit in a circled cell is the number of times that digit appears in a circled cell
+setCountingCircles(list): given a list of circled cells, a digit in a circled cell is the number of times that digit appears in a circled cell. Note: non-positive digits cannot appear in a counting circle. I admit it would be an interesting variation to have negative integers count as the positive integer, but decrementing the count. But that's not what's here.
   list: list of circle cells
 
 Cupid Clues
@@ -2115,6 +2115,7 @@ p = schroedingerCellSudoku(boardSizeRoot)
   Arrows (including Double Arrows)
   Between lines - all digits on the line must be less than all digits on one end point and greater than all digits on the other end poit
   Block Cages
+  Counting Circles
   Disjoint Groups - allDigits=False can be applied, forcing all 10 digits to appear in each location
   Even/Odd
   Given digits - setting a given digits enforces the corresponding cell is not a Schrödinger cell

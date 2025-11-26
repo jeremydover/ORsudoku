@@ -944,7 +944,34 @@ class schroedingerCellSudoku(sudoku):
 			else:
 				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] + self.sCellSums[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] - self.sCellSums[inlist[j+1][0]][inlist[j+1][1]] <= value)
 				self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] + self.sCellSums[inlist[j][0]][inlist[j][1]] - self.cellValues[inlist[j+1][0]][inlist[j+1][1]] - self.sCellSums[inlist[j+1][0]][inlist[j+1][1]] >= -1*value)
-						
+				
+	def setCountingCircles(self,inlist):
+		inlist = self._procCellList(inlist)
+		for d in self.digits:
+			if d > 0:
+				circleDigit = []
+				for x in inlist:
+					dx = self.model.NewBoolVar('countingCircle')
+					dxInt = self.model.NewIntVar(0,1,'countingCircle')
+					circleDigit.append(dxInt)
+					self.model.Add(dxInt == 1).OnlyEnforceIf(dx)
+					self.model.Add(dxInt == 0).OnlyEnforceIf(dx.Not())
+					
+					dxSwitch = self.model.NewBoolVar('countingCircleSCell')
+					self.model.Add(self.cellValues[x[0]][x[1]] == d).OnlyEnforceIf([dx,dxSwitch])
+					self.model.Add(self.sCellValues[x[0]][x[1]] == d).OnlyEnforceIf([dx,dxSwitch.Not()])
+					self.model.Add(self.cellValues[x[0]][x[1]] != d).OnlyEnforceIf(dx.Not())
+					self.model.Add(self.sCellValues[x[0]][x[1]] != d).OnlyEnforceIf(dx.Not())
+					self.model.AddBoolAnd(dxSwitch).OnlyEnforceIf(dx.Not())
+				
+				dAppears = self.model.NewBoolVar('countingCircleValueAppears')
+				self.model.Add(sum(circleDigit) == d).OnlyEnforceIf(dAppears)
+				self.model.Add(sum(circleDigit) == 0).OnlyEnforceIf(dAppears.Not())
+			else:
+				for x in inlist:
+					self.model.Add(self.cellValues[x[0]][x[1]] != d)
+					self.model.Add(self.sCellValues[x[0]][x[1]] != d)
+					
 class superpositionSudoku(schroedingerCellSudoku):
 	'''This class is a version of Schrödinger cell sudoku, but the constraints take a harder line on the double-digit cells to 
 	   look more like classical superposition. Whenever an S-cell is used on a constraint, there must be an assignment of Schrödinger cells that makes the constraint work, for both possible values. So for example, if an S-cell is on a Renban line with 3, 4, and 5, the Schrödinger cell must be 2/6, since either assignment independently could satisfy the constraint. It could not be 1/2, for assigning it to be 1 would leave the set of digits discontiguous. Constraints that order, such as between lines or thermos, can be inherited intact, but summing constraints need to be revised.'''

@@ -1,3 +1,6 @@
+11/26/2025
+	Added support for S-cell counting circles. Improved existing counting circles code to handle non-positive digits better.
+
 6/22/2025
 	Added support for Russian Doll clues (h/t oddlyeven)
 
