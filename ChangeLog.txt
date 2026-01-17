@@ -1,3 +1,11 @@
+1/16/2026
+	Moved getRegion function from main constructor to _utilities
+	Added support for disparity constraint, added test case; extended support to "disentropy" and "dismodular"
+	Added support for N-Mates, added test case (h/t EPH, via BremSter)
+	Added alias for Exclusion Quads, implemented using existing Block Cages primitive, added test case (h/t Bill Murphy)
+	Updated sweeper cell code to allow an offset, so that the number of cells matching the condition can be the sweeper cell value + the offset. As part of update, identified bug in sweeper cell negative constraint which was using default options instead of those previously entered. Added test case.
+	Added augment option to zipper lines which allows sum to increase/decrease by a fixed amount as the sums get further from the middle. Added test case (h/t Richard Stolk).
+
 11/26/2025
 	Added support for S-cell counting circles. Improved existing counting circles code to handle non-positive digits better.
 

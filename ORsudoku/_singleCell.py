@@ -595,17 +595,18 @@ def setConditionalCountCross(self,row,col,value,selectSummands=None,selectTermin
 		case _:
 			self.model.Add(sum(myValues) + mySelf == value)
 	
-def _initializeSweeper(self,selectSummands=None,includeSelf=None,orthogonalOnly=None,allInsteadOfValue=None):
+def _initializeSweeper(self,selectSummands=None,includeSelf=None,orthogonalOnly=None,allInsteadOfValue=None,offset=None):
 	if 'Sweeper' not in self._constraintInitialized:
 		self._constraintInitialized.append('Sweeper')
 		self.selectSummandsSweeper = [['All']] if selectSummands is None else selectSummands
 		self.includeSelfSweeper = True if includeSelf is None else includeSelf
 		self.orthogonalOnlySweeper = False if orthogonalOnly is None else orthogonalOnly
 		self.allInsteadOfValueSweeper = False if allInsteadOfValue is None else allInsteadOfValue
+		self.offsetSweeper = 0 if offset is None else offset
 		self.sweeperCells = []
 
-def _setSweeperCellBase(self,pm,row,col,selectSummands,includeSelf,orthogonalOnly,allInsteadOfValue):
-	self._initializeSweeper(selectSummands,includeSelf,orthogonalOnly,allInsteadOfValue)
+def _setSweeperCellBase(self,pm,row,col,selectSummands,includeSelf,orthogonalOnly,allInsteadOfValue,offset):
+	self._initializeSweeper(selectSummands,includeSelf,orthogonalOnly,allInsteadOfValue,offset)
 	if pm == self.Pos:
 		comp = self.EQ
 		self.sweeperCells.append((row,col))
@@ -618,24 +619,30 @@ def _setSweeperCellBase(self,pm,row,col,selectSummands,includeSelf,orthogonalOnl
 	if self.includeSelfSweeper:
 		mySummands = self.selectSummandsSweeper
 		if self.allInsteadOfValueSweeper:
-			self.setConditionalCountLine(L,len(L),mySummands,[['Last']],comparator=comp)
+			self.setConditionalCountLine(L,len(L)+offset,mySummands,[['Last']],comparator=comp)
 		else:		
-			self.setConditionalCountLine(L,self.cellValues[row-1][col-1],mySummands,[['Last']],comparator=comp)
+			self.setConditionalCountLine(L,self.cellValues[row-1][col-1]+offset,mySummands,[['Last']],comparator=comp)
 	else:
 		mySummands = self.selectSummandsSweeper + [('Location',self.GE,2)]
 		if self.allInsteadOfValueSweeper:
-			self.setConditionalCountLine(L,len(L)-1,mySummands,[['Last']],comparator=comp)
+			self.setConditionalCountLine(L,len(L)-1+offset,mySummands,[['Last']],comparator=comp)
 		else:		
-			self.setConditionalCountLine(L,self.cellValues[row-1][col-1],mySummands,[['Last']],comparator=comp)
+			self.setConditionalCountLine(L,self.cellValues[row-1][col-1]+offset,mySummands,[['Last']],comparator=comp)
 	
-def setSweeper(self,row,col,selectSummands=None,includeSelf=True,orthogonalOnly=False,allInsteadOfValue=False):
-	self._setSweeperCellBase(self.Pos,row,col,selectSummands,includeSelf,orthogonalOnly,allInsteadOfValue)
+def setSweeper(self,row,col,selectSummands=None,includeSelf=True,orthogonalOnly=False,allInsteadOfValue=False,offset=0):
+	if selectSummands is None:
+		self._setSweeperCellBase(self.Pos,row,col,self.selectSummandsSweeper,self.includeSelfSweeper,self.orthogonalOnlySweeper,self.allInsteadOfValueSweeper,self.offsetSweeper)
+	else:
+		self._setSweeperCellBase(self.Pos,row,col,selectSummands,includeSelf,orthogonalOnly,allInsteadOfValue,offset)
 	
-def setAntiSweeper(self,row,col,selectSummands=None,includeSelf=True,orthogonalOnly=False,allInsteadOfValue=False):
-	self._setSweeperCellBase(self.Neg,row,col,selectSummands,includeSelf,orthogonalOnly,allInsteadOfValue)
+def setAntiSweeper(self,row,col,selectSummands=None,includeSelf=True,orthogonalOnly=False,allInsteadOfValue=False,offset=0):
+	if selectSummands is None:
+		self._setSweeperCellBase(self.Neg,row,col,self.selectSummandsSweeper,self.includeSelfSweeper,self.orthogonalOnlySweeper,self.allInsteadOfValueSweeper,self.offsetSweeper)
+	else:
+		self._setSweeperCellBase(self.Neg,row,col,selectSummands,includeSelf,orthogonalOnly,allInsteadOfValue,offset)
 	
-def setSweeperNegative(self,selectSummands=None,includeSelf=None,orthogonalOnly=None,allInsteadOfValue=False):
-	self._initializeSweeper(selectSummands,includeSelf,orthogonalOnly,allInsteadOfValue)
+def setSweeperNegative(self,selectSummands=None,includeSelf=None,orthogonalOnly=None,allInsteadOfValue=False,offset=0):
+	self._initializeSweeper(selectSummands,includeSelf,orthogonalOnly,allInsteadOfValue,offset)
 	self._constraintNegative.append('Sweeper')
 	
 def _applySweeperNegative(self):
@@ -662,3 +669,32 @@ def setIndexedPairSum(self,row1,col1,uldr,value):
 	remoteValue = self.model.NewIntVar(min(self.digits),max(self.digits),'IndexedPairSumRemoteValue')
 	self.setConditionalSumLine(L,remoteValue,[('Location','Indexed',len(L)),('Location',self.LE,len(L)-1)],[['Last']])
 	self.model.Add(self.cellValues[row1-1][col1-1] + remoteValue == value)
+	
+def setNMates(self,inlist1):
+	# Each element of inlist is a 3-tuple: (row,col,direction), specifying the cell, and the direction the arrow in it points. N-Mates asserts that for all such cells, the sum of the cell value X and the cell value of the cell X steps away in the indicated direction all sum to the same value
+	
+	inlist = self._procCellList(inlist1)
+	matchVar = self.model.NewIntVar(0,2*self.maxDigit,"NMatesMatchVariable")
+	for x in inlist:
+		# Figure parameters for placement direction
+		if x[2] == self.Up:
+			cand = x[0]
+			hStep = 0
+			vStep = -1
+		elif x[2] == self.Down:
+			cand = self.boardWidth - x[0] - 1
+			hStep = 0
+			vStep = 1
+		elif x[2] == self.Left:
+			cand = x[1]
+			hStep = -1
+			vStep = 0
+		else:
+			cand = self.boardWidth - x[1] - 1
+			hStep = 1
+			vStep = 0
+	
+		varBitmap = self._varBitmap('NMatesRow{:d}Col{:d}'.format(x[0],x[1]),cand)
+		for i in range(1,cand+1):
+			self.model.Add(self.cellValues[x[0]+i*vStep][x[1]+i*hStep] + i == matchVar).OnlyEnforceIf(varBitmap[i-1])
+			self.model.Add(self.cellValues[x[0]][x[1]] == i).OnlyEnforceIf(varBitmap[i-1])

@@ -52,6 +52,7 @@ Difference Pairs - see Kropki and Kropki Pairs
 Different Neighbors
 Digit Count Cages
 Disjoint Groups
+Disparity
 Dominant Clone Regions - see Clone Regions
 Double Arrows - see Arrows
 Double or Nothing Sudoku - see Cell Transform Sudoku
@@ -72,6 +73,7 @@ Entropy Battenburg (on a 2x2, no pair of same entropic cells are adjacent)
 Entropy Quads (partial Entropy, asserts Entropy on an individual 2x2)
 Equal Sum Cages
 Equiparity/Uniparity Cages - see More-Odd-Than-Even Cages
+Exclusion Quads (see Quadruples)
 Even Max Quads - see Quad Max Values
 Even-Odd
 Extended Whispers Lines
@@ -137,6 +139,7 @@ Negator Sudoku - see Cell Transform Sudoku
 Neighbor Sets
 Neighbor Sums
 Next-To-Nine
+N-Mates
 No-Three-In-A-Row (Parity)
 No Seven - see Forbidden Consecutive Sums
 Non-Consecutive
@@ -700,6 +703,13 @@ setDigitCountCage(inlist,value): asserts that value is the number of distinct di
 Disjoint Groups
 ---------------
 setDisjointGroups(): sets the global disjoint groups constraint
+
+Disparity
+---------
+setDisparity(): asserts that any two orthogonally adjacent cells across a region border must have distinct parity
+setDisentropy(): asserts that any two orthogonally adjacent cells across a region border must have distinct entropy
+setDismodular(): asserts that any two orthogonally adjacent cells across a region border must have distinct modularity
+Note: The standard 9x9 grid with square regions does not admit a disparity solution, though irregular grids do.
 
 DoubleDoku
 ----------
@@ -1676,6 +1686,11 @@ setNextToNineSum(self,row1,col1,rc,value,digit): gives the sum of the cells next
   value: an integer specifying the sum of the cells next to the given digit
   digit (optional): defines which digit is the one the clued digits must appear next to...defaults to 9
 
+N-Mates
+-------
+setNMates(list): given a list of extended cell specifications (row,col,dir), for each specification in the list, the sum of the value X in cell (row,col) plus the value of the cell X cells away from (row,col) in the direction dir is constant for all specifications in the list
+  list: A list of extended cell specifications (row,col,dir) For dir, use class variables Up, Down, Left and Right
+
 No Three in a Row (Parity)
 --------------------------
 setNoThreeInARowParity(): assert that in any row/column, there are no three consecutive odd digits nor are there three consecutive even digits
@@ -1849,6 +1864,8 @@ setQuadruple(cellVals): create a quadruple constraint on a 2x2 region
   
 setQuadrupleArray(list): set multiple quadruples
   list: list of cellVal specifications; see setQuadruple
+  
+The opposite assertion, that quads do NOT contain a list of values, uses the same syntax with the function calls: setExclusionQuad and setExclusionQuadArray
   
 Quad Max Arrows
 ---------------
@@ -2271,17 +2288,19 @@ setSumSandwich(row,col,rc,values,neg=False): sets a sum sandwich - in a row/colu
   
 Sweepers
 --------
-setSweeper(row,col,selectSummands,includeSelf=True,orthogonalOnly=False,allInsteadOfValue=False): Defines cell to be a sweeper cell, whose value is the number of neighboring cells (or all neighbors) which satisfy the defined selection criteria
+setSweeper(row,col,selectSummands,includeSelf=True,orthogonalOnly=False,allInsteadOfValue=False,offset=0): Defines cell to be a sweeper cell, whose value is the number of neighboring cells (or all neighbors) which satisfy the defined selection criteria
   row,col: Coordinates of the sweeper cell
   selectSummands: See Hanging Sums for description of available selection criteria to pick "matching" cells.
     ***!!!NOTE!!!***: When giving selection criteria that match the sweeper cell, use position 1.
   includeSelf: Default is True; if True, cell itself counts as one of its neighbors.
   orthogonalOnly: Default is False; if True, only neighbors sharing an edge with the sweeper cell are counted. If False, all orthogonal and diagonal neighbors are counted.
   allInsteadOfValue: Default is False; if True, all neighbors must meet the constraint, regardless of sweeper cell value
+  offset: Number by which to adjust the sweeper cell value to match the count, e.g., if offset=-1, then the number of
+          cells matching the selection criteria is one less than the value in the sweeper cell. Default is 0.
   
-setAntiSweeper(row,col,selectSummands,includeSelf=True,orthogonalOnly=False): Defines cell to not be a sweeper cell
+setAntiSweeper(row,col,selectSummands,includeSelf=True,orthogonalOnly=False,offset=0): Defines cell to not be a sweeper cell
 
-setSweeperNegative(selectSummands,includeSelf=True,orthogonalOnly=False): Asserts that all cells not specifically designated as sweeper cells will not be sweeper cells.
+setSweeperNegative(selectSummands,includeSelf=True,orthogonalOnly=False,offset=0): Asserts that all cells not specifically designated as sweeper cells will not be sweeper cells.
 
 Thermometers
 ------------
@@ -2570,8 +2589,9 @@ setXYDifferenceNegative(): implements negative constraint
 
 Zipper Lines
 ------------
-setZipperLine(list): for an odd length, the sum of the cells equidistant from the ends equals the cell in the middle of the line. For an even length line, the sum of the cells equidistant from the ends is constant
+setZipperLine(list,augment): If augment is not set, for an odd length, the sum of the cells equidistant from the ends equals the cell in the middle of the line. For an even length line, the sum of the cells equidistant from the ends is constant. If augment is set, then the sums increase by the value augment (decrease if augment is negative) for each cell away from the center of the zipper the pair lies. For example, 1-3-4-2-5 would be a valid line if augment is 1.
   list: list of cell specifications
+  augment (optional): the amount the sum must increase as the sums move away from the center
 
 Zones
 -----

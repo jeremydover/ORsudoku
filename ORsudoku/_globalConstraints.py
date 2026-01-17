@@ -678,3 +678,24 @@ def setBattleships(self):
 			self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in candidates[j]) != 15).OnlyEnforceIf([battleshipTest[j].Not(),c])
 			self.model.AddBoolOr([battleshipTest[k] for k in mySupersets]).OnlyEnforceIf([battleshipTest[j].Not(),c.Not()])
 	
+def setDismode(self,mode):
+	if mode not in self._propertyInitialized:
+		getattr(self,'_set'+mode)()
+	myCells = getattr(self,'cell'+mode)
+	for i in range(self.boardWidth):
+		for j in range(self.boardWidth):
+			neigh = self.getOrthogonalNeighbors(i,j)
+			for x in neigh:
+				if self.getRegion(i,j) != self.getRegion(x[0],x[1]):
+					self.model.Add(myCells[i][j] != myCells[x[0]][x[1]])
+
+def setDisparity(self):
+	self.setDismode("Parity")
+	
+def setDisentropy(self):
+	self.setDismode("Entropy")
+	
+def setDismodular(self):
+	self.setDismode("Modular")
+	
+	

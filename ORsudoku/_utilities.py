@@ -65,6 +65,9 @@ def getOrthogonalNeighbors(self,i,j):
 	#return [(i+k,j+m) for k in [-1,0,1] for m in [-1,0,1] if i+k >= 0 and i+k < self.boardWidth and j+m >= 0 and j+m < self.boardWidth and abs(k) != abs(m)]
 	return list({(i+k,j+m) for k in [-1,0,1] for m in [-1,0,1] if abs(k) != abs(m)} & {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)})
 	
+def getRegion(self,row,col):
+	return [i for i in range(len(self.regions)) if (row,col) in self.regions[i]][0]
+	
 def _selectCellsMatchDigitSet(self,myVars,L,values,OEI=[]):
 	if type(values) is int:
 		values = [values]

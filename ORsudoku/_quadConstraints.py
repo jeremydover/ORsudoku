@@ -40,6 +40,18 @@ def setQuadruple(self,row,col=-1,values=-1):
 				
 def setQuadrupleArray(self,cells):
 	for x in cells: self.setQuadruple(x)
+	
+def setExclusionQuad(self,row,col=-1,values=-1):
+	if col == -1:
+		T = self._procCell(row)
+		row = T[0]
+		col = T[1]
+		values = [T[i] for i in range(2,len(T))]
+	# Note, cells are going to get proc'd again, so we need to re-base them back up to 1
+	self.setBlockCage([(row+1,col+1),(row+2,col+1),(row+1,col+2),(row+2,col+2)],values)
+	
+def setExclusionQuadArray(self,cells):
+	for x in cells: self.setExclusionQuad(x)
 
 def setQuadSum(self,row,col=-1):
 	if col == -1:

@@ -655,7 +655,7 @@ def setConsecutiveLine(self,inlist):
 	self.setRenbanLine(inlist)
 	self.setMissingThermo(inlist)
 	
-def setZipperLine(self,inlist):
+def setZipperLine(self,inlist,augment=0):
 	inlist = self._procCellList(inlist)
 	l = len(inlist)
 	if l % 2 == 0:
@@ -665,7 +665,7 @@ def setZipperLine(self,inlist):
 		target = self.cellValues[inlist[(l-1) // 2][0]][inlist[(l-1) // 2][1]]
 		test = (l-1) // 2
 	for i in range(test):
-		self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]]+self.cellValues[inlist[l-1-i][0]][inlist[l-1-i][1]] == target)
+		self.model.Add(self.cellValues[inlist[i][0]][inlist[i][1]]+self.cellValues[inlist[l-1-i][0]][inlist[l-1-i][1]] == target+(test-i)*augment)
 
 def setLineSumLine(self,inlist):
 	inlist = self._procCellList(inlist)
