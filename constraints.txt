@@ -51,6 +51,7 @@ Diagonal Mirrors
 Difference Pairs - see Kropki and Kropki Pairs
 Different Neighbors
 Digit Count Cages
+Digit Comparison
 Disjoint Groups
 Disparity
 Dominant Clone Regions - see Clone Regions
@@ -699,6 +700,15 @@ Digit Count Cages
 setDigitCountCage(inlist,value): asserts that value is the number of distinct digits appearing in the cage; pioneered by clover!
   inlist: list of cell specifications
   value: integer counting number of distinct digits
+  
+Digit Comparison
+----------------
+setDigitComparison(inlist1,inlist2,comparator,value,multiplicity): Compares the number of common digits between two lists of cells
+  inlist1: list of cell specifications
+  inlist2: list of cell specifications
+  comparator: use the class variables GE, EQ or LE, or NE (optional, default is EQ)
+  value: the value to which to compare the number of matches (optional, default is 0)
+  multiplicity: if True, the number of instances of a digit in the two lists must be non-zero and match; otherwise, a match is count as long as the digit appears in both lists
 
 Disjoint Groups
 ---------------

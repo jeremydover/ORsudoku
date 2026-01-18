@@ -1,3 +1,10 @@
+1/18/2026
+	Moved some helper functions out of __init__ that really belonged in utilities. Look at me cleaning stuff up.
+	Adding a global "digit tracking" property. Normally, the code tracks the digit in a cell as an array of ints, and this
+	is good for a lot of things. But when we need to count digits in a region, we need a more robust structure, which is essentially an array of Bools that says: is cell X this digit? is cell X that digit? is cell X the other digit? This massively inflates the model, so we don't want to do it unnecessarily. Moreover, even if we have to do it for some cells, we don't want to have to do it for all. So by setting up this property, we can do a lazy creation for an object variable to track this, and only create the Bools (and associated Ints) for the variables that need it, and by keeping them around we can reuse them, and not recreate them with every constraint.
+	Updated and greatly simplified shaken clone code with new digit tracking.
+	Added support for digit comparison zones, which allow the comparison of the number of digits between zones, with match counted by either presence or multiplicity. Added test cases.
+
 1/16/2026
 	Moved getRegion function from main constructor to _utilities
 	Added support for disparity constraint, added test case; extended support to "disentropy" and "dismodular"

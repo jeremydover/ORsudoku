@@ -539,34 +539,63 @@ def setDominantCloneRegion(self,inlist,strict=True):
 				self.model.Add(self.cellValues[inlist[0][k][0]][inlist[0][k][1]] >= self.cellValues[inlist[j][k][0]][inlist[j][k][1]])
 				
 def setShakenCloneRegion(self,inlist,noRepeat=False):
+	self._initializeDigitTracking()
 	inlist = list(map(self._procCellList,inlist))
-	cloneCounts = []
-	myDigits = list(self.digits)
-	for j in range(len(inlist)): # Loop over clones
-		# Create the variables which will count the number of appearances of a digit in this clone
-		thisCloneCount = []
-		for k in range(len(myDigits)): # Loop over the digits
-			# Create the count variables
-			v = self.model.NewIntVar(0,len(inlist[j]),'numberOfAppearancesOfDigit{:d}inClone{:d}'.format(myDigits[k],j))
-			thisCloneCount.append(v)
-			if j > 0:
-				self.model.Add(cloneCounts[0][k] == v) # Force the total number of appearances of each digit to equal those in the first clone
-				
-			# Create the Booleans and 0/1 integer to pair cells to digits
-			thisDigitCount = []
-			for x in inlist[j]:
-				v1 = self.model.NewBoolVar('cell{:d}{:d}Is{:d}'.format(x[0],x[1],myDigits[k]))
-				v2 = self.model.NewIntVar(0,1,'cell{:d}{:d}Is{:d}'.format(x[0],x[1],myDigits[k]))
-				self.model.Add(v2 == 1).OnlyEnforceIf(v1)
-				self.model.Add(v2 == 0).OnlyEnforceIf(v1.Not())
-				self.model.Add(self.cellValues[x[0]][x[1]] == myDigits[k]).OnlyEnforceIf(v1)
-				self.model.Add(self.cellValues[x[0]][x[1]] != myDigits[k]).OnlyEnforceIf(v1.Not())
-				thisDigitCount.append(v2)
-			self.model.Add(sum(thisDigitCount) == v)
-		cloneCounts.append(thisCloneCount)
 	
+	for j in range(len(inlist)): # Loop over clones
+		for x in inlist[j]:
+			self._initializeDigitTrackingCell(x[0],x[1]) # Set up tracking variables
 		if noRepeat:
 			self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in inlist[j]])
+		if j > 0:
+			for k in range(len(self.digitList)): # Loop over the digits
+				self.model.Add(sum(self.cellDigitInts[x[0]][x[1]][k] for x in inlist[0]) == sum(self.cellDigitInts[x[0]][x[1]][k] for x in inlist[j]))
+
+def setDigitComparison(self,inlist1,inlist2,comparator=1,value=0,multiplicity=False):
+	self._initializeDigitTracking()
+	inlist1 = self._procCellList(inlist1)
+	inlist2 = self._procCellList(inlist2)
+	for x in inlist1 + inlist2:
+		self._initializeDigitTrackingCell(x[0],x[1]) # Set up tracking variables
+
+	digitMatch = [self.model.NewBoolVar('DigitComparisonBool{:d}'.format(self.digitList[k])) for k in range(len(self.digitList))]
+	digitMatchInt = [self.model.NewIntVar(0,1,'DigitComparisonInt{:d}'.format(self.digitList[k])) for k in range(len(self.digitList))]
+	for k in range(len(self.digitList)):
+		self.model.Add(digitMatchInt[k] == 1).OnlyEnforceIf(digitMatch[k])
+		self.model.Add(digitMatchInt[k] == 0).OnlyEnforceIf(digitMatch[k].Not())
+		
+		# Create variables to determine if the digit is present in the listed cells or not
+		digitPresent1 = self.model.NewBoolVar('switch1')
+		digitPresent2 = self.model.NewBoolVar('switch2')
+		self.model.Add(sum(self.cellDigitInts[x[0]][x[1]][k] for x in inlist1) > 0).OnlyEnforceIf(digitPresent1)
+		self.model.Add(sum(self.cellDigitInts[x[0]][x[1]][k] for x in inlist1) == 0).OnlyEnforceIf(digitPresent1.Not())
+		self.model.Add(sum(self.cellDigitInts[x[0]][x[1]][k] for x in inlist2) > 0).OnlyEnforceIf(digitPresent2)
+		self.model.Add(sum(self.cellDigitInts[x[0]][x[1]][k] for x in inlist2) == 0).OnlyEnforceIf(digitPresent2.Not())
+		
+		# If we have a match, then there must be a non-zero number of appearances in inlist 1. If multiplicity is counted, this
+		# has to be the same number for inlist2, otherwise is just needs to be greater than 0
+		self.model.AddBoolAnd(digitPresent1).OnlyEnforceIf(digitMatch[k])
+		if multiplicity:
+			self.model.Add(sum(self.cellDigitInts[x[0]][x[1]][k] for x in inlist1) == sum(self.cellDigitInts[x[0]][x[1]][k] for x in inlist2)).OnlyEnforceIf(digitMatch[k])
+		else:
+			self.model.AddBoolAnd(digitPresent2).OnlyEnforceIf(digitMatch[k])
+
+		# If we don't have a match, need to go case by case
+		if multiplicity:
+			self.model.Add(sum(self.cellDigitInts[x[0]][x[1]][k] for x in inlist1) != sum(self.cellDigitInts[x[0]][x[1]][k] for x in inlist2)).OnlyEnforceIf([digitMatch[k].Not(),digitPresent1,digitPresent2])
+		else:
+			self.model.AddBoolAnd(digitMatch[k]).OnlyEnforceIf([digitMatch[k].Not(),digitPresent1,digitPresent2]) # Bury this case
+	
+	# Now count 'em up and compare
+	match comparator:
+		case self.LE:
+			self.model.Add(sum(digitMatchInt[k] for k in range(len(self.digitList))) <= value)
+		case self.GE:
+			self.model.Add(sum(digitMatchInt[k] for k in range(len(self.digitList))) >= value)
+		case self.NE:
+			self.model.Add(sum(digitMatchInt[k] for k in range(len(self.digitList))) != value)
+		case _:
+			self.model.Add(sum(digitMatchInt[k] for k in range(len(self.digitList))) == value)
 			
 def setHiddenClones(self,inlist,number):
 	# Given a region, assert that there exist at least number clones of it in the grid which do not overlap

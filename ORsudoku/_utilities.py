@@ -68,6 +68,259 @@ def getOrthogonalNeighbors(self,i,j):
 def getRegion(self,row,col):
 	return [i for i in range(len(self.regions)) if (row,col) in self.regions[i]][0]
 	
+def _initializeDigitTracking(self):
+		if 'DigitTracking' not in self._propertyInitialized:
+			self._setDigitTracking()
+
+def _setDigitTracking(self):
+	self.cellDigitBools = [[None for _ in range(self.boardWidth)] for _ in range(self.boardWidth)]
+	self.cellDigitInts = [[None for _ in range(self.boardWidth)] for _ in range(self.boardWidth)]
+	self.digitList = sorted(self.digits)
+	
+def _initializeDigitTrackingCell(self,row,col):
+	if self.cellDigitBools[row][col] is None:
+		self.cellDigitBools[row][col] = [self.model.NewBoolVar('DigitTrackingBoolRow{:d}Col{:d}Digit{:d}'.format(row,col,self.digitList[i])) for i in range(len(self.digitList))]
+		self.cellDigitInts[row][col] = [self.model.NewIntVar(0,1,'DigitTrackingIntRow{:d}Col{:d}Digit{:d}'.format(row,col,self.digitList[i])) for i in range(len(self.digitList))]
+		for i in range(len(self.digitList)):
+			self.model.Add(self.cellValues[row][col] == self.digitList[i]).OnlyEnforceIf(self.cellDigitBools[row][col][i])
+			self.model.Add(self.cellValues[row][col] != self.digitList[i]).OnlyEnforceIf(self.cellDigitBools[row][col][i].Not())
+			self.model.Add(self.cellDigitInts[row][col][i] == 1).OnlyEnforceIf(self.cellDigitBools[row][col][i])
+			self.model.Add(self.cellDigitInts[row][col][i] == 0).OnlyEnforceIf(self.cellDigitBools[row][col][i].Not())
+
+def _initializeParity(self):
+	if 'Parity' not in self._propertyInitialized:
+		self._setParity()
+
+def _setParity(self):
+	# Set up variables to track parity constraints
+	divVars = []
+	self.cellParity = []
+	
+	maxDiff = self.maxDigit-self.minDigit
+	for i in range(self.boardWidth):
+		t = []
+		for j in range(self.boardWidth):
+			div = self.model.NewIntVar(0,2*maxDiff,'ParityDiv')
+			mod = self.model.NewIntVar(0,1,'parityValue{:d}{:d}'.format(i,j))
+			t.append(mod)
+			self.model.Add(2*div <= self.cellValues[i][j])
+			self.model.Add(2*div+2 > self.cellValues[i][j])
+			self.model.Add(mod == self.cellValues[i][j]-2*div)
+		self.cellParity.insert(i,t)
+	
+	self._propertyInitialized.append('Parity')
+	
+def _initializeEntropy(self):
+	if 'Entropy' not in self._propertyInitialized:
+		self._setEntropy()
+
+def _setEntropy(self):
+	# Set up variables to track entropy and modular constraints
+	self.cellEntropy = []
+	
+	for i in range(self.boardWidth):
+		t = []
+		for j in range(self.boardWidth):
+			c = self.model.NewIntVar(self.minDigit // 3 - 1,self.maxDigit // 3,'entropyValue{:d}{:d}'.format(i,j))
+			t.append(c)
+			self.model.Add(3*c+1 <= self.cellValues[i][j])
+			self.model.Add(3*c+4 > self.cellValues[i][j])
+		self.cellEntropy.insert(i,t)
+	
+	self._propertyInitialized.append('Entropy')
+
+def _initializeModular(self):
+	if 'Modular' not in self._propertyInitialized:
+		self._setModular()
+
+def _setModular(self):
+	# Set up variables to track modular constraints
+	if 'Entropy' not in self._propertyInitialized:
+		self._setEntropy()
+	
+	self.cellModular = []
+	
+	for i in range(self.boardWidth):
+		t = []
+		for j in range(self.boardWidth):
+			c = self.model.NewIntVar(1,3,'modularValue{:d}{:d}'.format(i,j))
+			t.append(c)
+			self.model.Add(c == self.cellValues[i][j] - 3*self.cellEntropy[i][j])
+		self.cellModular.insert(i,t)
+	
+	self._propertyInitialized.append('Modular')
+	
+def _setFullRank(self):
+	if self.boardWidth != 9 or self.minDigit < 0 or self.maxDigit > 9:
+		print("Full rank constraints only supported for digits {0..9} on 9x9 boards or smaller.")
+		sys.exit()
+		
+	# Set up variables to track full rank constraints
+	self.rcRank = [self.model.NewIntVar(1,4*self.boardWidth,'fullRankRank') for i in range(4*self.boardWidth)]
+	self.rcSum = [self.model.NewIntVar(0,10**self.boardWidth,'fullRankSum') for i in range(4*self.boardWidth)]
+	# Set up tie between rank sums and cell values
+	for k in range(2):	# Top/left or bottom/right
+		for j in range(2):	# Row or column
+			for i in range(self.boardWidth):
+				# Note: these sums seems backwards because the closest digit to the clue is the MOST significant
+				sumRow = i if j == self.Row else (self.boardWidth-1 if k == 0 else 0)
+				sumCol = i if j == self.Col else (self.boardWidth-1 if k == 0 else 0)
+				hStep = 0 if j == self.Col else (-1 if k == 0 else 1) 
+				vStep = 0 if j == self.Row else (-1 if k == 0 else 1)
+				#print (sum(self.cellValue[sumRow+m*vStep][sumCol+m*hStep]*10**m for m in range(self.boardWidth)))
+				self.model.Add(self.rcSum[4*i+2*j+k] == sum(self.cellValues[sumRow+m*vStep][sumCol+m*hStep]*10**m for m in range(self.boardWidth)))
+	
+	# Set up Booleans to force rank ordering
+	for i in range(4*self.boardWidth):
+		for j in range(i+1,4*self.boardWidth):
+			c = self.model.NewBoolVar('rankOrder{:d}{:d}'.format(i,j))
+			self.model.Add(self.rcSum[i] > self.rcSum[j]).OnlyEnforceIf(c)
+			self.model.Add(self.rcRank[i] > self.rcRank[j]).OnlyEnforceIf(c)
+			self.model.Add(self.rcSum[i] < self.rcSum[j]).OnlyEnforceIf(c.Not())
+			self.model.Add(self.rcRank[i] < self.rcRank[j]).OnlyEnforceIf(c.Not())
+			
+	self._propertyInitialized.append('FullRank')
+	
+def _initializePrimality(self):
+	if 'Primality' not in self._propertyInitialized:
+		self._setPrimality()
+
+def configurePrimality(self,whatIsOne='Neither'):
+	match whatIsOne:
+		case 'Prime':
+			one = 0
+		case 'NotPrime':
+			one = 2
+		case 'Neither':
+			one = 1
+	self._setPrimality(one)
+
+def _setPrimality(self,whatIsOne=1):
+	if self.boardWidth != 9 or self.minDigit < 0 or self.maxDigit > 9:
+		print("Primality constraints only supported for digits {0..9} on 9x9 boards or smaller.")
+		sys.exit()
+
+	# Set up variables to track primality constraints
+	self.cellPrimality = []
+	for i in range(self.boardWidth):
+		t = []
+		for j in range(self.boardWidth):
+			varBitmap = self._varBitmap('PrimalityRow{:d}Col{:d}'.format(i,j),self.boardWidth)
+			c = self.model.NewIntVar(0,2,'primalityValue{:d}{:d}'.format(i,j))
+			self.model.Add(self.cellValues[i][j] == 1).OnlyEnforceIf(varBitmap[0])
+			self.model.Add(c == whatIsOne).OnlyEnforceIf(varBitmap[0])
+			self.model.Add(self.cellValues[i][j] == 2).OnlyEnforceIf(varBitmap[1])
+			self.model.Add(c == 0).OnlyEnforceIf(varBitmap[1])
+			self.model.Add(self.cellValues[i][j] == 3).OnlyEnforceIf(varBitmap[2])
+			self.model.Add(c == 0).OnlyEnforceIf(varBitmap[2])
+			self.model.Add(self.cellValues[i][j] == 4).OnlyEnforceIf(varBitmap[3])
+			self.model.Add(c == 2).OnlyEnforceIf(varBitmap[3])
+			self.model.Add(self.cellValues[i][j] == 5).OnlyEnforceIf(varBitmap[4])
+			self.model.Add(c == 0).OnlyEnforceIf(varBitmap[4])
+			self.model.Add(self.cellValues[i][j] == 6).OnlyEnforceIf(varBitmap[5])
+			self.model.Add(c == 2).OnlyEnforceIf(varBitmap[5])
+			self.model.Add(self.cellValues[i][j] == 7).OnlyEnforceIf(varBitmap[6])
+			self.model.Add(c == 0).OnlyEnforceIf(varBitmap[6])
+			self.model.Add(self.cellValues[i][j] == 8).OnlyEnforceIf(varBitmap[7])
+			self.model.Add(c == 2).OnlyEnforceIf(varBitmap[7])
+			self.model.Add(self.cellValues[i][j] == 9).OnlyEnforceIf(varBitmap[8])
+			self.model.Add(c == 2).OnlyEnforceIf(varBitmap[8])
+			t.append(c)
+		self.cellPrimality.insert(i,t)
+	self._propertyInitialized.append('Primality')
+
+def _initializeDigitSize(self):
+	if 'DigitSize' not in self._propertyInitialized:
+		self._setDigitSize()
+
+def configureDigitSize(self,whatIsFive='Neither'):
+	match whatIsFive:
+		case 'Big':
+			five = 2
+		case 'Small':
+			five = 0
+		case 'Neither':
+			five = 1
+	self._setDigitSize(five)
+
+def _setDigitSize(self,whatIsFive=1):
+	if self.boardWidth != 9 or self.minDigit < 0 or self.maxDigit > 9:
+		print("DigitSize constraints only supported for digits {0..9} on 9x9 boards or smaller.")
+		sys.exit()
+
+	# Set up variables to track magnitude constraints
+	self.cellDigitSize = []
+	for i in range(self.boardWidth):
+		t = []
+		for j in range(self.boardWidth):
+			c = self.model.NewIntVar(0,2,'MagnitudeValue{:d}{:d}'.format(i,j))
+			if whatIsFive == 0:
+				varBitmap = self._varBitmap('MagnitudeRow{:d}Col{:d}'.format(i,j),2)
+				self.model.Add(self.cellValues[i][j] <= 5).OnlyEnforceIf(varBitmap[0])
+				self.model.Add(c == 0).OnlyEnforceIf(varBitmap[0])
+				self.model.Add(self.cellValues[i][j] > 5).OnlyEnforceIf(varBitmap[1])
+				self.model.Add(c == 2).OnlyEnforceIf(varBitmap[1])
+			elif whatIsFive == 2:	
+				varBitmap = self._varBitmap('MagnitudeRow{:d}Col{:d}'.format(i,j),2)
+				self.model.Add(self.cellValues[i][j] < 5).OnlyEnforceIf(varBitmap[0])
+				self.model.Add(c == 0).OnlyEnforceIf(varBitmap[0])
+				self.model.Add(self.cellValues[i][j] >= 5).OnlyEnforceIf(varBitmap[1])
+				self.model.Add(c == 2).OnlyEnforceIf(varBitmap[1])
+			else:
+				varBitmap = self._varBitmap('MagnitudeRow{:d}Col{:d}'.format(i,j),2)
+				self.model.Add(self.cellValues[i][j] < 5).OnlyEnforceIf(varBitmap[0])
+				self.model.Add(c == 0).OnlyEnforceIf(varBitmap[0])
+				self.model.Add(self.cellValues[i][j] == 5).OnlyEnforceIf(varBitmap[1])
+				self.model.Add(c == 1).OnlyEnforceIf(varBitmap[1])
+				self.model.Add(self.cellValues[i][j] > 5).OnlyEnforceIf(varBitmap[2])
+				self.model.Add(c == 2).OnlyEnforceIf(varBitmap[2])
+			t.append(c)
+		self.cellDigitSize.insert(i,t)
+	self._propertyInitialized.append('DigitSize')
+	
+def getCellVar(self,i,j):
+	# Returns the model variable associated with a cell value. Useful when tying several puzzles together, e.g. Samurai
+	return self.cellValues[i][j]
+	
+def assertNoRoping(self,rc):
+	if rc == self.Row:
+		rows = [[(3*j,i) for i in range(3)] for j in range(3)]
+	else:
+		rows = [[(i,3*j) for i in range(3)] for j in range(3)]
+
+	minVars = [self.model.NewIntVar(self.minDigit,self.maxDigit,'roping') for j in range(3)]
+	for i in range(3):
+		self.model.AddMinEquality(minVars[i],[self.cellValues[x[0]][x[1]] for x in rows[i]])
+	maxVars = [self.model.NewIntVar(self.minDigit,self.maxDigit,'roping') for j in range(3)]
+	for i in range(3):
+		self.model.AddMaxEquality(maxVars[i],[self.cellValues[x[0]][x[1]] for x in rows[i]])
+	sumVars = [self.model.NewIntVar(3*self.minDigit,3*self.maxDigit,'roping') for j in range(3)]
+	for i in range(3):
+		self.model.Add(sumVars[i] == sum([self.cellValues[x[0]][x[1]] for x in rows[i]]))
+	
+	hStep = 0 if rc == self.Col else 1
+	vStep = 0 if rc == self.Row else 1
+	
+	for i in range(3):
+		for j in range(1,3):
+			myMinVar = self.model.NewIntVar(self.minDigit,self.maxDigit,'roping')
+			myMaxVar = self.model.NewIntVar(self.minDigit,self.maxDigit,'roping')
+			mySumVar = self.model.NewIntVar(3*self.minDigit,3*self.maxDigit,'roping')
+			myTestRow = [(x[0]+j*hStep+3*vStep,x[1]+j*vStep+3*hStep) for x in rows[i]]
+
+			self.model.AddMinEquality(myMinVar,[self.cellValues[x[0]][x[1]] for x in myTestRow])
+			self.model.AddMaxEquality(myMaxVar,[self.cellValues[x[0]][x[1]] for x in myTestRow])
+			self.model.Add(mySumVar == sum([self.cellValues[x[0]][x[1]] for x in myTestRow]))
+			
+			compVars = [self.model.NewBoolVar('roping') for k in range(3)]
+			self.model.Add(minVars[i] == myMinVar).OnlyEnforceIf(compVars[0].Not())
+			self.model.Add(minVars[i] != myMinVar).OnlyEnforceIf(compVars[0])
+			self.model.Add(maxVars[i] == myMaxVar).OnlyEnforceIf(compVars[1].Not())
+			self.model.Add(maxVars[i] != myMaxVar).OnlyEnforceIf(compVars[1])
+			self.model.Add(sumVars[i] == mySumVar).OnlyEnforceIf(compVars[2].Not())
+			self.model.Add(sumVars[i] != mySumVar).OnlyEnforceIf(compVars[2])
+			self.model.AddBoolOr(compVars)
+
 def _selectCellsMatchDigitSet(self,myVars,L,values,OEI=[]):
 	if type(values) is int:
 		values = [values]
