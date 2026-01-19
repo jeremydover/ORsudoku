@@ -1,3 +1,9 @@
+1/18/2026 bis
+	Abstracted modelling Kropki relationships so that it is between two variables, not necessarily two adjacent cell values.
+	Implemented support for Kroopki dots, and included test case.
+	Did a TopDownCondition global constraint, which allows the user to model "top heavy" type constraints, where two vertically adjacent cells that meet one condition must meet a second. Implemented test case.
+	Added 'Difference' selection criterion for hanging sums.
+
 1/18/2026
 	Moved some helper functions out of __init__ that really belonged in utilities. Look at me cleaning stuff up.
 	Adding a global "digit tracking" property. Normally, the code tracks the digit in a cell as an array of ints, and this

@@ -112,6 +112,7 @@ Knapp Daneben Cages - see Killer Cages
 Knightmare (seee Anti-Knight)
 Kropki (see Kropki Pairs)
 Kropki Pairs
+Kroopki Dots (see Kropki Pairs)
 Line Sum Lines
 Little Killer
 Lockout Lines
@@ -222,6 +223,8 @@ Sum Dots (see Killer Cages)
 Sum Sandwiches
 Sweepers
 Thermometers
+Top Down Conditions
+Top Heavy - see Top Down
 Triple Tabs
 Unicorn Digits
 Uniparity/Equiparity Cages - see More-Odd-Than-Even Cages
@@ -1147,6 +1150,12 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
 	For this property, we pick a cell if it represents an increase (resp. decrease)
 	Value: 'before' picks the first cell in the change, 'after' picks the second
 	
+	Property: 'Difference'
+	For this property, we pick cells whose difference is related to either a fixed cell, or its predecessor, through an arithmetic equality/inequality.
+	Values[0]: Either an integer indicating the fixed cell in the line to compare to (1-based), or the string 'previous' to compare to the previous digit in the line
+	Values[1]: a comparator: use the class variables GE, EQ or LE, or NE
+	Values[2]: the value against which to compare the difference
+	
   selectTerminator: a *list* of conditions (tuples) which describe when the sum should stop. As with summand selection,
   each tuple starts with a sting containing a property name, and is followed by values specific to that property. Note that multiple
   selection criteria may be given, but for termination they are combined with a logical OR. There are three styles of termination, defined
@@ -1491,6 +1500,14 @@ setRemoteKropkiRatio(ratio)
   
   cellDirBWG: extends the cellDir spec with a color attribute. In a tuple, can use the class variables Black, White and Gray. Shorthand is possible, with 0 to indicate White, 1 for Black and 2 for Gray.
 
+Kroopki Dots are doubled dots that related two adjacent cells through an intermediary digit, which need not be in the digit range of the puzzle. The syntax for Kroopki dots is:
+setKroopki(cellHVWBGWBG): sets a Kroopki relationship between two adjacent cells
+	cellHVWBG specification includes a cell spec, the HV spec as given in setKropkiWhite, and two WBG specs, specifying the color of the Kroopki dots, in order from the specified cell spec. For example, (1,3,p.Horz,p.White,p.Black) will specify a Kroopki dot between cells 1,3 and 1,4, where 1,3 is +/-1 to the intermediate value, and then the intermediate value has a ratio of 2 with 1,4.
+setKroopkiArray(list):
+	list: a list of cellHVWBGWBG specifications
+	
+Note: the difference and ratio relationships for Kroopki dots can be set using setKropkiDifference and setKropkiRatio.
+
 Line Sum Lines
 --------------
 setLineSumLine(list): asserts that one of the cells on the line is the sum of all remaining cells on the line. See Missing Arrow constraints under Arrows.
@@ -1504,7 +1521,7 @@ setLittleKiller(row1,col1,row2,col2,value): sets a little killer diagonal constr
   
 Lockout Lines
 -------------
-setlockoutLine(list): creates a lockout line constraint
+setLockoutLine(list): creates a lockout line constraint
   list: a list of cell specifications
   
 Logic Bombs
@@ -1568,7 +1585,7 @@ setMaxMinSumCage(list,value,repeating=False): asserts the sum of the largest and
   value: sum of largest and smallest digits in cage
   repeating (optional): True if digits may repeat in cage, default is false
   
-set MaxMinQuadSum(row,col,value): a shorthand for a cage around a 2x2 quad
+setMaxMinQuadSum(row,col,value): a shorthand for a cage around a 2x2 quad
   row,col: Cell specification
   value: sum of largest and smallest digits on quad
   Shortcut notation is possible, e.g., MaxMinQuadSum(3312) will set a max-min sum of 12 on quad 3,3
@@ -2365,6 +2382,25 @@ setDoubleThermo(list,slow,missing,increaseCriteria): sets a thermo where even an
 	'BothMissing': OK, this was a weird corner case that took up a lot of code, but it's *cool*. In the case of missing thermos, the default 'Both' option will order the evens and odds in thermos, but both thermos will increase in the same direction. This option allows (but does not force) the even and odd thermos to start at different ends of the missing thermo.
 	'MissingOpposite': Like BothMissing, but the odds and evens are forced to start at different ends of the missing thermo.
   
+Top Down
+--------
+setTopDown(select1,select2,value): sets a global condition that any pair of vertically adjacent digits meeting the first criterion must also meet the second. 
+  select1,select2: Selection criteria for digits on a conditional line. See hanging sums for a complete listing
+  value: The value that defines a success for the second criterion
+
+This constraint was generalized from the Top Heavy constraint, and indeed the alias:
+setTopHeavy()
+is available. The top heavy constraint asserts that any two vertically adjacent cells that have the same parity must have the larger on top.
+
+So using our generalization, we need a selection criterion that will be true for exactly one of the digits in a vertical pair when the criterion matches. For example, to detect that the digits are the same parity, we can use 'ParityAfter'.
+
+For the second criterion, we set the selection criterion and the value that must be met. So to ensure that the top is larger, we can evaluate the selection criterion ('Decrease','after'), and assert it will equal 1. Thus the top heavy constraint can be (and actually is) implemented as:
+setTopDownCondition([['ParityAfter']],[('Decrease','after')],1)
+
+As another example, consider:
+p.setTopDownCondition([['EntropyAfter']],[('Difference','previous',p.GE,2)],1)
+In this case, we are asserting that for any pair of vertically adjacent digits, if they are the same Entropy class, then they must differ by at least 2.
+
 Triple Tabs
 -----------
 setTripleTab(row,col,uldr,digits,cellCount): sets a triple tab clue, which is like an Outside clue, but appears inside the grid and is based at a cell

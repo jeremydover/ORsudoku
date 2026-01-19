@@ -698,4 +698,16 @@ def setDisentropy(self):
 def setDismodular(self):
 	self.setDismode("Modular")
 	
-	
+def setTopDownCondition(self,select1,select2,value):
+	for i in range(self.boardWidth-1):
+		for j in range(self.boardWidth):
+			myCount=self.model.NewIntVar(0,1,'TopDownConditionRow{:d}Col{:d}'.format(i,j))
+			countIs1 = self.model.NewBoolVar('TopDownConditionBool')
+			self.model.Add(myCount == 1).OnlyEnforceIf(countIs1)
+			self.model.Add(myCount == 0).OnlyEnforceIf(countIs1.Not())
+			
+			self.setConditionalCountLine([(i+1,j+1),(i+2,j+1)],myCount,select1,[['Last']])
+			self.setConditionalCountLine([(i+1,j+1),(i+2,j+1)],value,select2,[['Last']],OEI=[countIs1])
+			
+def setTopHeavy(self):
+	self.setTopDownCondition([['ParityAfter']],[('Decrease','after')],1)

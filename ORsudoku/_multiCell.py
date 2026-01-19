@@ -28,6 +28,16 @@ def _initializeKropkiBlack(self):
 		if 'KropkiWhite' not in self._constraintInitialized:
 			self.kropkiCells = []
 			self.kropkiDomino = False
+			
+def _modelKropkiWhiteRelationship(self,var1,var2):
+	bit = self.model.NewBoolVar('KropkiWhite')
+	self.model.Add(var1 - var2 == self.kropkiDiff).OnlyEnforceIf(bit)
+	self.model.Add(var1 - var2 == -1*self.kropkiDiff).OnlyEnforceIf(bit.Not())
+	
+def _modelKropkiBlackRelationship(self,var1,var2):
+	bit = self.model.NewBoolVar('KropkiBlack')
+	self.model.Add(var1 == self.kropkiRatio*var2).OnlyEnforceIf(bit)
+	self.model.Add(self.kropkiRatio*var1 == var2).OnlyEnforceIf(bit.Not())
 
 def setKropkiWhite(self,row,col=-1,hv=-1):
 	if col == -1:
@@ -36,10 +46,7 @@ def setKropkiWhite(self,row,col=-1,hv=-1):
 	self.kropkiCells.append((row,col,hv))
 	
 	# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
-	bit = self.model.NewBoolVar('KropkiWhiteBiggerDigitRow{:d}Col{:d}HV{:d}'.format(row,col,hv))
-	self.allVars.append(bit)
-	self.model.Add(self.cellValues[row][col] - self.cellValues[row+hv][col+(1-hv)] == self.kropkiDiff).OnlyEnforceIf(bit)
-	self.model.Add(self.cellValues[row][col] - self.cellValues[row+hv][col+(1-hv)] == -1*self.kropkiDiff).OnlyEnforceIf(bit.Not())
+	self._modelKropkiWhiteRelationship(self.cellValues[row][col],self.cellValues[row+hv][col+(1-hv)])
 
 def setKropkiBlack(self,row,col=-1,hv=-1):
 	if col == -1:
@@ -48,10 +55,7 @@ def setKropkiBlack(self,row,col=-1,hv=-1):
 	self.kropkiCells.append((row,col,hv))
 	
 	# Note: row,col is the top/left cell of the pair, hv = 0 -> horizontal, 1 -> vertical
-	bit = self.model.NewBoolVar('KropkiBlackBiggerDigitRow{:d}Col{:d}HV{:d}'.format(row,col,hv))
-	self.allVars.append(bit)
-	self.model.Add(self.cellValues[row][col] == self.kropkiRatio*self.cellValues[row+hv][col+(1-hv)]).OnlyEnforceIf(bit)
-	self.model.Add(self.kropkiRatio*self.cellValues[row][col] == self.cellValues[row+hv][col+(1-hv)]).OnlyEnforceIf(bit.Not())
+	self._modelKropkiBlackRelationship(self.cellValues[row][col],self.cellValues[row+hv][col+(1-hv)])
 	
 def setKropkiGray(self,row,col=-1,hv=-1):
 	if col == -1:
@@ -173,6 +177,28 @@ def setKropkiRatio(self,ratio=2):
 def setGammaEpsilon(self):
 	self.setKropkiDifference(5)
 	self.setKropkiRatio(3)
+	
+def setKroopki(self,row,col=-1,hv=-1,dot1=-1,dot2=-1):
+	if col == -1:
+		(row,col,hv,dot1,dot2) = self._procCell(row)
+	if dot1 == self.White or dot2 == self.White:
+		self._initializeKropkiWhite()
+	if dot1 == self.Black or dot2 == self.Black:
+		self._initializeKropkiBlack()
+	middle = self.model.NewIntVar(-2*abs(self.minDigit)*self.minDigit,2*self.maxDigit,'KroopkiIntermediary')
+	if dot1 == self.White:
+		self._modelKropkiWhiteRelationship(self.cellValues[row][col],middle)
+	else:
+		self._modelKropkiBlackRelationship(self.cellValues[row][col],middle)
+	if dot2 == self.White:
+		self._modelKropkiWhiteRelationship(middle,self.cellValues[row+hv][col+(1-hv)])
+	else:
+		self._modelKropkiBlackRelationship(middle,self.cellValues[row+hv][col+(1-hv)])
+		
+def setKroopkiArray(self,cells):
+	cellList = self._procCellList(cells)
+	for x in cellList:
+		self.setKroopki(x[0],x[1],x[2],x[3],x[4])
 				
 def _initializeRemoteKropkiWhite(self):
 	if 'RemoteKropkiWhite' not in self._constraintInitialized:

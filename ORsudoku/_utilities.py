@@ -993,6 +993,49 @@ def _selectCellsOnLine(self,L,selectCriteria,OEI=[]):
 					self.model.Add(myComp > 0).OnlyEnforceIf([myBool] + OEI)
 					self.model.Add(myComp <= 0).OnlyEnforceIf([myBool.Not()] + OEI)
 					
+			case 'Difference':
+				comparator = criterion[2]
+				value = criterion[3]
+				for i in range(len(L)):
+					if type(criterion[1]) is int:
+						target = self.cellValues[L[criterion[1]-1][0]][L[criterion[1]-1][1]]
+					else:
+						if i == 0:
+							self.model.AddBoolAnd(criterionBools[0].Not()).OnlyEnforceIf(OEI)
+							continue
+						else:
+							target = self.cellValues[L[i-1][0]][L[i-1][1]]
+							
+					switch = self.model.NewBoolVar('ConditionDifference')
+					for x in OEI:
+						self.model.AddBoolAnd(switch).OnlyEnforceIf(x.Not())
+						
+					match comparator:
+						case self.LE:
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] - target <= value).OnlyEnforceIf([criterionBools[i]] + OEI)
+							self.model.Add(target - self.cellValues[L[i][0]][L[i][1]] <= value).OnlyEnforceIf([criterionBools[i]] + OEI)
+							self.model.AddBoolAnd(switch).OnlyEnforceIf([criterionBools[i]] + OEI)
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] - target > value).OnlyEnforceIf([criterionBools[i].Not(),switch] + OEI)
+							self.model.Add(target - self.cellValues[L[i][0]][L[i][1]] > value).OnlyEnforceIf([criterionBools[i].Not(),switch.Not()] + OEI)
+						case self.EQ:
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] - target == value).OnlyEnforceIf([criterionBools[i],switch] + OEI)
+							self.model.Add(target - self.cellValues[L[i][0]][L[i][1]] == value).OnlyEnforceIf([criterionBools[i],switch.Not()] + OEI)
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] - target != value).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
+							self.model.Add(target - self.cellValues[L[i][0]][L[i][1]] != value).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
+							self.model.AddBoolAnd(switch).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
+						case self.GE:
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] - target >= value).OnlyEnforceIf([criterionBools[i],switch] + OEI)
+							self.model.Add(target - self.cellValues[L[i][0]][L[i][1]] >= value).OnlyEnforceIf([criterionBools[i],switch.Not()] + OEI)
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] - target < value).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
+							self.model.Add(target - self.cellValues[L[i][0]][L[i][1]] < value).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
+							self.model.AddBoolAnd(switch).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
+						case self.NE:
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] - target != value).OnlyEnforceIf([criterionBools[i]] + OEI)
+							self.model.Add(target - self.cellValues[L[i][0]][L[i][1]] != value).OnlyEnforceIf([criterionBools[i]] + OEI)
+							self.model.AddBoolAnd(switch).OnlyEnforceIf([criterionBools[i]] + OEI)
+							self.model.Add(self.cellValues[L[i][0]][L[i][1]] - target == value).OnlyEnforceIf([criterionBools[i].Not(),switch] + OEI)
+							self.model.Add(target - self.cellValues[L[i][0]][L[i][1]] == value).OnlyEnforceIf([criterionBools[i].Not(),switch.Not()] + OEI)
+											
 		criteriaBools.insert(criterionNumber,criterionBools)
 		criterionNumber = criterionNumber + 1
 	
