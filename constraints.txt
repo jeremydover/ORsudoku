@@ -94,6 +94,7 @@ Given Digits
 Global Entropy
 Global Modular (see Global Entropy)
 Global Neighbor Sums
+Global Orthogonal Conditions
 Global Whispers (Dutch, et. al.)
 Gurth's Symmetric Placement (GSP)
 Hanging Sums/Counts/Averages/Instances
@@ -223,8 +224,7 @@ Sum Dots (see Killer Cages)
 Sum Sandwiches
 Sweepers
 Thermometers
-Top Down Conditions
-Top Heavy - see Top Down
+Top Heavy - see Global Orthogonal Conditions
 Triple Tabs
 Unicorn Digits
 Uniparity/Equiparity Cages - see More-Odd-Than-Even Cages
@@ -970,6 +970,29 @@ Global Neighbor Sums
 setGlobalNeighborSum(sums,exceptions): asserts that every cell with a digit not in exceptions must have an orthogonal neighbor with which it sums to a value in sums
   sums - list of allowed sums
   exceptions - list of digits excepted from the sum requirement
+
+Global Orthogonal Conditions
+----------------------------
+setGlobalOrthogonalCondition(select1,select2,value): sets a global condition that any pair of adjacent digits meeting the first criterion must also meet the second. 
+  select1,select2: Selection criteria for digits on a conditional line. See hanging sums for a complete listing
+  value: The value that defines a success for the second criterion
+
+Versions for just vertical or horizontal pairs exist:
+setTopDownCondition(select1,select2,value)
+setLeftRightCondition(select1,select2,value)
+
+This constraint was generalized from the Top Heavy constraint, and indeed the alias:
+setTopHeavy()
+is available. The top heavy constraint asserts that any two vertically adjacent cells that have the same parity must have the larger on top.
+
+So using our generalization, we need a selection criterion that will be true for exactly one of the digits in a vertical pair when the criterion matches. For example, to detect that the digits are the same parity, we can use 'ParityAfter'.
+
+For the second criterion, we set the selection criterion and the value that must be met. So to ensure that the top is larger, we can evaluate the selection criterion ('Decrease','after'), and assert it will equal 1. Thus the top heavy constraint can be (and actually is) implemented as:
+setTopDownCondition([['ParityAfter']],[('Decrease','after')],1)
+
+As another example, consider:
+p.setOrthogonalCondition([['EntropyAfter']],[('Difference','previous',p.GE,2)],1)
+In this case, we are asserting that for any pair of orthogonally adjacent digits, if they are the same Entropy class, then they must differ by at least 2.
 
 Global Whispers
 ---------------
@@ -2382,25 +2405,6 @@ setDoubleThermo(list,slow,missing,increaseCriteria): sets a thermo where even an
 	'BothMissing': OK, this was a weird corner case that took up a lot of code, but it's *cool*. In the case of missing thermos, the default 'Both' option will order the evens and odds in thermos, but both thermos will increase in the same direction. This option allows (but does not force) the even and odd thermos to start at different ends of the missing thermo.
 	'MissingOpposite': Like BothMissing, but the odds and evens are forced to start at different ends of the missing thermo.
   
-Top Down
---------
-setTopDown(select1,select2,value): sets a global condition that any pair of vertically adjacent digits meeting the first criterion must also meet the second. 
-  select1,select2: Selection criteria for digits on a conditional line. See hanging sums for a complete listing
-  value: The value that defines a success for the second criterion
-
-This constraint was generalized from the Top Heavy constraint, and indeed the alias:
-setTopHeavy()
-is available. The top heavy constraint asserts that any two vertically adjacent cells that have the same parity must have the larger on top.
-
-So using our generalization, we need a selection criterion that will be true for exactly one of the digits in a vertical pair when the criterion matches. For example, to detect that the digits are the same parity, we can use 'ParityAfter'.
-
-For the second criterion, we set the selection criterion and the value that must be met. So to ensure that the top is larger, we can evaluate the selection criterion ('Decrease','after'), and assert it will equal 1. Thus the top heavy constraint can be (and actually is) implemented as:
-setTopDownCondition([['ParityAfter']],[('Decrease','after')],1)
-
-As another example, consider:
-p.setTopDownCondition([['EntropyAfter']],[('Difference','previous',p.GE,2)],1)
-In this case, we are asserting that for any pair of vertically adjacent digits, if they are the same Entropy class, then they must differ by at least 2.
-
 Triple Tabs
 -----------
 setTripleTab(row,col,uldr,digits,cellCount): sets a triple tab clue, which is like an Outside clue, but appears inside the grid and is based at a cell
