@@ -1,3 +1,8 @@
+1/20/2026 bis
+	Combed through code to replace instances of manual property initialization with the appropriate initialization methods from utilities.
+	Added support for stratified cages (parity, entropy, modular), and oil and water cages. Added test case.
+	Implement support for Sohei sudoku (Gattai-4).
+
 1/20/2026
 	Expanded support for TopDown conditions to LeftRight, and Global. Added test case.
 

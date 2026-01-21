@@ -73,7 +73,7 @@ Entropy (see Global Entropy)
 Entropy Battenburg (on a 2x2, no pair of same entropic cells are adjacent)
 Entropy Quads (partial Entropy, asserts Entropy on an individual 2x2)
 Equal Sum Cages
-Equiparity/Uniparity Cages - see More-Odd-Than-Even Cages
+Equiparity/Uniparity Cages - see Parity Cages
 Exclusion Quads (see Quadruples)
 Even Max Quads - see Quad Max Values
 Even-Odd
@@ -135,7 +135,7 @@ Missing Arrow - see Arrows
 Missing Bulb Thermos - see Thermometers
 Modular Lines
 Modular Quads - see Entropy Quads
-More-Odd-Than-Even/More-Even-Than-Odd Cages
+More-Odd-Than-Even/More-Even-Than-Odd Cages - see Parity Cages
 Nabner Lines
 Nearest Neighbor
 Negator Sudoku - see Cell Transform Sudoku
@@ -220,6 +220,7 @@ Slow Thermometers (see Thermometers)
 Split Pea Lines
 Split Pill Lines - see Split Pea Lines
 Star Battle Sudoku
+Stratified Cages - see Parity Cages
 Sum Dots (see Killer Cages)
 Sum Sandwiches
 Sweepers
@@ -227,7 +228,7 @@ Thermometers
 Top Heavy - see Global Orthogonal Conditions
 Triple Tabs
 Unicorn Digits
-Uniparity/Equiparity Cages - see More-Odd-Than-Even Cages
+Uniparity/Equiparity Cages - see Parity Cages
 Unique Pairs Lines
 Vaults
 Weak Palindrome Lines
@@ -453,7 +454,7 @@ setBust(row,col,rc,value,targetSum=21): creates a bust constraint, which is the 
 
 Capsules
 --------
-setCapsule(inlist): creates a capsule, i.e., a region with the same number of even and odd digits. See also More-Odd-Than-Even cages
+setCapsule(inlist): creates a capsule, i.e., a region with the same number of even and odd digits. See also Parity cages
   list: list of cell specifications
 
 Cell Index Lines
@@ -1661,22 +1662,6 @@ Modular Lines
 setModularLine(list): creates a modular line constraint
   list: a list of cell specifications
   
-More-Odd-Than-Even Cages
-------------------------
-A MOTE cage has more odd digits than even digits, and a METO cage is the reverse
-
-setMOTECage(list): set a MOTE cage
-	list: list of cell specifications
-
-setMETOCage(list): set a METO cage
-	list: list of cell specifications
-	
-setEquiparityCage(list): set a cage with an equal number of even and odd digits; see also Capsules
-	list: list of cell specifications
-
-setUniparityCage(list): set a cage with enitrely even or entirely odd digits
-	list: list of cell specifications
-
 Nabner Lines
 ------------
 setNabnerLine(inlist): assert that there are no two digits lying on the line are the same or consecutive
@@ -1799,6 +1784,34 @@ setPalindromeLine(list): creates a palindrome line constraint
 setParindromeLine(list): creates a parindrome line constraint, where only parity has to match 
   list: a list of cell specifications
   
+Parity Cages
+------------
+This section contains a variety of cages which make assertions about the distribution of digits by parity in the area. Note that none of them fundamentally require digits in the cage to be distinct; that can be forced by using setCage on the same area, without specifying a sum.
+
+setMOTECage(list): set a MOTE cage, which has more odd than even digits
+	list: list of cell specifications
+
+setMETOCage(list): set a METO cage, which has more even digits than odd
+	list: list of cell specifications
+	
+setEquiparityCage(list): set a cage with an equal number of even and odd digits; see also Capsules
+	list: list of cell specifications
+
+setUniparityCage(list): set a cage with enitrely even or entirely odd digits, to be determined by the solver
+	list: list of cell specifications
+	
+setParityStratifiedCage(list): set a cage where all of the cells in the cage in a single row have the same parity
+	list: list of cell specifications
+
+setEntropyStratifiedCage(list): set a cage where all of the cells in the cage in a single row have the same entropy
+	list: list of cell specifications
+
+setModularStratifiedCage(list): set a cage where all of the cells in the cage in a single row have the same modulus
+	list: list of cell specifications
+
+setOilAndWaterCage(list): set a cage where all digits in a row have a single parity, and all even rows (if any) are higher than all odd rows (if any)
+	list: list of cell specifications
+
 Parity Count Lines
 ------------------
 setParityCountLine(list): creates a parity count line constraint (inspired by Richard Stolk https://logic-masters.de/Raetselportal/Raetsel/zeigen.php?id=000B15, endpoints contain the number of odd/even digits along the line, in some order))

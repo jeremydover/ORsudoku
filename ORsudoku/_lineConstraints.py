@@ -144,8 +144,7 @@ def setFastThermo(self,inlist,missing=False):
 	self.setThermo(inlist,False,missing,'fast')
 
 def setOddEvenThermo(self,inlist,slow=False,missing=False):
-	if 'Parity' not in self._propertyInitialized:
-		self._setParity()
+	self._initializeParity()
 	self.setThermo(inlist,slow,missing)
 	inlist = self._procCellList(inlist)
 	for j in range(len(inlist)-1):
@@ -161,8 +160,7 @@ def setBrokenThermo(self,inlist,b1=None,b2=None):
 	self.setThermo(inlist,broken=True,brokenThreshold=b1,brokenMinDrop=b2)
 	
 def setDoubleThermo(self,inlist,slow=False,missing=False,increaseCriteria='Both'):
-	if 'Parity' not in self._propertyInitialized:
-		self._setParity()
+	self._initializeParity()
 	L = self._procCellList(inlist)
 
 	# This Q array is almost never used, except for the weird case where we have missing thermos, and we want to allow the
@@ -246,9 +244,7 @@ def setRemovedBulbThermo(self,inlist,slow=False):
 				self.model.Add(self.cellValues[L[j-1][0]][L[j-1][1]] < self.cellValues[L[j][0]][L[j][1]]).OnlyEnforceIf(varBitmap[i])
 				
 def setCountTheOddsLine(self,inlist):
-	if 'Parity' not in self._propertyInitialized:
-		self._setParity()
-		
+	self._initializeParity()
 	inlist = self._procCellList(inlist)
 	self.model.Add(self.cellValues[inlist[0][0]][inlist[0][1]] == sum([self.cellParity[inlist[j][0]][inlist[j][1]] for j in range(1,len(inlist))]))
 
@@ -274,8 +270,7 @@ def setPalindromeLine(self,inlist):
 		self.model.Add(self.cellValues[inlist[j][0]][inlist[j][1]] == self.cellValues[inlist[-j-1][0]][inlist[-j-1][1]])
 		
 def setParindromeLine(self,inlist):
-	if 'Parity' not in self._propertyInitialized:
-		self._setParity()
+	self._initializeParity()
 	inlist = self._procCellList(inlist)
 	for j in range(len(inlist) // 2):
 		self.model.Add(self.cellParity[inlist[j][0]][inlist[j][1]] == self.cellParity[inlist[-j-1][0]][inlist[-j-1][1]])
@@ -289,8 +284,7 @@ def setWeakPalindromeLine(self,inlist):
 		self.model.AddAllowedAssignments([self.cellValues[inlist[j][0]][inlist[j][1]],self.cellValues[inlist[-j-1][0]][inlist[-j-1][1]]],[(1,1),(1,3),(3,1),(3,3),(2,2),(2,4),(4,2),(4,4),(5,5),(5,7),(5,9),(7,5),(7,7),(7,9),(9,5),(9,7),(9,9),(6,6),(6,8),(8,6),(8,8)])
 
 def setParityLine(self,inlist):
-	if 'Parity' not in self._propertyInitialized:
-		self._setParity()
+	self._initializeParity()
 	inlist = self._procCellList(inlist)
 	for j in range(len(inlist)-1):
 		self.model.Add(self.cellParity[inlist[j][0]][inlist[j][1]] != self.cellParity[inlist[j+1][0]][inlist[j+1][1]])
@@ -403,8 +397,7 @@ def setEntropicWhispersLine(self,inlist):
 		
 def setEntropicLine(self,inlist):
 	inlist = self._procCellList(inlist)
-	if 'Entropy' not in self._propertyInitialized:
-		self._setEntropy()
+	self._initializeEntropy()
 	
 	if len(inlist) == 2:
 		self.model.Add(self.cellEntropy[inlist[0][0]][inlist[0][1]] != self.cellEntropy[inlist[1][0]][inlist[1][1]])
@@ -414,8 +407,7 @@ def setEntropicLine(self,inlist):
 
 def setModularLine(self,inlist):
 	inlist = self._procCellList(inlist)
-	if 'Modular' not in self._propertyInitialized:
-		self._setModular()
+	self._initializeModular()
 	
 	if len(inlist) == 2:
 		self.model.Add(self.cellModular[inlist[0][0]][inlist[0][1]] != self.cellModular[inlist[1][0]][inlist[1][1]])
@@ -561,8 +553,7 @@ def setNabnerLine(self,inlist):
 			self.setMinWhispersLine([inlist[i],inlist[j]],2)
 			
 def setParityCountLine(self,inlist):
-	if 'Parity' not in self._propertyInitialized:
-		self._setParity()
+	self._initializeParity()
 	inlist = self._procCellList(inlist)
 	c = self.model.NewBoolVar('ParityCountLine')
 	e = self.model.NewBoolVar('ParityCountLine')	# Variable to test if endpoints are equal, in which case we prevent c from flapping.

@@ -1054,9 +1054,7 @@ def setFullRank(self,row1,col1,rc,value):
 	self.model.Add(self.rcRank[4*i+2*j+k] == value)
 
 def setParityParty(self,row1,col1,rc,value):
-	if 'Parity' not in self._propertyInitialized:
-		self._setParity()
-		
+	self._initializeParity()
 	row = row1 - 1
 	col = col1 - 1
 	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
@@ -1114,8 +1112,7 @@ def setFirstSeenParity(self,row1,col1,rc,value):
 	col = col1 - 1
 	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
 	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
-	if 'Parity' not in self._propertyInitialized:
-		self._setParity()
+	self._initializeParity()
 	varBitmap = self._varBitmap('FirstSeenParityRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth)
 	clueParity = value % 2
 	for i in range(self.boardWidth):
@@ -1128,8 +1125,7 @@ def setFirstSeenEntropy(self,row1,col1,rc,value):
 	col = col1 - 1
 	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
 	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
-	if 'Entropy' not in self._propertyInitialized:
-		self._setEntropy()
+	self._initializeEntropy()
 	varBitmap = self._varBitmap('FirstSeenEntropyRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth)
 	clueEntropy = (value-1) // 3
 	for i in range(self.boardWidth):
@@ -1142,8 +1138,7 @@ def setFirstSeenModular(self,row1,col1,rc,value):
 	col = col1 - 1
 	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
 	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
-	if 'Modular' not in self._propertyInitialized:
-		self._setModular()
+	self._initializeModular()
 	varBitmap = self._varBitmap('FirstSeenModularRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth)
 	clueModular = value - 3*((value-1) //3)
 	for i in range(self.boardWidth):
