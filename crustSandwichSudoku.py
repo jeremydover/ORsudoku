@@ -219,26 +219,30 @@ class crustSandwichSudoku(sudoku):
 				myNeighbors = {(row+i,col+j) for i in range(-1,2) for j in range(-1,2) if (i,j) != (0,0)} & {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)}
 				self.model.AddBoolAnd(self.crust[x[0]][x[1]].Not() for x in myNeighbors).OnlyEnforceIf(self.crust[row][col])
 
-	def printCurrentSolution(self):
+	def printCurrentSolution(self,value_source=None):
+		if value_source is None:
+			value_source = self.solver
 		dW = max([len(str(x)) for x in self.digits])
 		colorama.init()
 		for i in range(self.boardWidth):
 			for j in range(self.boardWidth):
 				if self.solver.Value(self.crustInt[i][j]) == 1: # This one is doubled!
-					print(Fore.RED + '{:d}'.format(self.solver.Value(self.cellValues[i][j])).rjust(dW) + Fore.RESET,end = " ")
+					print(Fore.RED + '{:d}'.format(value_source.Value(self.cellValues[i][j])).rjust(dW) + Fore.RESET,end = " ")
 				else:
-					print('{:d}'.format(self.solver.Value(self.cellValues[i][j])).rjust(dW),end = " ")
+					print('{:d}'.format(value_source.Value(self.cellValues[i][j])).rjust(dW),end = " ")
 			print()
 		print()
 		
-	def testStringSolution(self):
+	def testStringSolution(self,value_source=None):
+		if value_source is None:
+			value_source = self.solver
 		testString = ''
 		for i in range(self.boardWidth):
 			for j in range(self.boardWidth):
-				if self.solver.Value(self.crustInt[i][j]) == 1: # This one is doubled!
-					testString = testString + '*{:d}*'.format(self.solver.Value(self.cellValues[i][j]))
+				if value_source.Value(self.crustInt[i][j]) == 1: # This one is doubled!
+					testString = testString + '*{:d}*'.format(value_source.Value(self.cellValues[i][j]))
 				else:
-					testString = testString + '{:d}'.format(self.solver.Value(self.cellValues[i][j]))
+					testString = testString + '{:d}'.format(value_source.Value(self.cellValues[i][j]))
 		return testString
 		
 	def preparePrintVariables(self):

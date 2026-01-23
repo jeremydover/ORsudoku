@@ -107,15 +107,17 @@ class quattroQuadri(sudoku):
 					self.model.Add(self.cellEntropy[i][j] == (varTrack % 3)).OnlyEnforceIf(varBitmap[varTrack])
 					varTrack = varTrack + 1
 			
-	def printCurrentSolution(self):
+	def printCurrentSolution(self,value_source=None):
+		if value_source is None:
+			value_source = self.solver
 		dW = max([len(str(x)) for x in self.digits])
-		indexed = [(self.solver.Value(self.indexCells[i][0])-1,self.solver.Value(self.indexCells[i][1])-1) for i in range(self.boardWidth)]
+		indexed = [(value_source.Value(self.indexCells[i][0])-1,value_source.Value(self.indexCells[i][1])-1) for i in range(self.boardWidth)]
 		for rowIndex in range(self.boardWidth):
 			for colIndex in range(self.boardWidth):
 				if (rowIndex,colIndex) in indexed:
-					print(Fore.RED + '{:d}'.format(self.solver.Value(self.cellValues[rowIndex][colIndex])).rjust(dW) + Fore.RESET,end = " ")
+					print(Fore.RED + '{:d}'.format(value_source.Value(self.cellValues[rowIndex][colIndex])).rjust(dW) + Fore.RESET,end = " ")
 				else:
-					print('{:d}'.format(self.solver.Value(self.cellValues[rowIndex][colIndex])).rjust(dW),end = " ")
+					print('{:d}'.format(value_source.Value(self.cellValues[rowIndex][colIndex])).rjust(dW),end = " ")
 			print()
 		print()
 		

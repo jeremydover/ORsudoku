@@ -4,15 +4,15 @@ from colorama import Fore,Back,init
 
 class SolutionPrinter(cp_model.CpSolverSolutionCallback):
 	"""Print intermediate solutions."""
-	def __init__(self, variables,boardWidth):
+	def __init__(self,print_formatter,variables=[]):
 		cp_model.CpSolverSolutionCallback.__init__(self)
+		self.__printer = print_formatter
 		self.__variables = variables
 		self.__solution_count = 0
 		self.__printAll = False
 		self.__debug = False
 		self.__testMode = False
 		self.__testStringArray = []
-		self.__boardWidth = boardWidth
 
 	def setPrintAll(self):
 		self.__printAll = True
@@ -35,15 +35,7 @@ class SolutionPrinter(cp_model.CpSolverSolutionCallback):
 		
 		elif self.__printAll is True:
 			if self.__debug is False:
-				# Note: updated this so print only the expected number of variables on-cut, instead of all variables passed
-				for i in range(self.__boardWidth**2):
-					v = self.__variables[i]
-					print('%i' % (self.Value(v)), end = ' ')
-					cntr += 1
-					if cntr == self.__boardWidth:
-						print ()
-						cntr = 0
-				print()
+				self.__printer(self)
 			else:
 				for v in self.__variables:
 					print('%s=%i' % (v,self.Value(v)))
@@ -59,14 +51,20 @@ def applyNegativeConstraints(self):
 	for x in self._constraintNegative:
 		getattr(self,'_apply'+x+'Negative')()
 
-def findSolution(self,test=False,debug=False):
+def applyAllNegativeConstraints(self):
 	self.applyNegativeConstraints()
-	self.solver = cp_model.CpSolver()
-	consolidatedCellValues = []
-	for tempArray in self.cellValues: consolidatedCellValues = consolidatedCellValues + tempArray
-	solution_printer = SolutionPrinter(consolidatedCellValues,self.boardWidth)
-	self.solveStatus = self.solver.Solve(self.model)
 	
+def preparePrintVariables(self):
+	consolidatedCellValues = []
+	for tempArray in self.cellValues:
+		consolidatedCellValues = consolidatedCellValues + tempArray
+	return consolidatedCellValues
+	
+def findSolution(self,test=False,debug=False):
+	self.applyAllNegativeConstraints()
+	self.solver = cp_model.CpSolver()
+	consolidatedCellValues = self.preparePrintVariables()
+	self.solveStatus = self.solver.Solve(self.model)
 	if test is True:
 		return self.testStringSolution()
 	elif debug is True:
@@ -81,20 +79,14 @@ def findSolution(self,test=False,debug=False):
 			self.printCurrentSolution()
 		return self.solveStatus
 
-def preparePrintVariables(self):
-	consolidatedCellValues = []
-	for tempArray in self.cellValues:
-		consolidatedCellValues = consolidatedCellValues + tempArray
-	return consolidatedCellValues
-
 def countSolutions(self,printAll = False,debug = False,test=False):
-	self.applyNegativeConstraints()
+	self.applyAllNegativeConstraints()
 	self.solver = cp_model.CpSolver()
 	consolidatedCellValues = self.preparePrintVariables()
 	if debug is True:
-		solution_printer = SolutionPrinter(self.allVars,self.boardWidth)
+		solution_printer = SolutionPrinter(self.printCurrentSolution,self.allVars)
 	else:	
-		solution_printer = SolutionPrinter(consolidatedCellValues,self.boardWidth)
+		solution_printer = SolutionPrinter(self.printCurrentSolution,consolidatedCellValues)
 	if printAll is True: solution_printer.setPrintAll()
 	if debug is True: solution_printer.setDebug()
 	if test is True: solution_printer.setTestMode()
@@ -109,19 +101,23 @@ def countSolutions(self,printAll = False,debug = False,test=False):
 			self.printCurrentSolution()
 		return solution_printer.SolutionCount()
 			
-def printCurrentSolution(self):
+def printCurrentSolution(self,value_source=None):
+	if value_source is None:
+		value_source = self.solver
 	dW = max([len(str(x)) for x in self.digits])
 	for rowIndex in range(self.boardWidth):
 		for colIndex in range(self.boardWidth):
-			print('{:d}'.format(self.solver.Value(self.cellValues[rowIndex][colIndex])).rjust(dW),end = " ")
+			print('{:d}'.format(value_source.Value(self.cellValues[rowIndex][colIndex])).rjust(dW),end = " ")
 		print()
 	print()
 	
-def testStringSolution(self):
+def testStringSolution(self,value_source=None):
+	if value_source is None:
+		value_source = self.solver
 	testString = ''
 	for rowIndex in range(self.boardWidth):
 		for colIndex in range(self.boardWidth):
-			testString = testString + '{:d}'.format(self.solver.Value(self.cellValues[rowIndex][colIndex]))
+			testString = testString + '{:d}'.format(value_source.Value(self.cellValues[rowIndex][colIndex]))
 	return testString
 	
 def listCandidates(self):

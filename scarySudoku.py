@@ -123,14 +123,16 @@ class scarySudoku(sudoku):
 		self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in self.regions[-1]])
 		self.model.Add(sum(self.scaryInt[x[0]][x[1]] for x in inlist) == 1)	# Ensure one scary cell per region
 
-	def printCurrentSolution(self):
+	def printCurrentSolution(self,value_source=None):
+		if value_source is None:
+			value_source = self.solver
 		dW = max([len(str(x)) for x in self.digits])
 		colorama.init()
 		for i in range(self.boardWidth):
 			for j in range(self.boardWidth):
-				if self.solver.Value(self.scaryInt[i][j]) == 1: # This one is doubled!
-					print(Fore.RED + '{:d}'.format(self.solver.Value(self.cellValues[i][j])).rjust(dW) + Fore.RESET,end = " ")
+				if value_source.Value(self.scaryInt[i][j]) == 1: # This one is doubled!
+					print(Fore.RED + '{:d}'.format(value_source.Value(self.cellValues[i][j])).rjust(dW) + Fore.RESET,end = " ")
 				else:
-					print('{:d}'.format(self.solver.Value(self.cellValues[i][j])).rjust(dW),end = " ")
+					print('{:d}'.format(value_source.Value(self.cellValues[i][j])).rjust(dW),end = " ")
 			print()
 		print()

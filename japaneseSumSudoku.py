@@ -255,13 +255,15 @@ class japaneseSumSudoku(sudoku):
 				if (i,j) not in self.jssBattenburgCells:
 					self.setJSSAntiBattenburg(i,j)
 
-	def printCurrentSolution(self):
+	def printCurrentSolution(self,value_source=None):
+		if value_source is None:
+			value_source = self.solver
 		colorama.init()
 		dW = max([len(str(x)) for x in self.digits])
 		for i in range(self.boardWidth):
 			for j in range(self.boardWidth):
-				myColors = self.colorMap[self.solver.Value(self.cellColor[i][j])]
-				print(myColors[0] + myColors[1] + '{:d}'.format(self.solver.Value(self.cellValues[i][j])).rjust(dW) + Fore.RESET + Back.RESET,end = " ")
+				myColors = self.colorMap[value_source.Value(self.cellColor[i][j])]
+				print(myColors[0] + myColors[1] + '{:d}'.format(value_source.Value(self.cellValues[i][j])).rjust(dW) + Fore.RESET + Back.RESET,end = " ")
 			print()
 		print()
 		
@@ -279,12 +281,14 @@ class japaneseSumSudoku(sudoku):
 	def setColorMap(self,inlist):
 		self.colorMap = inlist
 		
-	def testStringSolution(self):
+	def testStringSolution(self,value_source=None):
+		if value_source is None:
+			value_source = self.solver
 		testString = ''
 		for i in range(self.boardWidth):
 			for j in range(self.boardWidth):
-				testString = testString + '{:d}'.format(self.solver.Value(self.cellValues[i][j]))
+				testString = testString + '{:d}'.format(value_source.Value(self.cellValues[i][j]))
 		for i in range(self.boardWidth):
 			for j in range(self.boardWidth):				
-				testString = testString + '{:d}'.format(self.solver.Value(self.cellColors[i][j]))
+				testString = testString + '{:d}'.format(value_source.Value(self.cellColors[i][j]))
 		return testString

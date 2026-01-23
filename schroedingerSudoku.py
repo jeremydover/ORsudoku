@@ -228,26 +228,30 @@ class schroedingerCellSudoku(sudoku):
 		
 		self._propertyInitialized.append('Entropy')
 		
-	def printCurrentSolution(self):
+	def printCurrentSolution(self,value_source=None):
+		if value_source is None:
+			value_source = self.solver
 		dW = max([2*len(str(x)) for x in self.digits]) + 1
 		colorama.init()
 		for i in range(self.boardWidth):
 			for j in range(self.boardWidth):
-				if self.solver.Value(self.sCellInt[i][j]) == 1: # This one is the S-Cell
-					print(('{:d}'.format(self.solver.Value(self.cellValues[i][j])) + Fore.RED + ' {:d}'.format(self.solver.Value(self.sCellValues[i][j]))).rjust(dW) + Fore.RESET,end = " ")
+				if value_source.Value(self.sCellInt[i][j]) == 1: # This one is the S-Cell
+					print(('{:d}'.format(value_source.Value(self.cellValues[i][j])) + Fore.RED + ' {:d}'.format(value_source.Value(self.sCellValues[i][j]))).rjust(dW) + Fore.RESET,end = " ")
 				else:
-					print('{:d}'.format(self.solver.Value(self.cellValues[i][j])).center(dW),end = " ")
+					print('{:d}'.format(value_source.Value(self.cellValues[i][j])).center(dW),end = " ")
 			print()
 		print()
 		
-	def testStringSolution(self):
+	def testStringSolution(self,value_source=None):
+		if value_source is None:
+			value_source = self.solver
 		testString = ''
 		for i in range(self.boardWidth):
 			for j in range(self.boardWidth):
-				if self.solver.Value(self.sCellInt[i][j]) == 1: # This one is doubled!
-					testString = testString + '{:d}'.format(self.solver.Value(self.cellValues[i][j]))+'*{:d}*'.format(self.solver.Value(self.sCellValues[i][j]))
+				if value_source.Value(self.sCellInt[i][j]) == 1:
+					testString = testString + '{:d}'.format(value_source.Value(self.cellValues[i][j]))+'*{:d}*'.format(self.solver.Value(self.sCellValues[i][j]))
 				else:
-					testString = testString + '{:d}'.format(self.solver.Value(self.cellValues[i][j]))
+					testString = testString + '{:d}'.format(value_source.Value(self.cellValues[i][j]))
 		return testString
 		
 	def preparePrintVariables(self):

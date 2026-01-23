@@ -157,26 +157,30 @@ class starBattleSudoku(sudoku):
 			self.model.Add(sum(self.cellDigitInts[x[0]][x[1]][k] for x in inlist) == self.digitOrdinalCount[k])
 		self.model.Add(sum(self.isStarCellInt[x[0]][x[1]] for x in inlist) == self.numberOfStars)
 				
-	def printCurrentSolution(self):
+	def printCurrentSolution(self,value_source=None):
+		if value_source is None:
+			value_source = self.solver
 		dW = max([len(str(x)) for x in self.digits])
 		colorama.init()
 		for i in range(self.boardWidth):
 			for j in range(self.boardWidth):
-				if self.solver.Value(self.isStarCell[i][j]) == 1: # This one is a star
-					print(Fore.RED + '{:d}'.format(self.solver.Value(self.cellValues[i][j])).rjust(dW) + Fore.RESET,end = " ")
+				if value_source.Value(self.isStarCell[i][j]) == 1: # This one is a star
+					print(Fore.RED + '{:d}'.format(value_source.Value(self.cellValues[i][j])).rjust(dW) + Fore.RESET,end = " ")
 				else:
-					print('{:d}'.format(self.solver.Value(self.cellValues[i][j])).rjust(dW),end = " ")
+					print('{:d}'.format(value_source.Value(self.cellValues[i][j])).rjust(dW),end = " ")
 			print()
 		print()
 		
-	def testStringSolution(self):
+	def testStringSolution(self,value_source=None):
+		if value_source is None:
+			value_source = self.solver
 		testString = ''
 		for i in range(self.boardWidth):
 			for j in range(self.boardWidth):
-				if self.solver.Value(self.doubleInt[i][j]) == 1: # This one is doubled!
-					testString = testString + '*{:d}*'.format(self.solver.Value(self.baseValues[i][j]))
+				if value_source.Value(self.doubleInt[i][j]) == 1:
+					testString = testString + '*{:d}*'.format(value_source.Value(self.baseValues[i][j]))
 				else:
-					testString = testString + '{:d}'.format(self.solver.Value(self.baseValues[i][j]))
+					testString = testString + '{:d}'.format(value_source.Value(self.baseValues[i][j]))
 		return testString
 		
 	def listCandidates(self):
