@@ -164,6 +164,7 @@ Parity Mirror - see Diagonal Mirrors
 Parity Party
 Parity Quads (2x2 regions which contain both parities)
 Parity Snakes
+Partition Lines
 Pencilmarks
 Pool
 Potpourri N-Sums
@@ -1904,6 +1905,33 @@ setParitySnake(row1,col1,row2,col2,parity): asserts that there exists a path of 
 	
 Note: Parity snakes don't play well with the countSolutions method, due to the implementation. If there are multiple paths, each will be a separate solution, even if the underlying grids are the same. Additional solutions can also be created by cycles off the main path. Each solution will have a uniparity path between the posited endpoints, but the solver cannot readily determine uniqueness yet.
   
+Partition Lines
+---------------
+Partition lines allow the setter to model lines which are to be partitioned into contiguous runs based on certain criteria, and then to make assertions about the sum or count of the partitioned segment. There are also hanging versions which allow these to be clued via exterior clues, and to be apply across an entire row or column.
+
+setPartitionSumLine(inlist,criterion,comparison):
+setPartitionCountLine(inlist,criterion,comparison):
+  inlist: list of cell specifications
+  criterion: list containing the criterion according to which the line is partitioned. Currently supported:
+    'Region': the line can be partitioned as it switches regions in the grid...similar to equal sum lines
+	'(Parity|Entropy|Modular|Primality|DigitSize)Run': partitions the line into segments of fixed parity, entropy, etc.
+	'(Ascending|Descending)Run': partitions the line into monotone segments
+  comparison: list containing the condition that the partitions need to meet. Currently supported:
+    'Same': all of the runs must have the same sum/count
+	'Different': all of the runs must have different sums/counts
+	'OneIs': one of the partitions must have a sum/count matching the condition
+	  Value[1]: a comparator: use the class variables GE, EQ or LE, or NE
+	  Value[2]: the value against which to compare the difference
+	'AllAre': all of the partitions must have a sum/count matching the condition
+	  Value[1]: a comparator: use the class variables GE, EQ or LE, or NE
+	  Value[2]: the value against which to compare the difference
+	  
+The externally clued versions are:
+setHangingPartitionSum(row,col,rc,criterion,comparison)
+setHangingPartitionCount(row,col,rc,criterion,comparison)
+
+Example: setHangingPartitionSum(1,1,p.Row,['Region'],['OneIs',p.EQ,19]) segments the top row by regions, and asserts that one of those segments must sum to 19.
+
 Pencilmarks
 -----------
 setPencilmarks(row,col,values): set pencilmarks (possible values) for a single cell

@@ -1420,3 +1420,16 @@ def setRussianDollSum(self,row1,col1,rc,value):
 			pairVars.append(thisPair)
 	self.model.AddBoolOr(pairVars)
 			
+def setHangingPartitionSum(self,row,col,rc,criterion,comparison):
+	hStep = 0 if rc == self.Col else (1 if col == 1 else -1)
+	vStep = 0 if rc == self.Row else (1 if row == 1 else -1)
+	
+	L = [(row+k*vStep,col+k*hStep) for k in range(self.boardWidth)]
+	self.setPartitionSumLine(L,criterion,comparison)
+	
+def setHangingPartitionCount(self,row,col,rc,criterion,comparison):
+	hStep = 0 if rc == self.Col else (1 if col == 1 else -1)
+	vStep = 0 if rc == self.Row else (1 if row == 1 else -1)
+	
+	L = [(row+k*vStep,col+k*hStep) for k in range(self.boardWidth)]
+	self.setPartitionCountLine(L,criterion,comparison)

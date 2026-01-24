@@ -966,3 +966,79 @@ def setConditionalCountSegment(self,inlist,value,selectInitiator=None,selectSumm
 def setConditionalSumSegment(self,inlist,value,selectInitiator=None,selectSummands=None,selectTerminator=None,terminateOn='First',includeTerminator=True,comparator=None,forceTermination=True,includeSelf=True,backward=True,forward=True,failedTerminationBehavior='partial'):
 	self._setConditionalSegment('Sum',inlist,value,selectInitiator,selectSummands,selectTerminator,terminateOn,includeTerminator,comparator,forceTermination,includeSelf,backward,forward,failedTerminationBehavior)
 	
+def _setPartitionLine(self,inlist,criterion,comparison,mode):
+	L = self._procCellList(inlist)
+	runNumber = self._partitionLine(L,criterion)
+	runCellMx = [[self.model.NewBoolVar('RunNumberBools') for i in range(len(L))] for j in range(len(L))]
+	if mode == 'sum':
+		runCellSum = [[self.model.NewIntVar(min(0,self.minDigit),self.maxDigit,'RunNumberValues') for i in range(len(L))] for j in range(len(L))]
+	elif mode == 'count':
+		runCellSum = [[self.model.NewIntVar(0,len(L),'RunNumberValues') for i in range(len(L))] for j in range(len(L))]
+	for i in range(len(L)):
+		for j in range(len(L)):
+			self.model.Add(runNumber[j] == i+1).OnlyEnforceIf(runCellMx[i][j])
+			if mode == 'sum':
+				self.model.Add(runCellSum[i][j] == self.cellValues[L[j][0]][L[j][1]]).OnlyEnforceIf(runCellMx[i][j])
+			elif mode == 'count':
+				self.model.Add(runCellSum[i][j] == 1).OnlyEnforceIf(runCellMx[i][j])
+			self.model.Add(runNumber[j] != i+1).OnlyEnforceIf(runCellMx[i][j].Not())
+			self.model.Add(runCellSum[i][j] == 0).OnlyEnforceIf(runCellMx[i][j].Not())
+
+	maxRun = self.model.NewIntVar(1,len(L),'PartitionLineNumberOfRuns')
+	self.model.AddMaxEquality(maxRun,runNumber)
+	enforced = [self.model.NewBoolVar('IsComparisonEnforced') for i in range(len(L))]
+	for i in range(len(L)):
+		self.model.Add(maxRun > i).OnlyEnforceIf(enforced[i])
+		self.model.Add(maxRun <= i).OnlyEnforceIf(enforced[i].Not())
+	
+	match comparison[0]:
+		case 'Same':
+			if mode == 'sum':
+				runSum = self.model.NewIntVar(len(L)*min(0,self.minDigit),len(L)*self.maxDigit,'')
+			elif mode == 'count':
+				runSum = self.model.NewIntVar(0,len(L),'')
+			for i in range(len(L)):
+				self.model.Add(sum(runCellSum[i][j] for j in range(len(L))) == runSum).OnlyEnforceIf(enforced[i])
+		case 'Different':
+			for i in range(len(L)):
+				for k in range(i+1,len(L)):
+					self.model.Add(sum(runCellSum[i][j] for j in range(len(L))) != sum(runCellSum[k][j] for j in range(len(L)))).OnlyEnforceIf([enforced[i],enforced[k]])
+		case 'OneIs':
+			myBools = [self.model.NewBoolVar('ThisSumIsEqualToTheTarget') for i in range(len(L))]
+			for i in range(len(L)):
+				mySum = sum(runCellSum[i][j] for j in range(len(L)))
+				self.model.AddBoolAnd(myBools[i].Not()).OnlyEnforceIf(enforced[i].Not())
+				match comparison[1]:
+						case self.LE:
+							self.model.Add(mySum <= comparison[2]).OnlyEnforceIf([enforced[i],myBools[i]])
+							self.model.Add(mySum > comparison[2]).OnlyEnforceIf([enforced[i],myBools[i].Not()])
+						case self.GE:
+							self.model.Add(mySum >= comparison[2]).OnlyEnforceIf([enforced[i],myBools[i]])
+							self.model.Add(mySum < comparison[2]).OnlyEnforceIf([enforced[i],myBools[i].Not()])
+						case self.NE:
+							self.model.Add(mySum != comparison[2]).OnlyEnforceIf([enforced[i],myBools[i]])
+							self.model.Add(mySum == comparison[2]).OnlyEnforceIf([enforced[i],myBools[i].Not()])
+						case self.EQ:
+							self.model.Add(mySum == comparison[2]).OnlyEnforceIf([enforced[i],myBools[i]])
+							self.model.Add(mySum != comparison[2]).OnlyEnforceIf([enforced[i],myBools[i].Not()])
+			self.model.AddBoolOr(myBools)
+			
+		case 'AllAre':
+			for i in range(len(L)):
+				mySum = sum(runCellSum[i][j] for j in range(len(L)))
+				match comparison[1]:
+						case self.LE:
+							self.model.Add(mySum <= comparison[2]).OnlyEnforceIf(enforced[i])
+						case self.GE:
+							self.model.Add(mySum >= comparison[2]).OnlyEnforceIf(enforced[i])
+						case self.NE:
+							self.model.Add(mySum != comparison[2]).OnlyEnforceIf(enforced[i])
+						case self.EQ:
+							self.model.Add(mySum == comparison[2]).OnlyEnforceIf(enforced[i])
+			
+def setPartitionSumLine(self,inlist,criterion,comparison):
+	self._setPartitionLine(inlist,criterion,comparison,'sum')
+		
+def setPartitionCountLine(self,inlist,criterion,comparison):
+	self._setPartitionLine(inlist,criterion,comparison,'count')
+		

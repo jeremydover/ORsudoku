@@ -746,24 +746,8 @@ def _selectCellsOnLine(self,L,selectCriteria,OEI=[]):
 						self.model.AddBoolOr([matchBackward[i],matchForward[i]]).OnlyEnforceIf([criterionBools[i].Not()] + OEI)
 
 			case 'ParityRun'|'EntropyRun'|'ModularRun'|'PrimalityRun'|'DigitSizeRun':
-				if criterion[0][0:-3] not in self._propertyInitialized:
-					getattr(self,'_set'+criterion[0][0:-3])()
-				myCells = getattr(self,'cell'+criterion[0][0:-3])
-				
-				# First split the line up into contiguous runs with the same property
-				runNumber = [self.model.NewIntVar(1,len(L),'PropertyRunSelectionRunNumber') for i in range(len(L))]
-				propertySwitch = [self.model.NewBoolVar('PropertyRunSwitch') for i in range(len(L))]
-				for x in OEI:
-					self.model.AddBoolAnd(propertySwitch).OnlyEnforceIf(x.Not())
-					for i in range(len(L)):
-						self.model.Add(runNumber[i] == 1).OnlyEnforceIf(x.Not())
-				self.model.Add(runNumber[0] == 1).OnlyEnforceIf(OEI)
-				self.model.AddBoolAnd(propertySwitch[0].Not()).OnlyEnforceIf(OEI)
-				for i in range(1,len(L)):
-					self.model.Add(myCells[L[i-1][0]][L[i-1][1]] == myCells[L[i][0]][L[i][1]]).OnlyEnforceIf([propertySwitch[i].Not()] + OEI)
-					self.model.Add(myCells[L[i-1][0]][L[i-1][1]] != myCells[L[i][0]][L[i][1]]).OnlyEnforceIf([propertySwitch[i]] + OEI)
-					self.model.Add(runNumber[i] == runNumber[i-1]).OnlyEnforceIf([propertySwitch[i].Not()] + OEI)
-					self.model.Add(runNumber[i] == runNumber[i-1]+1).OnlyEnforceIf([propertySwitch[i]] + OEI)
+				# First split the line up into contiguous runs
+				runNumber = self._partitionProperty(L,criterion[0],OEI)
 				
 				filteredRunNumber = [self.model.NewIntVar(0,len(L),'PropertyRunSelectionFilteredNumber') for i in range(len(L))]
 				filteredRunCount = [self.model.NewIntVar(0,len(L),'PropertyRunSelectionFilteredCount') for i in range(len(L))]
@@ -841,23 +825,7 @@ def _selectCellsOnLine(self,L,selectCriteria,OEI=[]):
 
 			case 'AscendingRun'|'DescendingRun':
 				# First split the line up into contiguous runs
-				runNumber = [self.model.NewIntVar(1,len(L),'UpDownRunSelectionRunNumber') for i in range(len(L))]
-				runSwitch = [self.model.NewBoolVar('UpDownRunSwitch') for i in range(len(L))]
-				for x in OEI:
-					self.model.AddBoolAnd(runSwitch).OnlyEnforceIf(x.Not())
-					for i in range(len(L)):
-						self.model.Add(runNumber[i] == 1).OnlyEnforceIf(x.Not())
-				self.model.Add(runNumber[0] == 1).OnlyEnforceIf(OEI)
-				self.model.AddBoolAnd(runSwitch[0].Not()).OnlyEnforceIf(OEI)
-				for i in range(1,len(L)):
-					if criterion[0] == 'AscendingRun':
-						self.model.Add(self.cellValues[L[i-1][0]][L[i-1][1]] < self.cellValues[L[i][0]][L[i][1]]).OnlyEnforceIf([runSwitch[i].Not()] + OEI)
-						self.model.Add(self.cellValues[L[i-1][0]][L[i-1][1]] >= self.cellValues[L[i][0]][L[i][1]]).OnlyEnforceIf([runSwitch[i]] + OEI)	
-					else:
-						self.model.Add(self.cellValues[L[i-1][0]][L[i-1][1]] > self.cellValues[L[i][0]][L[i][1]]).OnlyEnforceIf([runSwitch[i].Not()] + OEI)
-						self.model.Add(self.cellValues[L[i-1][0]][L[i-1][1]] <= self.cellValues[L[i][0]][L[i][1]]).OnlyEnforceIf([runSwitch[i]] + OEI)	
-					self.model.Add(runNumber[i] == runNumber[i-1]).OnlyEnforceIf([runSwitch[i].Not()] + OEI)
-					self.model.Add(runNumber[i] == runNumber[i-1]+1).OnlyEnforceIf([runSwitch[i]] + OEI)
+				runNumber = self._partitionMonotone(L,criterion[0],OEI)
 				if type(criterion[1]) is int:
 					for i in range(len(L)):
 						self.model.Add(runNumber[i] == criterion[1]).OnlyEnforceIf([criterionBools[i]] + OEI)
@@ -1045,6 +1013,61 @@ def _selectCellsOnLine(self,L,selectCriteria,OEI=[]):
 		self.model.AddBoolOr([criteriaBools[j][i].Not() for j in range(len(criteriaBools))]).OnlyEnforceIf([selectionCells[i].Not()] + OEI)
 		
 	return selectionCells
+
+def _partitionRegion(self,L,OEI):
+	runNumber = [self.model.NewIntVar(1,len(L),'RegionRunSelectionRunNumber') for i in range(len(L))]
+	for x in OEI:
+		for i in range(len(L)):
+			self.model.Add(runNumber[i] == 1).OnlyEnforceIf(x.Not())
+	myRegion = [self.getRegion(L[i][0],L[i][1]) for i in range(len(L))]
+	self.model.Add(runNumber[0] == 1).OnlyEnforceIf(OEI)
+	maxRegion = 1
+	for i in range(1,len(L)):
+		if myRegion[i] == myRegion[i-1]:
+			self.model.Add(runNumber[i] == runNumber[i-1]).OnlyEnforceIf(OEI)
+		else:
+			self.model.Add(runNumber[i] == runNumber[i-1]+1).OnlyEnforceIf(OEI)
+	return runNumber
+
+def _partitionProperty(self,L,mode,OEI):
+	if mode[0:-3] not in self._propertyInitialized:
+		getattr(self,'_set'+mode[0:-3])()
+	myCells = getattr(self,'cell'+mode[0:-3])
+	runNumber = [self.model.NewIntVar(1,len(L),'PropertyRunSelectionRunNumber') for i in range(len(L))]
+	propertySwitch = [self.model.NewBoolVar('PropertyRunSwitch') for i in range(len(L))]
+	for x in OEI:
+		self.model.AddBoolAnd(propertySwitch).OnlyEnforceIf(x.Not())
+		for i in range(len(L)):
+			self.model.Add(runNumber[i] == 1).OnlyEnforceIf(x.Not())
+	self.model.Add(runNumber[0] == 1).OnlyEnforceIf(OEI)
+	self.model.AddBoolAnd(propertySwitch[0].Not()).OnlyEnforceIf(OEI)
+	for i in range(1,len(L)):
+		self.model.Add(myCells[L[i-1][0]][L[i-1][1]] == myCells[L[i][0]][L[i][1]]).OnlyEnforceIf([propertySwitch[i].Not()] + OEI)
+		self.model.Add(myCells[L[i-1][0]][L[i-1][1]] != myCells[L[i][0]][L[i][1]]).OnlyEnforceIf([propertySwitch[i]] + OEI)
+		self.model.Add(runNumber[i] == runNumber[i-1]).OnlyEnforceIf([propertySwitch[i].Not()] + OEI)
+		self.model.Add(runNumber[i] == runNumber[i-1]+1).OnlyEnforceIf([propertySwitch[i]] + OEI)
+	return runNumber
+
+def _partitionMonotone(self,L,mode,OEI):
+	# This code takes a line and splits it up into monotone runs of increasing or decreasing digits
+	runNumber = [self.model.NewIntVar(1,len(L),'UpDownRunSelectionRunNumber') for i in range(len(L))]
+	runSwitch = [self.model.NewBoolVar('UpDownRunSwitch') for i in range(len(L))]
+	for x in OEI:
+		self.model.AddBoolAnd(runSwitch).OnlyEnforceIf(x.Not())
+		for i in range(len(L)):
+			self.model.Add(runNumber[i] == 1).OnlyEnforceIf(x.Not())
+	self.model.Add(runNumber[0] == 1).OnlyEnforceIf(OEI)
+	self.model.AddBoolAnd(runSwitch[0].Not()).OnlyEnforceIf(OEI)
+	for i in range(1,len(L)):
+		if mode == 'AscendingRun':
+			self.model.Add(self.cellValues[L[i-1][0]][L[i-1][1]] < self.cellValues[L[i][0]][L[i][1]]).OnlyEnforceIf([runSwitch[i].Not()] + OEI)
+			self.model.Add(self.cellValues[L[i-1][0]][L[i-1][1]] >= self.cellValues[L[i][0]][L[i][1]]).OnlyEnforceIf([runSwitch[i]] + OEI)	
+		else:
+			self.model.Add(self.cellValues[L[i-1][0]][L[i-1][1]] > self.cellValues[L[i][0]][L[i][1]]).OnlyEnforceIf([runSwitch[i].Not()] + OEI)
+			self.model.Add(self.cellValues[L[i-1][0]][L[i-1][1]] <= self.cellValues[L[i][0]][L[i][1]]).OnlyEnforceIf([runSwitch[i]] + OEI)	
+		self.model.Add(runNumber[i] == runNumber[i-1]).OnlyEnforceIf([runSwitch[i].Not()] + OEI)
+		self.model.Add(runNumber[i] == runNumber[i-1]+1).OnlyEnforceIf([runSwitch[i]] + OEI)
+	return runNumber
 
 def _selectCellsInRowCol(self,row,col,rc,selectCriteria):
 	
@@ -1476,3 +1499,15 @@ def _evaluateHangingClues(self,partial,terminatorCells,value,terminateOn,include
 						self.model.AddBoolAnd(c).OnlyEnforceIf(varBitmap[k] + OEI)
 				self.model.AddBoolAnd(OEI).OnlyEnforceIf(c)
 				  # If any of the OEI variables are false, forces c to be false.
+				  
+def _partitionLine(self,L,criterion):
+	# Splits line into runs
+	match criterion[0]:
+		case 'ParityRun'|'EntropyRun'|'ModularRun'|'PrimalityRun'|'DigitSizeRun':
+			runNumber = self._partitionProperty(L,criterion[0],[])
+		case 'AscendingRun'|'DescendingRun':
+			runNumber = self._partitionMonotone(L,criterion[0],[])
+		case 'Region':
+			runNumber = self._partitionRegion(L,[])
+	return runNumber	
+				

@@ -1,3 +1,6 @@
+1/24/2026
+	I had other things to do than this too, but oh well. Implemented partition lines, which use some criterion to partition a line into segments (e.g. regions like in equal sum lines, runs of constant parity, or ascending/descending digits), and evaluates the set of segments, e.g. all the same/different, one is greater than some value, etc. There are sum and count versions for evaluation. Test cases added.
+
 1/23/2026
 	Well, this was probably a dumb idea. Plan was to implement test harness for multi-sudoku, so I can test the sohei and samurai functions. Ended up revamping the entire solution printing code. To be fair, it desperately needed it, since that was pretty OG, but not what I was planning for today.
 	And then, I just refactored all of multi-sudoku. I really had other things to do today. But there's some Samurai test cases now, and the code is a lot more modular and effective. And the documentation is actually accurate.
