@@ -24,15 +24,96 @@ class multiSudoku(sudoku):
 		self.maxDigit = max(self.digits)
 		self.minDigit = min(self.digits)
 		self.digitRange = self.maxDigit - self.minDigit
+		self._propertyInitialized = []
 
 		self.model = cp_model.CpModel()
 		self.subgrids = [sudoku(boardSizeRoot,irregular=irregular,digitSet=self.digits,model=self.model) for i in range(self.numberOfPuzzles)]
 		
 	def setMultiConstraint(self,puzz,constraint,args):
-		getattr(self.subgrids[puzz-1],'set'+constraint)(args)
+		getattr(self.subgrids[puzz-1],'set'+constraint)(*args)
 		
 	def setMultiRegion(self,puzz,inlist):
-		self.subgrids[puzz-1].setRegion(args)
+		self.subgrids[puzz-1].setRegion(inlist)
+		
+	def _initializeCrossGridLines(self):
+		if 'CrossGridLines' not in self._propertyInitialized:
+			self._propertyInitialized.append('CrossGridLines')
+			self.cellValues = [[self.model.NewIntVar(self.minDigit,self.maxDigit,'CrossGridReferenceVariables') for i in range(self.boardWidth*self.boardWidth)] for k in range(self.numberOfPuzzles)]
+			for i in range(self.boardWidth):
+				for j in range(self.boardWidth):
+					for k in range(self.numberOfPuzzles):
+						self.model.Add(self.cellValues[k][self.boardWidth*i + j] == self.subgrids[k].cellValues[i][j])
+						
+	def setCrossGridLine(self,constraint,inlist,args=[]):
+		self._initializeCrossGridLines()
+		inlist1 = self._procCellList(inlist)
+		L = []
+		for x in inlist1:
+			L.append((x[0]+1,x[1]*self.boardWidth+x[2]))
+		getattr(self,'set'+constraint)(*([L]+args))
+
+	def _initializeParity(self):
+		if 'Parity' not in self._propertyInitialized:
+			self._setParity()
+	
+	def _setParity(self):
+		# Set up variables to track parity constraints
+		divVars = []
+		self.cellParity = []
+		
+		maxDiff = self.maxDigit-self.minDigit
+		for i in range(self.numberOfPuzzles):
+			t = []
+			for j in range(self.boardWidth*self.boardWidth):
+				div = self.model.NewIntVar(0,2*maxDiff,'ParityDiv')
+				mod = self.model.NewIntVar(0,1,'parityValue{:d}{:d}'.format(i,j))
+				t.append(mod)
+				self.model.Add(2*div <= self.cellValues[i][j])
+				self.model.Add(2*div+2 > self.cellValues[i][j])
+				self.model.Add(mod == self.cellValues[i][j]-2*div)
+			self.cellParity.insert(i,t)
+		
+		self._propertyInitialized.append('Parity')
+		
+	def _initializeEntropy(self):
+		if 'Entropy' not in self._propertyInitialized:
+			self._setEntropy()
+	
+	def _setEntropy(self):
+		# Set up variables to track entropy and modular constraints
+		self.cellEntropy = []
+		
+		for i in range(self.numberOfPuzzles):
+			t = []
+			for j in range(self.boardWidth*self.boardWidth):
+				c = self.model.NewIntVar(self.minDigit // 3 - 1,self.maxDigit // 3,'entropyValue{:d}{:d}'.format(i,j))
+				t.append(c)
+				self.model.Add(3*c+1 <= self.cellValues[i][j])
+				self.model.Add(3*c+4 > self.cellValues[i][j])
+			self.cellEntropy.insert(i,t)
+		
+		self._propertyInitialized.append('Entropy')
+	
+	def _initializeModular(self):
+		if 'Modular' not in self._propertyInitialized:
+			self._setModular()
+	
+	def _setModular(self):
+		# Set up variables to track modular constraints
+		if 'Entropy' not in self._propertyInitialized:
+			self._setEntropy()
+		
+		self.cellModular = []
+		
+		for i in range(self.numberOfPuzzles):
+			t = []
+			for j in range(self.boardWidth*self.boardWidth):
+				c = self.model.NewIntVar(1,3,'modularValue{:d}{:d}'.format(i,j))
+				t.append(c)
+				self.model.Add(c == self.cellValues[i][j] - 3*self.cellEntropy[i][j])
+			self.cellModular.insert(i,t)
+		
+		self._propertyInitialized.append('Modular')
 		
 	def applyAllNegativeConstraints(self):
 		for i in range(self.numberOfPuzzles):

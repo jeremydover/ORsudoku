@@ -1678,11 +1678,18 @@ To set irregular regions in subgrids, use the setMultiRegion method:
 setMultiRegion(puzzle,list): sets an irregular region in the subgrid puzzle
 
 For these classes, you can use the method setMultiConstraint to set constraints on individual puzzles:
-setMultiConstraint(puzzle,constraint,argsd): sets a constraint within a single grid
+setMultiConstraint(puzzle,constraint,args): sets a constraint within a single grid
 	puzzle: the puzzle number to which the constraint should apply
 	constraint: a string containing the name of the constraint (e.g. 'GivenArray')..do not include the 'set' used in the method name
-	args: the arguments that you wish to pass to the constraint, just as if you were passing them with the normal 'set' method
+	args: an array of arguments that you wish to pass to the constraint, just as if you were passing them with the normal 'set' method
 The aliases setDoubleDokuConstraint, setSamuraiConstraint and setSoheiConstraint are still supported, but are deprecated.
+
+To set a line constraint where the line between grids, you can use:
+setCrossGridLine(constraint,inlist,args):
+    constraint: a string containing the name of the constraint (e.g. 'GivenArray')..do not include the 'set' used in the method name
+	inlist: a list of puzzle extended cell specifications, where the first digit is the puzzle number; for example, (3,4,7) refers to the cell in row 4, column 7 in puzzle grid 3
+	args: Just like setMultiConstraint, an array of any remaining arguments other than the list specifying the line
+Note: technically this constraint will also attempt to set non-line constraints, but this is very unlikely to give you the results you're looking for.
 
 Nabner Lines
 ------------
