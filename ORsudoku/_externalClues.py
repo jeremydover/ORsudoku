@@ -1399,26 +1399,45 @@ def setRCRegionSum(self,row1,col1,rc,value):
 		self.model.Add(sum(self.cellValues[x[0]][x[1]] for x in myRegions[i]) != value).OnlyEnforceIf(testVars[i].Not())
 	self.model.AddBoolOr(testVars)
 	
-def setRussianDollSum(self,row1,col1,rc,value):
+def setRussianDollSum(self,row1,col1,rc,value,overlap='none'):
 	row = row1 - 1
 	col = col1 - 1
 	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
 	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
 	
-	pairVars = []
-	for i in range(self.boardWidth):
-		for j in range(i+1,self.boardWidth):
-			thisPair = self.model.NewBoolVar('RussianDollSum')
-			pairSumCorrect = self.model.NewBoolVar('RussianDollSum')
-			fillingSumCorrect = self.model.NewBoolVar('RussianDollSum')
-			self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] + self.cellValues[row+j*vStep][col+j*hStep] == value).OnlyEnforceIf(pairSumCorrect)
-			self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] + self.cellValues[row+j*vStep][col+j*hStep] != value).OnlyEnforceIf(pairSumCorrect.Not())
-			self.model.Add(sum(self.cellValues[row+k*vStep][col+k*hStep] for k in range(i+1,j)) == value).OnlyEnforceIf(fillingSumCorrect)
-			self.model.Add(sum(self.cellValues[row+k*vStep][col+k*hStep] for k in range(i+1,j)) != value).OnlyEnforceIf(fillingSumCorrect.Not())
-			self.model.AddBoolAnd(pairSumCorrect,fillingSumCorrect).OnlyEnforceIf(thisPair)
-			self.model.AddBoolOr(pairSumCorrect.Not(),fillingSumCorrect.Not()).OnlyEnforceIf(thisPair.Not())
-			pairVars.append(thisPair)
-	self.model.AddBoolOr(pairVars)
+	# If type is an int, make it a list so that value is iterable
+	if type(value) is int:
+		value = [value]
+	starts = [self.model.NewIntVar(1,self.boardWidth,'RussianDollStarts') for k in range(len(value))]
+	ends = [self.model.NewIntVar(1,self.boardWidth,'RussianDollEnds') for k in range(len(value))]
+	for k in range(1,len(value)):
+		match overlap:
+			case 'none':
+				self.model.Add(starts[k] > ends[k-1])
+			case 'crust':
+				self.model.Add(starts[k] >= ends[k-1])
+			case 'any':
+				self.model.Add(starts[k] >= starts[k-1])
+	for k in range(len(value)):
+		pairVars = []
+		for i in range(self.boardWidth):
+			for j in range(i+1,self.boardWidth):
+				thisPairSelected = self.model.NewBoolVar('RussianDollSum')
+				thisPairWorks = self.model.NewBoolVar('RussianDollSum')
+				pairSumCorrect = self.model.NewBoolVar('RussianDollSum')
+				fillingSumCorrect = self.model.NewBoolVar('RussianDollSum')
+				self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] + self.cellValues[row+j*vStep][col+j*hStep] == value[k]).OnlyEnforceIf(pairSumCorrect)
+				self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] + self.cellValues[row+j*vStep][col+j*hStep] != value[k]).OnlyEnforceIf(pairSumCorrect.Not())
+				self.model.Add(sum(self.cellValues[row+k*vStep][col+k*hStep] for k in range(i+1,j)) == value[k]).OnlyEnforceIf(fillingSumCorrect)
+				self.model.Add(sum(self.cellValues[row+k*vStep][col+k*hStep] for k in range(i+1,j)) != value[k]).OnlyEnforceIf(fillingSumCorrect.Not())
+				self.model.AddBoolAnd(pairSumCorrect,fillingSumCorrect).OnlyEnforceIf(thisPairWorks)
+				self.model.AddBoolOr(pairSumCorrect.Not(),fillingSumCorrect.Not()).OnlyEnforceIf(thisPairWorks.Not())
+				self.model.AddBoolAnd(thisPairWorks).OnlyEnforceIf(thisPairSelected)
+				self.model.Add(starts[k] == i+1).OnlyEnforceIf(thisPairSelected)
+				self.model.Add(ends[k] == j+1).OnlyEnforceIf(thisPairSelected)
+				self.model.AddBoolAnd([x.Not() for x in pairVars]).OnlyEnforceIf(thisPairSelected)
+				pairVars.append(thisPairSelected)
+		self.model.AddBoolOr(pairVars)
 			
 def setHangingPartitionSum(self,row,col,rc,criterion,comparison):
 	hStep = 0 if rc == self.Col else (1 if col == 1 else -1)

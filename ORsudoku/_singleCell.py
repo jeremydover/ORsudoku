@@ -251,7 +251,7 @@ def setNearestNeighbor(self,row1,col1,pointers):
 	col = col1 - 1
 	if type(pointers) is int:
 		pointers = [pointers]
-	allNeighbors = {(row+i,col+j) for i in [-1,0,1] for j in [-1,0,1] if abs(i) != abs(j)} & {(i,j) for i in range(self.boardWidth) for j in range(self.boardWidth)}
+	allNeighbors = set(self.getOrthogonalNeighbors(row,col))
 	vDict = {}
 	# Need for cell transform clues. self.minDigit is the smallest base digit, not necessarily as transformed.
 	myMin = min(self.digits)
@@ -274,6 +274,37 @@ def setNearestNeighbor(self,row1,col1,pointers):
 				
 def setNearestNeighbour(self,row1,col1,pointers):
 	self.setNearestNeighbor(row1,col1,pointers)
+	
+def setMinMaxNeighbor(self,pm,row1,col1,pointers,negativeConstraint):
+	row = row1 - 1
+	col = col1 - 1
+	if type(pointers) is int:
+		pointers = [pointers]
+	allNeighbors = self.getOrthogonalNeighbors(row,col)
+	pointedNeighbors = [(row + (1-x//2)*(-1)**(x%2 + 1),col + (x//2)*(-1)**(x%2 + 1)) for x in pointers]
+	extreme = self.model.NewIntVar(self.minDigit,self.maxDigit,'MinMaxNeighborExtremum')
+	if pm == self.Max:
+		self.model.AddMaxEquality(extreme,[self.cellValues[x[0]][x[1]] for x in allNeighbors])
+	else:
+		self.model.AddMinEquality(extreme,[self.cellValues[x[0]][x[1]] for x in allNeighbors])
+	for x in allNeighbors:
+		if x in pointedNeighbors:
+			self.model.Add(self.cellValues[x[0]][x[1]] == extreme)
+		else:
+			if negativeConstraint:
+				self.model.Add(self.cellValues[x[0]][x[1]] < extreme)
+
+def setBiggestNeighbor(self,row,col,pointers,negativeConstraint=True):
+	self.setMinMaxNeighbor(self.Max,row,col,pointers,negativeConstraint)
+	
+def setBiggestNeighbour(self,row,col,pointers,negativeConstraint=True):
+	self.setMinMaxNeighbor(self.Max,row,col,pointers,negativeConstraint)
+	
+def setSmallestNeighbor(self,row,col,pointers,negativeConstraint=True):
+	self.setMinMaxNeighbor(self.Min,row,col,pointers,negativeConstraint)
+
+def setSmallestNeighbour(self,row,col,pointers,negativeConstraint=True):
+	self.setMinMaxNeighbor(self.Min,row,col,pointers,negativeConstraint)
 
 def setDifferentNeighbors(self,row1,col1,includeCell=False):
 	# A different neighbor constraint asserts that the digit in the cell is the number of distinct digits in the cell's (8-cell) neighborhood...h/t clover!

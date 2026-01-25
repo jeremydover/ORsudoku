@@ -16,6 +16,7 @@ Battlefield
 Before Nine - see Sandwich Sums
 Bent Diagonals - see XSudoku
 Between Lines
+Biggest Neighbor
 Block Cages
 Broken Thermos - see Thermometers
 Broken X-Sums - see X-Sum
@@ -219,6 +220,7 @@ Skyscraper Sums - see Skyscrapers
 Slingshots
 Slot Machine
 Slow Thermometers (see Thermometers)
+Smallest Neighbor - see Biggest Neighbor
 Sohei Sudoku - see Multi Sudoku
 Split Pea Lines
 Split Pill Lines - see Split Pea Lines
@@ -441,6 +443,16 @@ Between Lines
 setBetweenLine(list): creates a between line constraint
   list: a list of cell specifications
   
+Biggest Neighbor
+----------------
+setBiggestNeighbor(row,col,pointers,negativeConstraint): asserts that arrows in a cell point to the biggest orthogonal neighbor
+  row,col: The coordinates of the cell next to which the clue value sits
+  rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
+  pointers: a single direction, or a list of directions: use class variables Up, Down, Left and Right
+  negativeConstraint: (optional, default is True) if True, a direction with no arrow is definitely less than the largest neighbor value; otherwise, they will be less than or equal to the largest neighbor
+  
+setSmallestNeighbor(row,col,pointers,negativeConstraint): asserts that arrows in a cell point to the smallest orthogonal neighbor
+
 Block Cages
 -----------
 setBlockCage(list,values): creates a block cage, that is an list of cells and a list of values, such that those values cannot appear within the cage
@@ -565,7 +577,7 @@ setShakenCloneRegion(list,noRepeat): creates a set of regions that contain the s
   noRepeat: OPTIONAL, defaults to False. If noRepeat, digits cannot repeat in the zone. By default, repeats are allowed.
   
 Conditional Lines
----------------------
+-----------------
 setConditionalCountLine(list,value,selectCriteria,terminationCriteria,terminateOn,includeTerminator,comparator,forceTermination): analogous to a Hanging Count, but along a line instead of just in a column
   list: list of cell specifications
   See Hanging Sums for a description of all other parameters
@@ -2139,10 +2151,14 @@ setRCRegionSum(row,col,rc,value): Asserts that the sum of the cells in the inter
 
 Russian Doll Sums
 -----------------
-setRussianDollSum(row,col,rc,value): Asserts there exists a pair of digits in the clued row/column whose sum equals value AND the sum of the digits between them also equals value
+setRussianDollSum(row,col,rc,value,overlap): For each value, asserts there exists a pair of digits in the clued row/column whose sum equals value AND the sum of the digits between them also equals value
   row,col: The coordinates of the cell next to which the clue values sit
   rc: row/column specification, use class variables Row and Col
-  value: the sum of the shell and the interior of the Russian doll
+  value: can be a single integer or a list of integers; each integer is the sum of a shell and the interior of the Russian doll, with the dolls appearing in the order specified, if a list
+  overlap: (optional, defaults to 'none') Indicates by how much multiple Russian dolls in a row/col can overlap. Possible values are:
+    'none': Russian dolls cannot overlap at all
+	'crust': Russian dolls can have overlapping crust, but not interior
+	'any': any amount of overlap is allowed, with the proviso that to keep the dolls in order, the beginning of each must come strictly after the beginning of its predecessor
 
 Sandwich Sums
 -------------
