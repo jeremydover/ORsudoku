@@ -224,6 +224,7 @@ Smallest Neighbor - see Biggest Neighbor
 Sohei Sudoku - see Multi Sudoku
 Split Pea Lines
 Split Pill Lines - see Split Pea Lines
+Squishdoku
 Star Battle Sudoku
 Stratified Cages - see Parity Cages
 Sum Dots (see Killer Cages)
@@ -1325,13 +1326,13 @@ Indexing (159)
 ****NOTE****
 Older versions of OR Tools had a bug (https://github.com/google/or-tools/issues/3670) which caused the same solution to be reported multiple times. This has been fixed as of version 9.6.
 
-setIndexRow(row,neg=False,inlist=[]): set an index row, namely one which indicates the position of the digit corresponding to the row within some subset of columns
+setIndexRow(row,neg=False,inlist1=[]): set an index row, namely one which indicates the position of the digit corresponding to the row within some subset of columns
   row: the row (1-9) used as an index. By default, all column positions index
   neg (optional): if a column position is indicated as not indexing, then position indicate specifically does NOT indicate the position of the digit. Default is False.
   inlist (optional): a list of which column positions (1-9) are indexing, with columns not in the list NOT indexing. Note: if inlist is not given, and neg=True, then code assumes *NO* cell in the row indexes. If inlist is not given, and new is True, or not given, then code assumes *ALL* cells in the row index.
   Example: If we call setIndexRow(5,True,[1,2,3,4,5,6,7,8]), then in all but the rightmost column, the entry in row 5, column X indicates which row contains a 5 in that column. So if 5,1 is a 2, then 2,1 must be 5. In the rightmost column, the 5 CANNOT appear in the row indicated by the entry in row 5. Specifically if 5,9 is a 3, then the entry in 3,9 CANNOT be a 5.
 
-setIndexColumn(row,neg=False,inlist=[]): set an index column. See setIndexRow for details of the mechanics
+setIndexColumn(col,neg=False,inlist1=[]): set an index column. See setIndexRow for details of the mechanics
   Example: The traditional 159 ruleset is implemented with the calls:
   setIndexColumn(1)
   setIndexColumn(5)
@@ -2356,6 +2357,15 @@ Split Pea Lines
 ---------------
 setSplitPeaLine(inlist): the sum of the interior cells on the line is equal to some concatenation of the first digit and last digit of the line, where either may be the tens digit
   inlist: list of cell specifications
+  
+Squishdoku
+----------
+Solver code for squishdoku puzzles, where the columns between regions are shared by both regions, yielding a 7x7 grid. To model a Squishdoku, you must use the class squishdoku, e.g.
+
+from squishdoku import squishdoku
+p = squishdoku(3)
+
+Many constraints should work reasonably natively: most line constraints, except those that deal with regions. As problems are discovered, we can work to tune constraints to squishdoku, because what happens with an equal sum line, for example, is not obvious.
 
 Star Battle Sudoku
 ------------------

@@ -1,3 +1,7 @@
+1/27/2026
+	Implemented squishdoku class, added several test cases.
+	Squashed a bug in quattroQuadri and scarySudoku.
+	
 1/25/2026
 	Added several test cases.
 	Updated Russian dolls code to allow multiple dolls per row/column. Added test case. (h/t Timotab and Richard Stolk)

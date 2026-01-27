@@ -69,7 +69,7 @@ class quattroQuadri(sudoku):
 			
 	def setRegion(self,inlist):
 		# Allow setting of irregular regions
-		inlist = self.__procCellList(inlist)
+		inlist = self._procCellList(inlist)
 		self.regions.append(inlist)
 		self.model.AddAllDifferent([self.cellValues[x[0]][x[1]] for x in self.regions[-1]])
 		
