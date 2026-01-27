@@ -73,6 +73,8 @@ def _initializeDigitTracking(self):
 			self._setDigitTracking()
 
 def _setDigitTracking(self):
+	if 'DigitTracking' not in self._propertyInitialized:
+		self._propertyInitialized.append('DigitTracking')
 	self.cellDigitBools = [[None for _ in range(self.boardWidth)] for _ in range(self.boardWidth)]
 	self.cellDigitInts = [[None for _ in range(self.boardWidth)] for _ in range(self.boardWidth)]
 	self.digitList = sorted(self.digits)
@@ -107,6 +109,41 @@ def _setParity(self):
 			self.model.Add(2*div+2 > self.cellValues[i][j])
 			self.model.Add(mod == self.cellValues[i][j]-2*div)
 		self.cellParity.insert(i,t)
+		
+	if 'VariableExteriorClues' in self._constraintInitialized:
+		maxDiff = self.maxDigit*self.boardWidth - min(0,self.minDigit*self.boardWidth)
+		for i in range(self.boardWidth):
+			# Right column
+			div = self.model.NewIntVar(0,2*maxDiff,'ParityDiv')
+			mod = self.model.NewIntVar(0,1,'parityValue{:d}{:d}'.format(i,self.boardWidth))
+			self.model.Add(2*div <= self.cellValues[i][self.boardWidth])
+			self.model.Add(2*div+2 > self.cellValues[i][self.boardWidth])
+			self.model.Add(mod == self.cellValues[i][self.boardWidth]-2*div)
+			self.cellParity[i].append(mod)
+			# Left column
+			div = self.model.NewIntVar(0,2*maxDiff,'ParityDiv')
+			mod = self.model.NewIntVar(0,1,'parityValue{:d}{:d}'.format(i,-1))
+			self.model.Add(2*div <= self.cellValues[i][-1])
+			self.model.Add(2*div+2 > self.cellValues[i][-1])
+			self.model.Add(mod == self.cellValues[i][-1]-2*div)
+			self.cellParity[i].append(mod)
+		
+		# Bottom row
+		divs = [self.model.NewIntVar(0,2*maxDiff,'ParityDiv') for j in range(self.boardWidth+2)]
+		mods = [self.model.NewIntVar(0,1,'parityValue{:d}{:d}'.format(i,self.boardWidth)) for j in range(self.boardWidth+2)]
+		for j in range(self.boardWidth+2):
+			self.model.Add(2*divs[j] <= self.cellValues[self.boardWidth][j])
+			self.model.Add(2*divs[j]+2 > self.cellValues[self.boardWidth][j])
+			self.model.Add(mods[j] == self.cellValues[self.boardWidth][j]-2*divs[j])
+		self.cellParity.append(mods)
+		# Top row
+		divs = [self.model.NewIntVar(0,2*maxDiff,'ParityDiv') for j in range(self.boardWidth+2)]
+		mods = [self.model.NewIntVar(0,1,'parityValue{:d}{:d}'.format(i,self.boardWidth)) for j in range(self.boardWidth+2)]
+		for j in range(self.boardWidth+2):
+			self.model.Add(2*divs[j] <= self.cellValues[-1][j])
+			self.model.Add(2*divs[j]+2 > self.cellValues[-1][j])
+			self.model.Add(mods[j] == self.cellValues[-1][j]-2*divs[j])
+		self.cellParity.append(mods)
 	
 	self._propertyInitialized.append('Parity')
 	
@@ -126,6 +163,32 @@ def _setEntropy(self):
 			self.model.Add(3*c+1 <= self.cellValues[i][j])
 			self.model.Add(3*c+4 > self.cellValues[i][j])
 		self.cellEntropy.insert(i,t)
+		
+	if 'VariableExteriorClues' in self._constraintInitialized:
+		for i in range(self.boardWidth):
+			# Right column
+			c = self.model.NewIntVar(min(0,self.minDigit*self.boardWidth) // 3 - 1,self.maxDigit*self.boardWidth // 3,'entropyValue{:d}{:d}'.format(i,self.boardWidth))
+			self.model.Add(3*c+1 <= self.cellValues[i][self.boardWidth])
+			self.model.Add(3*c+4 > self.cellValues[i][self.boardWidth])
+			self.cellEntropy[i].append(c)
+			# Left column
+			c = self.model.NewIntVar(min(0,self.minDigit*self.boardWidth) // 3 - 1,self.maxDigit*self.boardWidth // 3,'entropyValue{:d}{:d}'.format(i,-1))
+			self.model.Add(3*c+1 <= self.cellValues[i][-1])
+			self.model.Add(3*c+4 > self.cellValues[i][-1])
+			self.cellEntropy[i].append(c)
+		
+		# Bottom row
+		cs = [self.model.NewIntVar(min(0,self.minDigit*self.boardWidth) // 3 - 1,self.maxDigit*self.boardWidth // 3,'entropyValue{:d}{:d}'.format(self.boardWidth,j)) for j in range(self.boardWidth+2)]
+		for j in range(self.boardWidth+2):
+			self.model.Add(3*cs[j]+1 <= self.cellValues[self.boardWidth][j])
+			self.model.Add(3*cs[j]+4 > self.cellValues[self.boardWidth][j])
+		self.cellEntropy.append(cs)
+		## Top row
+		cs = [self.model.NewIntVar(min(0,self.minDigit*self.boardWidth) // 3 - 1,self.maxDigit*self.boardWidth // 3,'entropyValue{:d}{:d}'.format(self.boardWidth,-1)) for j in range(self.boardWidth+2)]
+		for j in range(self.boardWidth+2):
+			self.model.Add(3*cs[j]+1 <= self.cellValues[-1][j])
+			self.model.Add(3*cs[j]+4 > self.cellValues[-1][j])
+		self.cellEntropy.append(cs)
 	
 	self._propertyInitialized.append('Entropy')
 
@@ -147,7 +210,29 @@ def _setModular(self):
 			t.append(c)
 			self.model.Add(c == self.cellValues[i][j] - 3*self.cellEntropy[i][j])
 		self.cellModular.insert(i,t)
-	
+
+	if 'VariableExteriorClues' in self._constraintInitialized:
+		for i in range(self.boardWidth):
+			# Right column
+			c = self.model.NewIntVar(1,3,'modularValue{:d}{:d}'.format(i,self.boardWidth))
+			self.model.Add(c == self.cellValues[i][self.boardWidth] - 3*self.cellEntropy[i][self.boardWidth])
+			self.cellModular[i].append(c)
+			# Left column
+			c = self.model.NewIntVar(1,3,'modularValue{:d}{:d}'.format(i,-1))
+			self.model.Add(c == self.cellValues[i][-1] - 3*self.cellEntropy[i][-1])
+			self.cellModular[i].append(c)
+		
+		# Bottom row
+		cs = [self.model.NewIntVar(1,3,'modularValue{:d}{:d}'.format(self.boardWidth,j)) for j in range(self.boardWidth+2)]
+		for j in range(self.boardWidth+2):
+			self.model.Add(cs[j] == self.cellValues[self.boardWidth][j] - 3*self.cellEntropy[self.boardWidth][j])
+		self.cellModular.append(cs)
+		## Top row
+		cs = [self.model.NewIntVar(1,3,'modularValue{:d}{:d}'.format(-1,j)) for j in range(self.boardWidth+2)]
+		for j in range(self.boardWidth+2):
+			self.model.Add(cs[j] == self.cellValues[-1][j] - 3*self.cellEntropy[-1][j])
+		self.cellModular.append(cs)
+		
 	self._propertyInitialized.append('Modular')
 	
 def _setFullRank(self):

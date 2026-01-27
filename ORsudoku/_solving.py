@@ -55,9 +55,7 @@ def applyAllNegativeConstraints(self):
 	self.applyNegativeConstraints()
 	
 def preparePrintVariables(self):
-	consolidatedCellValues = []
-	for tempArray in self.cellValues:
-		consolidatedCellValues = consolidatedCellValues + tempArray
+	consolidatedCellValues = [self.cellValues[i][j] for i in range(self.boardWidth) for j in range(self.boardWidth)]
 	return consolidatedCellValues
 	
 def findSolution(self,test=False,debug=False):

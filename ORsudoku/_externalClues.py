@@ -1,3 +1,23 @@
+def _initializeVariableExteriorClues(self):
+		if 'VariableExteriorClues' not in self._constraintInitialized:
+			self._constraintInitialized.append('VariableExteriorClues')
+			self._constraintNegative.append('VariableExteriorClues')
+			self.variableExteriorClues = []
+			for i in range(self.boardWidth):
+				self.cellValues[i].append(self.model.NewIntVar(min(0,self.minDigit*self.boardWidth),self.maxDigit*self.boardWidth,'cellValueExteriorRightEdge'))
+				self.cellValues[i].append(self.model.NewIntVar(min(0,self.minDigit*self.boardWidth),self.maxDigit*self.boardWidth,'cellValueExteriorLeftEdge'))
+			self.cellValues.append([self.model.NewIntVar(min(0,self.minDigit*self.boardWidth),self.maxDigit*self.boardWidth,'cellValueExteriorBottomEdge') for j in range(self.boardWidth+2)])
+			self.cellValues.append([self.model.NewIntVar(min(0,self.minDigit*self.boardWidth),self.maxDigit*self.boardWidth,'cellValueExteriorTopEdge') for j in range(self.boardWidth+2)])
+			
+def _applyVariableExteriorCluesNegative(self):
+	for i in [(x,y) for x in range(-1,self.boardWidth+1) for y in range(-1,self.boardWidth+1) if x in {-1,self.boardWidth} or y in {-1,self.boardWidth}]:
+		if i not in self.variableExteriorClues:
+			self.model.Add(self.cellValues[i[0]][i[1]] == 0)
+
+def setVariableExteriorClue(self,row,col):
+	self._initializeVariableExteriorClues()
+	self.variableExteriorClues.append((row,col))
+
 def setLittleKiller(self,row1,col1,row2,col2,value):
 	# row1,col1 is the position of the first cell in the sum
 	# row2,col2 is the position of the second cell in the sum
@@ -23,6 +43,10 @@ def setXSumBase(self,row1,col1,rc,value,pm,depth=1,depthStyle=None,broken=False)
 	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
 	hStep = pm * hStep	# Change direction in case we're doing reverse
 	vStep = pm * vStep
+	
+	if type(value) != int:
+		self.setVariableExteriorClue(row-vStep,col-hStep)
+		value = self.cellValues[row-vStep][col-hStep]
 	
 	if broken:
 		digits = list({x+1 for x in self.digits} | {x-1 for x in self.digits})
@@ -52,8 +76,11 @@ def setXSumBase(self,row1,col1,rc,value,pm,depth=1,depthStyle=None,broken=False)
 	for i in range(len(digits)):
 		if digits[i] == 0:
 			# In this case we have to have a null sum, which must be 0.
-			if value == 0:
+			if type(value) == int and value == 0:
 				self.model.Add(self.cellValues[sumRow][sumCol] == 0).OnlyEnforceIf(varBitmap[i])
+			elif type(value) != int:
+				self.model.Add(self.cellValues[sumRow][sumCol] == 0).OnlyEnforceIf(varBitmap[i])
+				self.model.Add(value == 0).OnlyEnforceIf(varBitmap[i])
 			else:
 				self.model.AddBoolAnd([varBitmap[i][0].Not()]).OnlyEnforceIf(varBitmap[i])		
 				# If value is not 0, then 0 is not a valid digit and this case cannot occur, but there's no arithmetic way to express this	
@@ -108,12 +135,14 @@ def setXSumBase(self,row1,col1,rc,value,pm,depth=1,depthStyle=None,broken=False)
 						self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] == digits[i]).OnlyEnforceIf(varBitmap[i] + [depthVars[j]])
 						self.model.Add(self.cellValues[row+depthIndices[j]*vStep][col+depthIndices[j]*hStep] != digits[i]).OnlyEnforceIf(varBitmap[i] + [depthVars[j].Not()])
 			self.model.Add(sum(self.cellValues[mySumRow+j*myVStep][mySumCol+j*myHStep] for j in range(-1*digits[i])) == value).OnlyEnforceIf(varBitmap[i])
+	if type(value) != int:
+		return value
 			
 def setXSum(self,row1,col1,rc,value,depth=1,depthStyle=None,broken=False):
-	self.setXSumBase(row1,col1,rc,value,1,depth,depthStyle,broken)
+	return self.setXSumBase(row1,col1,rc,value,1,depth,depthStyle,broken)
 	
 def setReverseXSum(self,row1,col1,rc,value,depth=1,depthStyle=None,broken=False):
-	self.setXSumBase(row1,col1,rc,value,-1,depth,depthStyle,broken)
+	return self.setXSumBase(row1,col1,rc,value,-1,depth,depthStyle,broken)
 			
 def setDoubleXSum(self,row1,col1,rc,value):
 	# A double X sum clue gives the sum of the X sums from each direction (top/bottom or left/right) in the clued row or column.
@@ -121,7 +150,10 @@ def setDoubleXSum(self,row1,col1,rc,value):
 	col = col1 - 1 if rc == self.Col else 0
 	hStep = 0 if rc == self.Col else 1
 	vStep = 0 if rc == self.Row else 1
-	
+	if type(value) != int:
+		self.setVariableExteriorClue(row-vStep,col-hStep)
+		value = self.cellValues[row-vStep][col-hStep]
+		
 	digits = [x for x in self.digits if abs(x) <= self.boardWidth]
 	varBitmap = self._varBitmap('doubleXSumRow{:d}Col{:d}RC{:d}'.format(row,col,rc),len(digits)*len(digits))
 		
@@ -146,13 +178,17 @@ def setDoubleXSum(self,row1,col1,rc,value):
 			myVars = sumIVars + sumJVars
 			if len(myVars) == 0:
 				# In this case both digits are zero, could happen in a weird 0-8, double or nothing scenario
-				if value == 0: # This is always true
+				if type(value) == int and value == 0: # This is always true
 					self.model.AddBoolAnd([varBitmap[varTrack][0]]).OnlyEnforceIf(varBitmap[varTrack])
+				elif type(value) != int:
+					self.model.Add(value == 0).OnlyEnforceIf(varBitmap[varTrack])
 				else: # This is never true
 					self.model.AddBoolAnd([varBitmap[varTrack][0].Not()]).OnlyEnforceIf(varBitmap[varTrack])
 			else:
 				self.model.Add(sum(myVars) == value).OnlyEnforceIf(varBitmap[varTrack])
 			varTrack = varTrack + 1
+	if type(value) != int:
+		return value
 
 def setXAverageBase(self,row1,col1,rc,value,pm):
 	#row,col are the coordinates of the cell containing the length, value is the sum
@@ -170,13 +206,18 @@ def setXAverageBase(self,row1,col1,rc,value,pm):
 	vStep = pm * vStep
 	
 	digits = list(self.digits)
-	varBitmap = self._varBitmap('XSumRow{:d}Col{:d}RC{:d}'.format(row,col,rc),len(digits))
+	varBitmap = self._varBitmap('XAverageRow{:d}Col{:d}RC{:d}'.format(row,col,rc),len(digits))
+	if type(value) != int:
+		self.setVariableExteriorClue(row-vStep,col-hStep)
+		value = self.cellValues[row-vStep][col-hStep]
 		
 	for i in range(len(digits)):
 		if digits[i] == 0:
 			# In this case we have to have a null sum, which must be 0.
-			if value == 0:
+			if type(value) == int and value == 0:
 				self.model.Add(self.cellValues[sumRow][sumCol] == 0).OnlyEnforceIf(varBitmap[i])
+			elif type(value) != int:
+				self.model.Add(value == 0).OnlyEnforceIf(varBitmap[i])
 			else:
 				self.model.AddBoolAnd([varBitmap[i][0].Not()]).OnlyEnforceIf(varBitmap[i])		
 				# If value is not 0, then 0 is not a valid digit and this case cannot occur, but there's no arithmetic way to express this	
@@ -193,12 +234,14 @@ def setXAverageBase(self,row1,col1,rc,value,pm):
 			myVStep = -1 * vStep				
 			self.model.Add(self.cellValues[row][col] == digits[i]).OnlyEnforceIf(varBitmap[i])
 			self.model.Add(sum(self.cellValues[mySumRow+j*myVStep][mySumCol+j*myHStep] for j in range(-1*digits[i])) == value*digits[i]).OnlyEnforceIf(varBitmap[i])
+	if type(value) != int:
+		return value
 
 def setXAverage(self,row1,col1,rc,value):
-	self.setXAverageBase(row1,col1,rc,value,1)
+	return self.setXAverageBase(row1,col1,rc,value,1)
 	
 def setReverseXAverage(self,row1,col1,rc,value):
-	self.setXAverageBase(row1,col1,rc,value,-1)
+	return self.setXAverageBase(row1,col1,rc,value,-1)
 
 def _initializeXCount(selectCriteria=None,terminateCriteria=None):
 	if 'XCount' not in self._constraintInitialized:
@@ -308,7 +351,10 @@ def setNumberedRoomBase(self,row1,col1,rc,value,pm):
 	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
 	hStep = pm * hStep	# Change direction in case we're doing reverse
 	vStep = pm * vStep
-	
+	if type(value) != int:
+		self.setVariableExteriorClue(row-vStep,col-hStep)
+		value = self.cellValues[row-vStep][col-hStep]
+		
 	digits = list(self.digits)
 	varBitmap = self._varBitmap('NumRoomPosRow{:d}Col{:d}RC{:d}'.format(row,col,rc),len(digits))
 	
@@ -325,12 +371,14 @@ def setNumberedRoomBase(self,row1,col1,rc,value,pm):
 			myVStep = -1 * vStep				
 			self.model.Add(self.cellValues[row][col] == digits[i]).OnlyEnforceIf(varBitmap[i])
 			self.model.Add(self.cellValues[myPosRow+(-1*digits[i]-1)*myVStep][myPosCol+(-1*digits[i]-1)*myHStep] == value).OnlyEnforceIf(varBitmap[i])
+	if type(value) != int:
+		return value
 	
 def setNumberedRoom(self,row1,col1,rc,value):
-	self.setNumberedRoomBase(row1,col1,rc,value,1)
+	return self.setNumberedRoomBase(row1,col1,rc,value,1)
 	
 def setReverseNumberedRoom(self,row1,col1,rc,value):
-	self.setNumberedRoomBase(row1,col1,rc,value,-1)
+	return self.setNumberedRoomBase(row1,col1,rc,value,-1)
 
 def setSandwichSum(self,row1,col1,rc,value,digits=[]):
 	# row,col are the coordinates of the cell containing the index of the target cell
@@ -347,7 +395,10 @@ def setSandwichSum(self,row1,col1,rc,value,digits=[]):
 	col = col1 - 1
 	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
 	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
-	
+	if type(value) != int:
+		self.setVariableExteriorClue(row-vStep,col-hStep)
+		value = self.cellValues[row-vStep][col-hStep]
+		
 	varBitmap = self._varBitmap('SandwichPositionsRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth*(self.boardWidth-1))
 	
 	# We loop over all possible positions for the sandwich digits
@@ -369,8 +420,10 @@ def setSandwichSum(self,row1,col1,rc,value,digits=[]):
 
 			if (myMax - myMin) == 1:
 				# This is an adjacent case
-				if value == 0:
+				if type(value) == int and value == 0:
 					pass # There is no additional constraint to put here
+				elif type(value) != int:
+					self.model.Add(value == 0).OnlyEnforceIf(varBitmap[varTrack])
 				else:
 					self.model.AddBoolAnd(varBitmap[varTrack][0].Not()).OnlyEnforceIf(varBitmap[varTrack])
 			else:
@@ -386,13 +439,20 @@ def setOpenfacedSandwichSum(self,row1,col1,rc,value,digit=9):
 	col = col1 - 1
 	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
 	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
-	
+	if type(value) != int:
+		self.setVariableExteriorClue(row-vStep,col-hStep)
+		value = self.cellValues[row-vStep][col-hStep]
+		
 	varBitmap = self._varBitmap('OFSandwichPosRow{:d}Col{:d}RC{:d}'.format(row,col,rc),self.boardWidth)
 	
 	for i in range(self.boardWidth):
 		self.model.Add(self.cellValues[row+i*vStep][col+i*hStep] == digit).OnlyEnforceIf(varBitmap[i])
 		if i == 0:
-			if value != 0:
+			if type(value) == int and value == 0:
+				pass # There is no additional constraint to put here
+			elif type(value) != int:
+				self.model.Add(value == 0).OnlyEnforceIf(varBitmap[i])
+			else:
 				self.model.AddBoolAnd([varBitmap[i][0].Not()]).OnlyEnforceIf(varBitmap[i])	# Bury it, cannot be this case.
 		else:
 			self.model.Add(sum(self.cellValues[row+j*vStep][col+j*hStep] for j in range(i)) == value).OnlyEnforceIf(varBitmap[i])
@@ -408,7 +468,10 @@ def setShortSandwichSum(self,row1,col1,rc,value,depth=6):
 	col = col1 - 1
 	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
 	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
-	
+	if type(value) != int:
+		self.setVariableExteriorClue(row-vStep,col-hStep)
+		value = self.cellValues[row-vStep][col-hStep]
+		
 	varBitmap = self._varBitmap('SandwichPositionsRow{:d}Col{:d}RC{:d}'.format(row,col,rc),depth*(depth-1))
 	
 	# We loop over all possible positions for the sandwich digits
@@ -433,8 +496,10 @@ def setShortSandwichSum(self,row1,col1,rc,value,depth=6):
 
 			if (myMax - myMin) == 1:
 				# This is an adjacent case
-				if value == 0:
+				if type(value) == int and value == 0:
 					pass # There is no additional constraint to put here
+				elif type(value) != int:
+					self.model.Add(value == 0).OnlyEnforceIf(varBitmap[varTrack])
 				else:
 					self.model.AddBoolAnd(varBitmap[varTrack][0].Not()).OnlyEnforceIf(varBitmap[varTrack])
 			else:
@@ -450,7 +515,10 @@ def setConditionalSandwichSum(self,row1,col1,rc,value,digits=[1,9],selectCriteri
 	col = col1 - 1
 	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
 	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
-	
+	if type(value) != int:
+		self.setVariableExteriorClue(row-vStep,col-hStep)
+		value = self.cellValues[row-vStep][col-hStep]
+		
 	# Need for cell transform clues. self.minDigit is the smallest base digit, not necessarily as transformed.
 	myMin = min(self.digits)
 	myMax = max(self.digits)
@@ -820,7 +888,10 @@ def setSkyscraper(self,row1,col1,rc,value,depth=None):
 	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
 	if depth is None:
 		depth = self.boardWidth
-	
+	if type(value) != int:
+		self.setVariableExteriorClue(row-vStep,col-hStep)
+		value = self.cellValues[row-vStep][col-hStep]
+		
 	# Create Boolean variables to determine where cell i in the row (from the correct direction) is greater than each of its predecessors
 	incVars = [[]]
 	for i in range(1,depth):
@@ -847,6 +918,9 @@ def setSkyscraper(self,row1,col1,rc,value,depth=None):
 		
 	self.model.Add(sum([seenInts[i] for i in range(depth)]) == value)
 	
+	if type(value) != int:
+		return value
+	
 def setSkyscraperSum(self,row1,col1,rc,value,depth=None):
 	# row,col are the coordinates of the cell containing the index of the target cell
 	# rc is whether things are row/column
@@ -859,7 +933,10 @@ def setSkyscraperSum(self,row1,col1,rc,value,depth=None):
 	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
 	if depth is None:
 		depth = self.boardWidth
-	
+	if type(value) != int:
+		self.setVariableExteriorClue(row-vStep,col-hStep)
+		value = self.cellValues[row-vStep][col-hStep]
+		
 	# Create Boolean variables to determine where cell i in the row (from the correct direction) is greater than each of its predecessors
 	incVars = [[]]
 	for i in range(1,depth):
@@ -889,7 +966,10 @@ def setSkyscraperSum(self,row1,col1,rc,value,depth=None):
 		self.model.AddBoolAnd([seenBools[i]]).OnlyEnforceIf(incVars[i])
 		
 	self.model.Add(sum([seenInts[i] for i in range(depth)]) == value)
-
+	
+	if type(value) != int:
+		return value
+		
 def setNextToNine(self,row1,col1,rc,values,digit=9):
 	if type(values) is int:
 		values  = [values]
@@ -1416,8 +1496,14 @@ def setRussianDollSum(self,row1,col1,rc,value,overlap='none'):
 				self.model.Add(starts[k] > ends[k-1])
 			case 'crust':
 				self.model.Add(starts[k] >= ends[k-1])
-			case 'any':
-				self.model.Add(starts[k] >= starts[k-1])
+			case 'notfirst':
+				self.model.Add(starts[k] > starts[k-1])
+			case 'lex':
+				switch = self.model.NewBoolVar('RussianDollOverlapSwitch')
+				self.model.Add(starts[k] > starts[k-1]).OnlyEnforceIf(switch)
+				self.model.Add(starts[k] == starts[k-1]).OnlyEnforceIf(switch.Not())
+				self.model.Add(ends[k] > ends[k-1]).OnlyEnforceIf(switch.Not())
+				
 	for k in range(len(value)):
 		pairVars = []
 		for i in range(self.boardWidth):

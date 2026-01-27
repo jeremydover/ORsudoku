@@ -236,6 +236,7 @@ Triple Tabs
 Unicorn Digits
 Uniparity/Equiparity Cages - see Parity Cages
 Unique Pairs Lines
+Variable Exterior Clues
 Vaults
 Weak Palindrome Lines
 Windoku
@@ -1782,13 +1783,13 @@ Numbered Rooms
 setNumberedRoom(row,col,rc,value): sets a numbered room constraint
   row,col: The coordinates of the cell containing the indexing clue, i.e. the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
-  value: The value (1-9) to be placed based on the indexing cell
+  value: The value (1-9) to be placed based on the indexing cell. If this is a variable to be otherwise constrained, use the string 'var', and see Variable External Clues.
   Note: for negative digits, the behavior of a Numbered Room is to count cells from the other side of the row/column, a la a reverse Numbered Room
   
 setReverseNumberedRoom(row,col,rc,value): sets a reverse numbered room constraint, i.e., If the clue is X, the value is placed in cell X counting from the *other*, non-clue end of the row/column.
   row,col: The coordinates of the cell containing the indexing clue, i.e. the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
-  value: The value (1-9) to be placed based on the indexing cell
+  value: The value (1-9) to be placed based on the indexing cell. If this is a variable to be otherwise constrained, use the string 'var', and see Variable External Clues.
   Note: for negative digits, the behavior of a reverse Numbered Room is to count cells from the other side of the row/column, a la regular Numbered Room
 
 Offset Digits
@@ -2159,20 +2160,21 @@ setRussianDollSum(row,col,rc,value,overlap): For each value, asserts there exist
   overlap: (optional, defaults to 'none') Indicates by how much multiple Russian dolls in a row/col can overlap. Possible values are:
     'none': Russian dolls cannot overlap at all
 	'crust': Russian dolls can have overlapping crust, but not interior
-	'any': any amount of overlap is allowed, with the proviso that to keep the dolls in order, the beginning of each must come strictly after the beginning of its predecessor
+	'notfirst': any amount of overlap is allowed, with the proviso that to keep the dolls in order, the beginning of each must come strictly after the beginning of its predecessor
+	'lex': overlap is allowed; ordering is done by (position of first crust,position of last crust) in lexicographic order
 
 Sandwich Sums
 -------------
 setSandwichSum(row,col,rc,value,digits): sets a sandwich sum constraint
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
-  value: The sum of the values between the 1 and 9 in the clued row/column
+  value: The sum of the values between the 1 and 9 in the clued row/column. If this is a variable to be otherwise constrained, use the string 'var', and see Variable External Clues.
   digits (optional): A list of two digits to form the "bread" of the sandwich. Defaults to the minimum and maximum digit.
   
 setOpenfacedSandwichSum(row,col,rc,value,digit): set an open-face sandwich sum clue, i.e. the sum of all digits in the row/col up to a bread digit
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
-  value: The sum of the values before the sandwich digit in the clued row/column
+  value: The sum of the values before the sandwich digit in the clued row/column. If this is a variable to be otherwise constrained, use the string 'var', and see Variable External Clues.
   digit (optional): The sandwich digit. Optional, defaults to 9.
   
 setBeforeNine(row,col,rc,value): an alias for Openfaced sandwich sums, with sandwich digit 9
@@ -2332,13 +2334,13 @@ Skyscrapers
 setSkyscraper(row,col,rc,value,depth): sets a skyscraper constraint, specifying the number of digits that can be "seen" from the clue, where seen means greater than all digits between it and the clue
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
-  value: the number of digits that can be seen
+  value: the number of digits that can be seen. If this is a variable to be otherwise constrained, use the string 'var', and see Variable External Clues.
   depth (optional): only skyscrapers at most <depth> cells from the puzzle edge can be seen. Defaults to whole board.
   
 setSkyscraperSum(row,col,rc,value,depth): sets a skyscraper sum constraint, specifying the SUM OF the number of digits that can be "seen" from the clue, where seen means greater than all digits between it and the clue
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
-  value: the sum of digits that can be seen
+  value: the sum of digits that can be seen. If this is a variable to be otherwise constrained, use the string 'var', and see Variable External Clues.
   depth (optional): only skyscrapers at most <depth> cells from the puzzle edge can be seen. Defaults to whole board.
   
 Slingshots
@@ -2504,6 +2506,18 @@ Unique Pairs Lines
 ------------------
 setUniquePairsLines(inlist): creates a set of lines such that each line has no repeats, and no pair of lines in the set have more than one digit in common
   inlist: list of lists of cell specifications, so a list of lines
+  
+Variable Exterior Clues
+-----------------------
+Some puzzles have exterior clues, such as X-Sums, where the value of the X-Sum is to be determined by the solver based on some other constraints. Not all exterior clued constraints allow variable cluing, the list of currently supported constraints is:
+X-Sums/Reverse X-Sums
+Double X-Sums
+X-Average/Reverse X-Average
+Numbered Room/Reverse Numbered Room
+Sandwich Sums/Open-Face Sandwich Sums (aka Before 9)/Short Sandwich Sums/Conditional Sandwich Sums
+Skyscrapers/Skyscraper Sums
+
+In order to use a variable clue, all you have to do is set the "value" on an exterior clue to be the string 'var' (or any string, really), and the exterior clue variables will be created. To utilize these exterior variables in other contraints, just extend the grid coordinates as you would naturally think to: for normal suokdu the top row is (0,1)...(0,9), the left column is (1,0)...(9,0), the right column is (0,10)...(9,10), and the bottom row is (10,1)...(10,0). These should work with most of the common constraints like lines, Kropkis, XV, etc., but no promises with more exotic constraints, and certainly global constraints like entropy do not extend to the external clues. In addition, clues that implement variable external values will provide the variable as a return.
 
 Weak Palindrome Lines
 ---------------------
@@ -2573,7 +2587,7 @@ X-Sum
 setXSum(row,col,rc,value,depth,depthStyle,broken): set an X sum constraint on a row or column
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
-  value: The sum of the first X cells in the row/column from the clue, where X is the value in the adjacent cell
+  value: The sum of the first X cells in the row/column from the clue, where X is the value in the adjacent cell. If this is a variable to be otherwise constrained, use the string 'var', and see Variable External Clues.
   Note: for negative digits, the behavior of an X-Sum is to take digits from the other side of the row/column, a la a reverse sum
   depth (Optional): depth=1 is the default, which acts like a normal X-Sums clue. If depth is greater than 1, then the cell which picks the length of the sum can be anywhere in the first "depth" cells of the clued row/column. If depth is 0, then the cell which picks the length of the sum can be anywhere where the clued row/column meets the region containing the cell next to the clue.
   depthStyle (Optional): By default, any cell allowed to have the length picker by depth can contain it. depthStyle can be set to 'Smallest' or 'Largest' to force the smallest or largest value in the set of possible cells to be the one chosen.
@@ -2582,7 +2596,7 @@ setXSum(row,col,rc,value,depth,depthStyle,broken): set an X sum constraint on a 
 setReverseXSum(row,col,rc,value,depth,depthStyle,broken): set a reverse X sum constraint on a row or column, where the sum is taken on cells starting from the end of the row/column opposite the clue
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
-  value: The sum of the first X cells on the other side of the row/column from the clue, where X is the value in the adjacent cell
+  value: The sum of the first X cells on the other side of the row/column from the clue, where X is the value in the adjacent cell. If this is a variable to be otherwise constrained, use the string 'var', and see Variable External Clues.
   Note: for negative digits, the behavior of a Reverse X-Sum is to take digits from the other side of the row/column, a la regular X-Sum
   depth (Optional): depth=1 is the default, which acts like a normal X-Sums clue. If depth is greater than 1, then the cell which picks the length of the sum can be anywhere in the first "depth" cells of the clued row/column. If depth is 0, then the cell which picks the length of the sum can be anywhere where the clued row/column meets the region containing the cell next to the clue.
   depthStyle (Optional): By default, any cell allowed to have the length picker by depth can contain it. depthStyle can be set to 'Smallest' or 'Largest' to force the smallest or largest value in the set of possible cells to be the one chosen.
@@ -2591,7 +2605,7 @@ setReverseXSum(row,col,rc,value,depth,depthStyle,broken): set a reverse X sum co
 setDoubleXSum(row,col,rc,value): set a double X sum constraint on a row or column, where the clue is the sum of the X sums taken from both sides of the row/column
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
-  value: The sum of the first X cells in the row/column from the clue, where X is the value in the adjacent cell, plus the sum of the first Y cells in the row/column on the other side of the row/column from the clue, where Y is the value in the cell furthest from the clue.
+  value: The sum of the first X cells in the row/column from the clue, where X is the value in the adjacent cell, plus the sum of the first Y cells in the row/column on the other side of the row/column from the clue, where Y is the value in the cell furthest from the clue. If this is a variable to be otherwise constrained, use the string 'var', and see Variable External Clues.
   Note: for negative digits, the behavior of either of the sums in a double sum is exactly as in X-sums, to take the sum from the other side
   
 setXAverage(row,col,rc,value): like an X Sum, but specifies the average of the cells
