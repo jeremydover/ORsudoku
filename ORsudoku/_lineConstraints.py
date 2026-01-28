@@ -1023,6 +1023,24 @@ def _setPartitionLine(self,inlist,criterion,comparison,mode):
 							self.model.Add(mySum != comparison[2]).OnlyEnforceIf([enforced[i],myBools[i].Not()])
 			self.model.AddBoolOr(myBools)
 			
+		case 'BiggestIs':
+			myBools = [self.model.NewBoolVar('ThisSumIsEqualToTheTarget') for i in range(len(L))]
+			for i in range(len(L)):
+				mySum = sum(runCellSum[i][j] for j in range(len(L)))
+				self.model.AddBoolAnd(myBools[i].Not()).OnlyEnforceIf(enforced[i].Not())
+				self.model.Add(mySum == comparison[1]).OnlyEnforceIf([enforced[i],myBools[i]])
+				self.model.Add(mySum < comparison[1]).OnlyEnforceIf([enforced[i],myBools[i].Not()])
+			self.model.AddBoolOr(myBools)
+
+		case 'SmallestIs':
+			myBools = [self.model.NewBoolVar('ThisSumIsEqualToTheTarget') for i in range(len(L))]
+			for i in range(len(L)):
+				mySum = sum(runCellSum[i][j] for j in range(len(L)))
+				self.model.AddBoolAnd(myBools[i].Not()).OnlyEnforceIf(enforced[i].Not())
+				self.model.Add(mySum == comparison[1]).OnlyEnforceIf([enforced[i],myBools[i]])
+				self.model.Add(mySum > comparison[1]).OnlyEnforceIf([enforced[i],myBools[i].Not()])
+			self.model.AddBoolOr(myBools)
+			
 		case 'AllAre':
 			for i in range(len(L)):
 				mySum = sum(runCellSum[i][j] for j in range(len(L)))

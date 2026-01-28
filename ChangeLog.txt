@@ -1,3 +1,8 @@
+1/28/2026
+	Added new selection criteria for hanging clues: Before/AfterInstance.
+	Implement OnlyEnforceIf ambiguity enforcement for hanging clues (was done for more general conditional lines before, easy port).
+	New test cases.
+
 1/27/2026 bis
 	Added support for variable exterior clues for some common exterior constraints which can be used in other constraints, and included some test cases.
 	Note: I try not to do this, but there may be some backward compatibility issues. For constraints where this has been implemented, if you abused the API by passing a variable to emulate this functionality, this passed variable will be ignored and left to flap. The good news is that this functionality does exactly what you were trying to do, so it should be readily fixable.

@@ -1088,7 +1088,75 @@ def _selectCellsOnLine(self,L,selectCriteria,OEI=[]):
 							self.model.AddBoolAnd(switch).OnlyEnforceIf([criterionBools[i]] + OEI)
 							self.model.Add(self.cellValues[L[i][0]][L[i][1]] - target == value).OnlyEnforceIf([criterionBools[i].Not(),switch] + OEI)
 							self.model.Add(target - self.cellValues[L[i][0]][L[i][1]] == value).OnlyEnforceIf([criterionBools[i].Not(),switch.Not()] + OEI)
-											
+			
+			case 'BeforeInstance'|'AfterInstance':
+				x = re.search("(Before|After)Instance",criterion[0])
+				beforeAfter = x.group(1)
+				isInstance = [self.model.NewBoolVar('BeforeInstanceSelectionVars') for i in range(len(L))]
+				instanceNumber = [self.model.NewIntVar(0,len(L),'BeforeInstanceSelectionVars') for i in range(len(L))]
+				maxInstance = self.model.NewIntVar(0,len(L),'BeforeInstanceSelectionMaximum')
+				self.model.AddMaxEquality(maxInstance,instanceNumber)
+				
+				for x in OEI:
+					self.model.AddBoolAnd(isInstance).OnlyEnforceIf(x.Not())
+					for i in range(len(L)):
+						self.model.Add(instanceNumber[i] == 0).OnlyEnforceIf(x.Not())
+
+				if criterion[2][0] == 'DigitList':
+					for i in range(len(L)):
+						for d in self.digits:
+							if d in criterion[2][1]:
+								self.model.Add(self.cellValues[L[i][0]][L[i][1]] != d).OnlyEnforceIf([isInstance[i].Not()]+OEI)
+							else:
+								self.model.Add(self.cellValues[L[i][0]][L[i][1]] != d).OnlyEnforceIf([isInstance[i]]+OEI)
+				else:
+					getattr(self,'_initialize'+criterion[2][0])()
+					myCells = getattr(self,'cell'+criterion[2][0])
+					for i in range(len(L)):
+						match criterion[2][1]:
+							case self.LE:
+								self.model.Add(myCells[L[i][0]][L[i][1]] <= criterion[2][2]).OnlyEnforceIf([isInstance[i]]+OEI)
+								self.model.Add(myCells[L[i][0]][L[i][1]] > criterion[2][2]).OnlyEnforceIf([isInstance[i].Not()]+OEI)
+							case self.EQ:
+								self.model.Add(myCells[L[i][0]][L[i][1]] == criterion[2][2]).OnlyEnforceIf([isInstance[i]]+OEI)
+								self.model.Add(myCells[L[i][0]][L[i][1]] != criterion[2][2]).OnlyEnforceIf([isInstance[i].Not()]+OEI)
+							case self.GE:
+								self.model.Add(myCells[L[i][0]][L[i][1]] >= criterion[2][2]).OnlyEnforceIf([isInstance[i]]+OEI)
+								self.model.Add(myCells[L[i][0]][L[i][1]] < criterion[2][2]).OnlyEnforceIf([isInstance[i].Not()]+OEI)
+							case self.NE:
+								self.model.Add(myCells[L[i][0]][L[i][1]] != criterion[2][2]).OnlyEnforceIf([isInstance[i]]+OEI)
+								self.model.Add(myCells[L[i][0]][L[i][1]] == criterion[2][2]).OnlyEnforceIf([isInstance[i].Not()]+OEI)
+
+				if beforeAfter == 'Before':
+					for i in range(len(L)):
+						if i > 0:
+							self.model.Add(instanceNumber[i] == instanceNumber[i-1] + 1).OnlyEnforceIf([isInstance[i]]+OEI)
+							self.model.Add(instanceNumber[i] == instanceNumber[i-1]).OnlyEnforceIf([isInstance[i].Not()]+OEI)
+						else:
+							self.model.Add(instanceNumber[0] == 1).OnlyEnforceIf([isInstance[0]]+OEI)
+							self.model.Add(instanceNumber[0] == 0).OnlyEnforceIf([isInstance[0].Not()]+OEI)
+						if criterion[1] == 'last':
+							self.model.Add(instanceNumber[i] < maxInstance).OnlyEnforceIf([criterionBools[i]]+OEI)
+							self.model.Add(instanceNumber[i] >= maxInstance).OnlyEnforceIf([criterionBools[i].Not()]+OEI)
+						else:
+							self.model.Add(instanceNumber[i] < criterion[1]).OnlyEnforceIf([criterionBools[i]]+OEI)
+							self.model.Add(instanceNumber[i] >= criterion[1]).OnlyEnforceIf([criterionBools[i].Not()]+OEI)
+				else:
+					# Note: we reverse the instance labelling for extracting 'After' digits, so that the breakpoints in instance numbers fall correctly
+					for i in range(len(L)):
+						if i < len(L)-1:
+							self.model.Add(instanceNumber[i] == instanceNumber[i+1] + 1).OnlyEnforceIf([isInstance[i]]+OEI)
+							self.model.Add(instanceNumber[i] == instanceNumber[i+1]).OnlyEnforceIf([isInstance[i].Not()]+OEI)
+						else:
+							self.model.Add(instanceNumber[-1] == 1).OnlyEnforceIf([isInstance[-1]]+OEI)
+							self.model.Add(instanceNumber[-1] == 0).OnlyEnforceIf([isInstance[-1].Not()]+OEI)
+						if criterion[1] == 'last':
+							self.model.Add(instanceNumber[i] == 0).OnlyEnforceIf([criterionBools[i]]+OEI)
+							self.model.Add(instanceNumber[i] > 0).OnlyEnforceIf([criterionBools[i].Not()]+OEI)
+						else:
+							self.model.Add(instanceNumber[i] <= maxInstance-criterion[1]).OnlyEnforceIf([criterionBools[i]]+OEI)
+							self.model.Add(instanceNumber[i] > maxInstance-criterion[1]).OnlyEnforceIf([criterionBools[i].Not()]+OEI)
+								
 		criteriaBools.insert(criterionNumber,criterionBools)
 		criterionNumber = criterionNumber + 1
 	
@@ -1154,12 +1222,12 @@ def _partitionMonotone(self,L,mode,OEI):
 		self.model.Add(runNumber[i] == runNumber[i-1]+1).OnlyEnforceIf([runSwitch[i]] + OEI)
 	return runNumber
 
-def _selectCellsInRowCol(self,row,col,rc,selectCriteria):
+def _selectCellsInRowCol(self,row,col,rc,selectCriteria,OEI=[]):
 	
 	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
 	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
 	L = [(row+i*vStep,col+i*hStep) for i in range(self.boardWidth)]
-	selectionCells = self._selectCellsOnLine(L,selectCriteria)
+	selectionCells = self._selectCellsOnLine(L,selectCriteria,OEI)
 	return selectionCells
 
 	
@@ -1418,12 +1486,12 @@ def _terminateCellsOnLine(self,L,selectTerminator,OEI=[]):
 		
 	return terminatorCells
 	
-def _terminateCellsInRowCol(self,row,col,rc,selectTerminator):
+def _terminateCellsInRowCol(self,row,col,rc,selectTerminator,OEI=[]):
 	
 	hStep = 0 if rc == self.Col else (1 if col == 0 else -1)
 	vStep = 0 if rc == self.Row else (1 if row == 0 else -1)
 	L = [(row+i*vStep,col+i*hStep) for i in range(self.boardWidth)]
-	terminatorCells = self._terminateCellsOnLine(L,selectTerminator)
+	terminatorCells = self._terminateCellsOnLine(L,selectTerminator,OEI)
 	return terminatorCells
 	
 def _evaluateHangingClues(self,partial,terminatorCells,value,terminateOn,includeTerminator,comparator=None,forceTermination=True,OEI=[],failedTerminationBehavior='partial'):

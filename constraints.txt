@@ -580,13 +580,15 @@ setShakenCloneRegion(list,noRepeat): creates a set of regions that contain the s
   
 Conditional Lines
 -----------------
-setConditionalCountLine(list,value,selectCriteria,terminationCriteria,terminateOn,includeTerminator,comparator,forceTermination): analogous to a Hanging Count, but along a line instead of just in a column
+setConditionalCountLine(list,value,selectCriteria,terminationCriteria,terminateOn,includeTerminator,comparator,forceTermination,OEI,failedTerminationBehavior): analogous to a Hanging Count, but along a line instead of just in a column
   list: list of cell specifications
-  See Hanging Sums for a description of all other parameters
+  See Hanging Sums for a description of all other parameters, except
+  
+  failedTerminationBehavior: There are two options: 'partial' and 'zero', with 'partial' being the default. For 'partial', the solver counts/sums to the end of the specified row/column/line for purposes of comparison with 'value'. If this option is selected, the last cell on the line is NOT considered a terminator for purposes of "includeTerminator", so *all* cells are included. For 'zero', the solver insists that 'value' be 0...this can be a useful way for testing negative conditions, since the value on failure will be predictable.
 
-setConditionalSumLine(list,value,selectCriteria,terminationCriteria,terminateOn,includeTerminator,comparator,forceTermination): analogous to a Hanging Sum, but along a line instead of just in a column
+setConditionalSumLine(list,value,selectCriteria,terminationCriteria,terminateOn,includeTerminator,comparator,forceTermination,OEI,failedTerminationBehavior): analogous to a Hanging Sum, but along a line instead of just in a column
   list: list of cell specifications
-  See Hanging Sums for a description of all other parameters
+  See Conditional Count Line above.
   
 setConditionalInstanceLine(list,values,selectCriteria,terminationCriteria,terminateOn,includeTerminator,negativeConstraint,forceTermination): analogous to a Hanging Instance, but along a line instead of just in a column
   list: list of cell specifications
@@ -1011,7 +1013,7 @@ Hanging Sums
 ------------
 This is a function which is probably overloaded with capability, but generically, it allows the setter to define outside sum clues
 which give the sum of some selection of digits, up to some terminator. The syntax is:
-setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='First',includeTerminator=True,comparator=EQ,forceTermination=True,failedTerminationBehavior='partial')
+setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='First',includeTerminator=True,comparator=EQ,forceTermination=True,OEI=[])
   row,col: The coordinates of the cell next to which the clue value sits
   rc: Indicates whether the clue applies to the row or column; use the Row or Column class variables
   value: the sum of all the digits select by selectSummands which occur before a terminating cell
@@ -1178,6 +1180,14 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
 	Values[1]: a comparator: use the class variables GE, EQ or LE, or NE
 	Values[2]: the value against which to compare the difference
 	
+	Property: '(Before|After)Instance'
+	For this property, we pick all cells which come before(after) a fixed appearance of a digit from some specification, e.g. pick all digits that come before the second even digit, pick all digits that come after the last of [1,2,3].
+	Values[0]: Either an integer indicating the ordinal instance (1 = first, 2 = second) before/after which we extract digits
+	Values[1]: The property specifying the possible boundary digits. Options are:
+	  ('DigitList',list of digits): a fixed list of digits to compare to
+	  ('Parity|Entropy|Modular|Primality|DigitSize',comparator,value): a property to compare to, with comparator and value given
+	As an example, setHangingSum(1,1,p.Col,17,[('AfterInstance',1,('Parity',p.EQ,0))],[['Last']]) will pull all digits after the first even digit in the column.
+	
   selectTerminator: a *list* of conditions (tuples) which describe when the sum should stop. As with summand selection,
   each tuple starts with a sting containing a property name, and is followed by values specific to that property. Note that multiple
   selection criteria may be given, but for termination they are combined with a logical OR. There are three styles of termination, defined
@@ -1204,7 +1214,7 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
 	Values[1]: nth instance of target to stop at
 	
 	Terminator: '(Parity|Entropy|Modular|Primality|DigitSize)(Change|Repeat)Reached'
-	Again, apologies for the regex notation, but there are 8 possible combinations here. This terminator keeps track of the number of changes or repeats in some property (parity, entropy, etc.), and terminates on a specified instance of said change.
+	Again, apologies for the regex notation, but there are 10 possible combinations here. This terminator keeps track of the number of changes or repeats in some property (parity, entropy, etc.), and terminates on a specified instance of said change.
 	Value: nth instance of target
 	Note: in any case, the terminating cell is the *second* in the pair where the change/repeat is determined, so the first cell can never be a terminator.
 	
@@ -1247,6 +1257,12 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
   
   forceTermination: the default behavior is that if no terminator is found (e.g., terminator is 'RepeatReached' on a line with no repeats), then the solver considers there is no solution to the puzzle. If forceTermination is set to False, the solver does not fail if no cell meets the termination condition; behavior depends on the failedTerminationBehavior argument...see below.
   
+  OEI: Only Enforce If. This is useful for ambiguity solving, but requires digging into the SAT solver modelling a bit. OEI is a list of model Boolean variables, so that the line condition is only enforced when all of the Booleans are true. The most typical use case looks like:
+    switch = p.model.NewBoolVar('switch')
+	p.setHangingSum(first condition,OEI=[switch])
+	p.setHangingSum(second condition,OEI=[switch.Not()])
+  In this case, either one of the two conditions may be met. Possibly both, but that will cause non-unique solutions as the switch variable will flap.
+  
   Example:
   p.setHangingSum(1,2,p.Col,14,[],[('Fixed',1),('DigitSetReached',[2,4,6,8],1),('DigitSetReached',[1,3,5,7,9],1)],terminateOn='Any')
   
@@ -1256,9 +1272,7 @@ setHangingSum(row,col,rc,value,selectSummands,selectTerminator,terminateOn='Firs
   p.setHangingSum(1,2,p.Col,14,[],[('Fixed',1),('ParityChangeReached',1)],terminateOn='Any')
   
   The sum can again terminate in the first cell, or it continues to the first parity change.
-  
-  failedTerminationBehavior: There are two options: 'partial' and 'zero', with 'partial' being the default. For 'partial', the solver counts/sums to the end of the specified row/column/line for purposes of comparison with 'value'. If this option is selected, the last cell on the line is NOT considered a terminator for purposes of "includeTerminator", so *all* cells are included. For 'zero', the solver insists that 'value' be 0...this can be a useful way for testing negative conditions, since the value on failure will be predictable.
-  
+    
 Related functions:
 setHangingCount(row,col,rc,value,selectSummands,selectTerminator,terminateOn='First',includeTerminator=True,comparator=EQ,forceTermination=True) - counts the number of digits matched, instead of their sum
 
@@ -1943,6 +1957,10 @@ setPartitionCountLine(inlist,criterion,comparison):
 	'OneIs': one of the partitions must have a sum/count matching the condition
 	  Value[1]: a comparator: use the class variables GE, EQ or LE, or NE
 	  Value[2]: the value against which to compare the difference
+	'BiggestIs': at least one of the partitions must have size equal to the condition, and the rest must be smaller
+	  Value[1]: the biggest value appearing
+	'SmallestIs': at least one of the partitions must have size equal to the condition, and the rest must be bigger
+	  Value[1]: the smallest value appearing  
 	'AllAre': all of the partitions must have a sum/count matching the condition
 	  Value[1]: a comparator: use the class variables GE, EQ or LE, or NE
 	  Value[2]: the value against which to compare the difference

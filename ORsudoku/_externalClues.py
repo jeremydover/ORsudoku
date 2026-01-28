@@ -1242,7 +1242,7 @@ def setBust(self,row1,col1,rc,value,targetSum=21):
 	self.model.Add(sum(self.cellValues[row+j*vStep][col+j*hStep] for j in range(value-1)) <= targetSum)
 	self.model.Add(sum(self.cellValues[row+j*vStep][col+j*hStep] for j in range(value)) > targetSum)
 	
-def setHangingSum(self,row1,col1,rc,value,selectSummands=None,selectTerminator=None,terminateOn='First',includeTerminator=True,comparator=None,forceTermination=True):
+def setHangingSum(self,row1,col1,rc,value,selectSummands=None,selectTerminator=None,terminateOn='First',includeTerminator=True,comparator=None,forceTermination=True,OEI=[]):
 	# OK, this one is going to need some comments, because I'm hoping it will cover a LOT of ground. Basically
 	# this is going to be a general function to cover a number of different constraints that start at the grid
 	# boundary and continue in, selecting digits based on some criteria, and terminating at a cell, determined
@@ -1265,21 +1265,25 @@ def setHangingSum(self,row1,col1,rc,value,selectSummands=None,selectTerminator=N
 	
 	# Now I'm going to create selection Booleans to evaluate each cell against the selectSummand criteria. 
 	# Notice how I'm clever enough to avoid defining selectSummands as long as I can. #genius
-	selectionCells = self._selectCellsInRowCol(row,col,rc,selectSummands)
+	selectionCells = self._selectCellsInRowCol(row,col,rc,selectSummands,OEI)
 	
 	# Tie the variables together
-	self.model.Add(partialSum[0] == self.cellValues[row][col]).OnlyEnforceIf(selectionCells[0])
-	self.model.Add(partialSum[0] == 0).OnlyEnforceIf(selectionCells[0].Not())
+	self.model.Add(partialSum[0] == self.cellValues[row][col]).OnlyEnforceIf([selectionCells[0]]+OEI)
+	self.model.Add(partialSum[0] == 0).OnlyEnforceIf([selectionCells[0].Not()]+OEI)
 	for i in range(1,self.boardWidth):
-		self.model.Add(partialSum[i] == partialSum[i-1] + self.cellValues[row+i*vStep][col+i*hStep]).OnlyEnforceIf(selectionCells[i])
-		self.model.Add(partialSum[i] == partialSum[i-1]).OnlyEnforceIf(selectionCells[i].Not())
+		self.model.Add(partialSum[i] == partialSum[i-1] + self.cellValues[row+i*vStep][col+i*hStep]).OnlyEnforceIf([selectionCells[i]]+OEI)
+		self.model.Add(partialSum[i] == partialSum[i-1]).OnlyEnforceIf([selectionCells[i].Not()]+OEI)
+		
+	for x in OEI:
+		for i in range(self.boardWidth):
+			self.model.Add(partialSum[i] == 0).OnlyEnforceIf(x.Not())
 	
 	# Now create terminator conditions
-	terminatorCells = self._terminateCellsInRowCol(row,col,rc,selectTerminator)
+	terminatorCells = self._terminateCellsInRowCol(row,col,rc,selectTerminator,OEI)
 	
-	self._evaluateHangingClues(partialSum,terminatorCells,value,terminateOn,includeTerminator,comparator,forceTermination)
+	self._evaluateHangingClues(partialSum,terminatorCells,value,terminateOn,includeTerminator,comparator,forceTermination,OEI)
 	
-def setHangingCount(self,row1,col1,rc,value,selectCounts=None,selectTerminator=None,terminateOn='First',includeTerminator=True,comparator=None,forceTermination=True):
+def setHangingCount(self,row1,col1,rc,value,selectCounts=None,selectTerminator=None,terminateOn='First',includeTerminator=True,comparator=None,forceTermination=True,OEI=[]):
 
 	row = row1 - 1
 	col = col1 - 1
@@ -1291,19 +1295,23 @@ def setHangingCount(self,row1,col1,rc,value,selectCounts=None,selectTerminator=N
 	
 	# Now I'm going to create selection Booleans to evaluate each cell against the selectSummand criteria. 
 	# Notice how I'm clever enough to avoid defining selectSummands as long as I can. #genius
-	selectionCells = self._selectCellsInRowCol(row,col,rc,selectCounts)
+	selectionCells = self._selectCellsInRowCol(row,col,rc,selectCounts,OEI)
 	
 	# Tie the variables together
-	self.model.Add(partialCount[0] == 1).OnlyEnforceIf(selectionCells[0])
-	self.model.Add(partialCount[0] == 0).OnlyEnforceIf(selectionCells[0].Not())
+	self.model.Add(partialCount[0] == 1).OnlyEnforceIf([selectionCells[0]]+OEI)
+	self.model.Add(partialCount[0] == 0).OnlyEnforceIf([selectionCells[0].Not()]+OEI)
 	for i in range(1,self.boardWidth):
-		self.model.Add(partialCount[i] == partialCount[i-1] + 1).OnlyEnforceIf(selectionCells[i])
-		self.model.Add(partialCount[i] == partialCount[i-1]).OnlyEnforceIf(selectionCells[i].Not())
+		self.model.Add(partialCount[i] == partialCount[i-1] + 1).OnlyEnforceIf([selectionCells[i]]+OEI)
+		self.model.Add(partialCount[i] == partialCount[i-1]).OnlyEnforceIf([selectionCells[i].Not()]+OEI)
+		
+	for x in OEI:
+		for i in range(self.boardWidth):
+			self.model.Add(partialCount[i] == 0).OnlyEnforceIf(x.Not())
 	
 	# Now create terminator conditions
-	terminatorCells = self._terminateCellsInRowCol(row,col,rc,selectTerminator)
+	terminatorCells = self._terminateCellsInRowCol(row,col,rc,selectTerminator,OEI)
 	
-	self._evaluateHangingClues(partialCount,terminatorCells,value,terminateOn,includeTerminator,comparator,forceTermination)
+	self._evaluateHangingClues(partialCount,terminatorCells,value,terminateOn,includeTerminator,comparator,forceTermination,OEI)
 	
 def setHangingAverage(self,row1,col1,rc,value,selectCounts=None,selectTerminator=None,terminateOn='First',includeTerminator=True):
 
