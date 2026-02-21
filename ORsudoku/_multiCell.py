@@ -854,6 +854,36 @@ def setRankedCage(self,inlist,ranklist):
 			
 	for x in ranklist:
 		self.model.Add(myRank[x[0]-1] == x[1])
+		
+def setGravityCage(self,inlist,dir1,dir2=-1):
+	self.setCage(inlist)
+	
+	L = self._procCellList(inlist)
+	if dir2 < 0:
+		dirs = [dir1]
+	else:
+		dirs = [dir1,dir2]
+	for dir in dirs:
+		match dir:
+			case self.Left:
+				d1 = self.Horz
+				d2 = 1
+			case self.Right:
+				d1 = self.Horz
+				d2 = -1
+			case self.Up:
+				d1 = self.Vert
+				d2 = 1
+			case self.Down:
+				d1 = self.Vert
+				d2 = -1
+		for i in range(len(L)):
+			for j in range(i+1,len(L)):
+				if L[i][d1] == L[j][d1]: # If L/R, need rows the same, If U/D, need columns
+					if L[i][1-d1] < L[j][1-d1]: # Cell is left of/above cell j
+						self.model.Add(d2*(self.cellValues[L[i][0]][L[i][1]] - self.cellValues[L[j][0]][L[j][1]]) > 0)
+					else:
+						self.model.Add(d2*(self.cellValues[L[j][0]][L[j][1]] - self.cellValues[L[i][0]][L[i][1]]) > 0)
 	
 def setCapsule(self,inlist):
 	# A capsule has the same number of even and odd digits

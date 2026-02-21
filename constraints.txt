@@ -97,6 +97,7 @@ Global Modular (see Global Entropy)
 Global Neighbor Sums
 Global Orthogonal Conditions
 Global Whispers (Dutch, et. al.)
+Gravity Cage - see Killer Cages
 Gurth's Symmetric Placement (GSP)
 Hanging Sums/Counts/Averages/Instances
 Hidden Arrows - see Missing Multi-Digit Arrow under Arrows
@@ -165,6 +166,7 @@ Parity Mirror - see Diagonal Mirrors
 Parity Party
 Parity Quads (2x2 regions which contain both parities)
 Parity Snakes
+Partial Palindrome Line - see Palindrome Line
 Partition Lines
 Pencilmarks
 Pool
@@ -1468,6 +1470,11 @@ setRankedCage(cellList,rankList): creates a killer cage with no repeats, but no 
    clued.
    cellList: list of cell specifications
    rankList: list of tuples, where the first element of a tuple is the index of the clued cell in cellList (1-based, so first cell is 1), and the second element is its rank in the cage (1 is smallest, 2 is second smallest, etc.)
+   
+ setGravityCage(list,dir1,dir2): creates a cage without repeats where the numbers increase in the given direction(s)
+   list: list of cells in the cage
+   dir1: Use class variables Left, Right, Up, Down. Direction of increase within row/column. For example, if Left, cells in the same row will increase from right to left.
+   dir2: (optional) A second direction on the other axis for increase
   
 Kropki and Kropki Pairs
 -----------------------
@@ -1841,6 +1848,15 @@ setPalindromeLine(list): creates a palindrome line constraint
 setParindromeLine(list): creates a parindrome line constraint, where only parity has to match 
   list: a list of cell specifications
   
+setPartialPalindromeLine(list,criteria): creates a line on which a palindrome exists, but may not take up the entire line
+  list: a list of cell specifications
+  criteria: a list of criteria the palindrome must meet. Each criterion is a 3-tuple.
+    value[0]: the property to require, currently supported 'Length' and 'Sum'
+	value[1]: a comparator, use class variables EQ, GE and LE...note, NE is not supported
+	value[2]: the value to which compare the property
+	
+  For example, the criteria list [('Length',p.LE,5)] looks for palindromes of length less than 5. Note however that such a palindrome could be part of a longer palindrome, but the search will fail unless a shorter palindrome is found. As another example, the criteria [('Length',p.GE,3),('Sum',p.EQ,8)] will look for palindromes of length at least three whos digits sum to 8.
+  
 Parity Cages
 ------------
 This section contains a variety of cages which make assertions about the distribution of digits by parity in the area. Note that none of them fundamentally require digits in the cage to be distinct; that can be forced by using setCage on the same area, without specifying a sum.
@@ -1964,6 +1980,16 @@ setPartitionCountLine(inlist,criterion,comparison):
 	'AllAre': all of the partitions must have a sum/count matching the condition
 	  Value[1]: a comparator: use the class variables GE, EQ or LE, or NE
 	  Value[2]: the value against which to compare the difference
+	
+	Some comparisons for Partiton Sum Lines only:
+	'OneSuitablyLongIs': one of the partitions must have a sum matching the condition, and must be at least a certain length
+	  Value[1]: a comparator: use the class variables GE, EQ or LE, or NE
+	  Value[2]: the value against which to compare the difference
+	  Value[3]: minimum length of run
+	'AllSuitablyLongAre': all of the partitions with length at least a given amount must have a sum matching the condition
+	  Value[1]: a comparator: use the class variables GE, EQ or LE, or NE
+	  Value[2]: the value against which to compare the difference
+	  Value[3]: minimum length of run
 	  
 The externally clued versions are:
 setHangingPartitionSum(row,col,rc,criterion,comparison)

@@ -869,7 +869,7 @@ def _setConditionalSegment(self,countSum,inlist,value,selectInitiator=None,selec
 	Lunproc = [(L[i][0]+1,L[i][1]+1) for i in range(len(L))]
 	
 	# Step 1: Initiator cells. A lot of this code can just be modified from the analogous terminators
-	initiatorCells = [self.model.NewBoolVar('ConditionalCountRayInitiator{:d}'.format(k)) for k in range(self.boardWidth)]
+	initiatorCells = [self.model.NewBoolVar('ConditionalCountRayInitiator{:d}'.format(k)) for k in range(len(L))]
 	self.allVars = self.allVars + initiatorCells
 	self.model.AddBoolOr(initiatorCells)
 	
@@ -999,11 +999,13 @@ def _setPartitionLine(self,inlist,criterion,comparison,mode):
 				runSum = self.model.NewIntVar(0,len(L),'')
 			for i in range(len(L)):
 				self.model.Add(sum(runCellSum[i][j] for j in range(len(L))) == runSum).OnlyEnforceIf(enforced[i])
+				
 		case 'Different':
 			for i in range(len(L)):
 				for k in range(i+1,len(L)):
 					self.model.Add(sum(runCellSum[i][j] for j in range(len(L))) != sum(runCellSum[k][j] for j in range(len(L)))).OnlyEnforceIf([enforced[i],enforced[k]])
-		case 'OneIs':
+					
+		case 'OneIs'|'OneSuitablyLongIs':
 			myBools = [self.model.NewBoolVar('ThisSumIsEqualToTheTarget') for i in range(len(L))]
 			for i in range(len(L)):
 				mySum = sum(runCellSum[i][j] for j in range(len(L)))
@@ -1022,7 +1024,22 @@ def _setPartitionLine(self,inlist,criterion,comparison,mode):
 							self.model.Add(mySum == comparison[2]).OnlyEnforceIf([enforced[i],myBools[i]])
 							self.model.Add(mySum != comparison[2]).OnlyEnforceIf([enforced[i],myBools[i].Not()])
 			self.model.AddBoolOr(myBools)
-			
+			if comparison[0] == 'OneSuitablyLongIs':
+				runCellCount = [[self.model.NewIntVar(0,len(L),'RunNumberValues') for i in range(len(L))] for j in range(len(L))]
+				myCountBools = [self.model.NewBoolVar('ThisSumIsLongEnough') for i in range(len(L))]
+				myJointBools = [self.model.NewBoolVar('BothSumAndCountMatch') for i in range(len(L))]
+				
+				for i in range(len(L)):
+					self.model.AddBoolAnd(myCountBools[i].Not()).OnlyEnforceIf(enforced[i].Not())
+					self.model.AddBoolAnd([myBools[i],myCountBools[i]]).OnlyEnforceIf(myJointBools[i])
+					self.model.AddBoolOr([myBools[i].Not(),myCountBools[i].Not()]).OnlyEnforceIf(myJointBools[i].Not())
+					for j in range(len(L)):
+						self.model.Add(runCellCount[i][j] == 1).OnlyEnforceIf(runCellMx[i][j])
+						self.model.Add(runCellCount[i][j] == 0).OnlyEnforceIf(runCellMx[i][j].Not())
+					self.model.Add(sum(runCellCount[i][j] for j in range(len(L))) >= comparison[3]).OnlyEnforceIf([enforced[i],myCountBools[i]])
+					self.model.Add(sum(runCellCount[i][j] for j in range(len(L))) < comparison[3]).OnlyEnforceIf([enforced[i],myCountBools[i].Not()])
+				self.model.AddBoolOr(myJointBools)
+					
 		case 'BiggestIs':
 			myBools = [self.model.NewBoolVar('ThisSumIsEqualToTheTarget') for i in range(len(L))]
 			for i in range(len(L)):
@@ -1053,10 +1070,69 @@ def _setPartitionLine(self,inlist,criterion,comparison,mode):
 							self.model.Add(mySum != comparison[2]).OnlyEnforceIf(enforced[i])
 						case self.EQ:
 							self.model.Add(mySum == comparison[2]).OnlyEnforceIf(enforced[i])
+							
+		case 'AllSuitablyLongAre':
+			runCellCount = [[self.model.NewIntVar(0,len(L),'RunNumberValues') for i in range(len(L))] for j in range(len(L))]
+			myCountBools = [self.model.NewBoolVar('ThisSumIsLongEnough') for i in range(len(L))]
+			for i in range(len(L)):
+				for j in range(len(L)):
+					self.model.Add(runCellCount[i][j] == 1).OnlyEnforceIf(runCellMx[i][j])
+					self.model.Add(runCellCount[i][j] == 0).OnlyEnforceIf(runCellMx[i][j].Not())
+				self.model.AddBoolAnd(myCountBools[i]).OnlyEnforceIf(enforced[i].Not())
+				self.model.Add(sum(runCellCount[i][j] for j in range(len(L))) >= comparison[3]).OnlyEnforceIf([enforced[i],myCountBools[i]])
+				self.model.Add(sum(runCellCount[i][j] for j in range(len(L))) < comparison[3]).OnlyEnforceIf([enforced[i],myCountBools[i].Not()])
+				mySum = sum(runCellSum[i][j] for j in range(len(L)))
+				match comparison[1]:
+						case self.LE:
+							self.model.Add(mySum <= comparison[2]).OnlyEnforceIf([enforced[i],myCountBools[i]])
+						case self.GE:
+							self.model.Add(mySum >= comparison[2]).OnlyEnforceIf([enforced[i],myCountBools[i]])
+						case self.NE:
+							self.model.Add(mySum != comparison[2]).OnlyEnforceIf([enforced[i],myCountBools[i]])
+						case self.EQ:
+							self.model.Add(mySum == comparison[2]).OnlyEnforceIf([enforced[i],myCountBools[i]])
 			
 def setPartitionSumLine(self,inlist,criterion,comparison):
 	self._setPartitionLine(inlist,criterion,comparison,'sum')
 		
 def setPartitionCountLine(self,inlist,criterion,comparison):
 	self._setPartitionLine(inlist,criterion,comparison,'count')
-		
+
+def setPartialPalindromeLine(self,inlist,criteria):
+	L = self._procCellList(inlist)
+	minLength = 1
+	maxLength = len(L)
+	minSum = 0
+	maxSum = len(L)*self.maxDigit
+	for x in criteria:
+		match x[0]:
+			case 'Length':
+				match x[1]:
+					case self.LE:
+						maxLength = x[2]
+					case self.GE:
+						minLength = x[2]
+					case self.EQ:
+						maxLength = x[2]
+						minLength = x[2]
+			case 'Sum':
+				match x[1]:
+					case self.LE:
+						maxSum = x[2]
+					case self.GE:
+						minSum = x[2]
+					case self.EQ:
+						maxSum = x[2]
+						minSum = x[2]
+	
+	testVars = []
+	for i in range(len(L)):
+		for j in range(i+minLength-1,min(len(L),i+maxLength)):
+			bit = self.model.NewBoolVar('PartialPalindromeLine{:d}{:d}'.format(i,j))
+			testVars.append(bit)
+			for k in range((j-i+1)//2):
+				self.model.Add(self.cellValues[L[i+k][0]][L[i+k][1]] == self.cellValues[L[j-k][0]][L[j-k][1]]).OnlyEnforceIf(bit)
+			self.model.Add(sum(self.cellValues[L[k][0]][L[k][1]] for k in range(i,j+1)) <= maxSum).OnlyEnforceIf(bit)
+			self.model.Add(sum(self.cellValues[L[k][0]][L[k][1]] for k in range(i,j+1)) >= minSum).OnlyEnforceIf(bit)
+	self.model.AddBoolOr(testVars)
+			

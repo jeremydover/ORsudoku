@@ -1,3 +1,10 @@
+2/20/2026
+	Fixed bug in Conditional Segment constraints, since now I have a test case!
+	Added support for partial palindrome lines, which contain a palindrome with some specified propertiues like length and sum.
+	Added support for gravity cages.
+	Added additional comparisons for PartitionSumLines allowing runs to match the sum criterion only if they also exceed a minimum length. Added test case.
+	Added some other test cases.
+
 1/28/2026
 	Added new selection criteria for hanging clues: Before/AfterInstance.
 	Implement OnlyEnforceIf ambiguity enforcement for hanging clues (was done for more general conditional lines before, easy port).

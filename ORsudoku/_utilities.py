@@ -1662,5 +1662,5 @@ def _partitionLine(self,L,criterion):
 			runNumber = self._partitionMonotone(L,criterion[0],[])
 		case 'Region':
 			runNumber = self._partitionRegion(L,[])
-	return runNumber	
+	return runNumber
 				
