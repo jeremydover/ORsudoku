@@ -1,3 +1,6 @@
+8/7/2026
+	Fixed bug in conditionalCountCross which cropped up in later versions of ORTools.
+
 2/20/2026
 	Fixed bug in Conditional Segment constraints, since now I have a test case!
 	Added support for partial palindrome lines, which contain a palindrome with some specified propertiues like length and sum.

@@ -608,7 +608,7 @@ def setConditionalCountCross(self,row,col,value,selectSummands=None,selectTermin
 		myValues.append(thisValue)
 		self.setConditionalCountLine(myLists[j],thisValue,selectSummands+[('Location',self.GE,2)],selectTerminator,terminateOn,includeTerminator,self.EQ,forceTermination)
 
-	if value == 'self':
+	if type(value) is str:
 		value = self.cellValues[row-1][col-1]
 
 	if includeSelf:
